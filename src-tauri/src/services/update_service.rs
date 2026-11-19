@@ -193,7 +193,15 @@ impl UpdateService {
     }
 
     /// Start periodic update checking
+    #[cfg_attr(feature = "msix-store", allow(unreachable_code, unused_variables))]
     pub fn start_periodic_check(&mut self, interval_hours: u32, app_handle: tauri::AppHandle) {
+        #[cfg(feature = "msix-store")]
+        {
+            self.stop_periodic_check();
+            tracing::info!("Updates are managed by Microsoft Store; skipping periodic update check");
+            return;
+        }
+
         // Stop any existing task
         self.stop_periodic_check();
 
@@ -254,7 +262,14 @@ impl UpdateService {
 /// from the network gate keeps its `NetworkBlocked` identity all the way to the
 /// frontend, where it reads as `BLOCKED` like every other refusal — and so the
 /// scheduled loop can tell a refusal apart from a failure.
+#[cfg_attr(feature = "msix-store", allow(unreachable_code, unused_variables))]
 async fn check_and_install_update(app: &tauri::AppHandle) -> Result<()> {
+    #[cfg(feature = "msix-store")]
+    {
+        tracing::info!("Updates are managed by Microsoft Store; skipping update check");
+        return Ok(());
+    }
+
     tracing::debug!("check_and_install_update: Starting update check");
 
     let current_version = env!("CARGO_PKG_VERSION").to_string();
@@ -389,7 +404,15 @@ async fn check_and_install_update(app: &tauri::AppHandle) -> Result<()> {
 /// The Settings button behind this one is a gesture the user just made, so its
 /// refusal travels back as `NetworkBlocked` and the dialog renders it. The
 /// scheduled loop is the path that must stay quiet, not this one.
+#[cfg_attr(feature = "msix-store", allow(unreachable_code, unused_variables))]
 pub async fn check_for_update_manual(app: &tauri::AppHandle) -> Result<UpdateCheckEvent> {
+    #[cfg(feature = "msix-store")]
+    {
+        return Err(GitnadoError::OperationFailed(
+            "Updates are managed by Microsoft Store.".to_string(),
+        ));
+    }
+
     let current_version = env!("CARGO_PKG_VERSION").to_string();
 
     let updater = gated_updater(app)?;
@@ -424,7 +447,15 @@ pub async fn check_for_update_manual(app: &tauri::AppHandle) -> Result<UpdateChe
 }
 
 /// Download and install update manually
+#[cfg_attr(feature = "msix-store", allow(unreachable_code, unused_variables))]
 pub async fn install_update(app: &tauri::AppHandle) -> Result<()> {
+    #[cfg(feature = "msix-store")]
+    {
+        return Err(GitnadoError::OperationFailed(
+            "Updates are managed by Microsoft Store.".to_string(),
+        ));
+    }
+
     check_and_install_update(app).await
 }
 

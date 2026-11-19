@@ -100,8 +100,12 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
-        .plugin(tauri_plugin_notification::init())
-        .plugin(tauri_plugin_updater::Builder::new().build());
+        .plugin(tauri_plugin_notification::init());
+
+    #[cfg(not(feature = "msix-store"))]
+    {
+        builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
+    }
 
     // Single-instance and deep-link plugins (desktop only)
     // Single-instance must be registered BEFORE deep-link for proper callback handling

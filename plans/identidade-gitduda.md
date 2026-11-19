@@ -1,7 +1,7 @@
 # Plano de Desenvolvimento: Rebrand e Isolamento de Identidade para Gitduda
 
 - **Data**: 2026-11-18
-- **Status**: [ ] Em Execução
+- **Status**: [x] Concluído
 - **Debate Técnico**: Validado e revisado (Etapas 1–6)
 - **Arquivo de Controle**: `plans/identidade-gitduda.md`
 
@@ -22,7 +22,7 @@
 - [x] Etapa 3: Rebrand de UI, Deep-Link OAuth, Snippets MCP, i18n e Specs E2E (Frontend)
 - [x] Etapa 4: Workflows do GitHub Actions e Manifestos em `packaging/`
 - [x] Etapa 5: Rename do Repositório no GitHub, Atualização do Remote Local e Validação de Coexistência
-- [ ] Etapa 6: Empacotamento MSIX e Distribuição via Microsoft Store Web Installer (Sem SmartScreen)
+- [x] Etapa 6: Empacotamento MSIX e Distribuição via Microsoft Store Web Installer (Sem SmartScreen)
 
 ---
 

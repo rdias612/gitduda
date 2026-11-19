@@ -126,6 +126,7 @@ version = "3"
 [features]
 default = ["custom-protocol"]
 custom-protocol = ["tauri/custom-protocol"]
+msix-store = []
 cuda = [
   "llama-cpp-2/cuda",
   "candle-core/cuda",
