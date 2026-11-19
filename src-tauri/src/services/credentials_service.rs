@@ -12,7 +12,7 @@ use std::time::Instant;
 use crate::services::transfer_monitor::TransferMonitor;
 
 /// Service name for keychain storage
-const SERVICE_NAME: &str = "gitnado-git";
+const SERVICE_NAME: &str = "gitduda-git";
 
 /// Time-to-live for cached credentials (30 minutes).
 /// Expired entries are lazily removed on the next cache read.

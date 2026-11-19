@@ -88,12 +88,12 @@ pub fn run() {
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "gitnado=debug,git2=warn".into()),
+                .unwrap_or_else(|_| "gitduda=debug,gitnado_lib=debug,git2=warn".into()),
         )
         .with(tracing_subscriber::fmt::layer())
         .init();
 
-    tracing::info!("Starting Gitnado");
+    tracing::info!("Starting Gitduda");
 
     // Build the app with plugins
     let mut builder = tauri::Builder::default()
@@ -111,7 +111,7 @@ pub fn run() {
             .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
                 // On Windows/Linux, deep links arrive as command line arguments
                 if let Some(url) = argv.get(1) {
-                    if url.starts_with("gitnado://") {
+                    if url.starts_with("gitduda://") {
                         tracing::info!("Received deep link via single-instance: {}", url);
                         let _ = app.emit("deep-link", url);
                     }
@@ -305,7 +305,7 @@ pub fn run() {
             use tauri::tray::TrayIconBuilder;
 
             let show_hide =
-                MenuItemBuilder::with_id("show_hide", "Show/Hide Gitnado").build(app)?;
+                MenuItemBuilder::with_id("show_hide", "Show/Hide Gitduda").build(app)?;
             let quit = MenuItemBuilder::with_id("quit", "Quit").build(app)?;
 
             let menu = MenuBuilder::new(app)
@@ -320,7 +320,7 @@ pub fn run() {
             }
             let _tray = tray_builder
                 .menu(&menu)
-                .tooltip("Gitnado")
+                .tooltip("Gitduda")
                 .on_menu_event(
                     move |app: &tauri::AppHandle, event: tauri::menu::MenuEvent| match event
                         .id()

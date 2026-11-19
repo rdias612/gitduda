@@ -910,7 +910,7 @@ impl McpServer {
                 "tools": {}
             },
             "serverInfo": {
-                "name": "gitnado",
+                "name": "gitduda",
                 "version": env!("CARGO_PKG_VERSION")
             }
         });
@@ -1100,7 +1100,7 @@ impl McpServer {
              \r\n{body}",
             body.len(),
             if status == 401 {
-                "WWW-Authenticate: Bearer realm=\"Gitnado MCP\"\r\n"
+                "WWW-Authenticate: Bearer realm=\"Gitduda MCP\"\r\n"
             } else {
                 ""
             },
@@ -1320,7 +1320,7 @@ mod tests {
         let result = response.result.unwrap();
         // No version requested: answer with the newest one supported.
         assert_eq!(result["protocolVersion"], SUPPORTED_PROTOCOL_VERSIONS[0]);
-        assert_eq!(result["serverInfo"]["name"], "gitnado");
+        assert_eq!(result["serverInfo"]["name"], "gitduda");
         assert_eq!(result["serverInfo"]["version"], env!("CARGO_PKG_VERSION"));
     }
 

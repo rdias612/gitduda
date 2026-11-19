@@ -959,7 +959,7 @@ pub async fn erase_credentials(path: String, host: String, protocol: String) -> 
     Ok(())
 }
 
-const INTEGRATION_SERVICE: &str = "gitnado-integrations";
+const INTEGRATION_SERVICE: &str = "gitduda-integrations";
 
 /// Build the macOS `security add-generic-password` argument list (M3).
 ///

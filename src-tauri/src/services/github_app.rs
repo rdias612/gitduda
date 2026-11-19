@@ -171,7 +171,7 @@ pub async fn get_installation_token(
         .post(&url)
         .header("Authorization", format!("Bearer {}", jwt))
         .header("Accept", "application/vnd.github+json")
-        .header("User-Agent", "Gitnado-Git-Client")
+        .header("User-Agent", "Gitduda-Git-Client")
         .header("X-GitHub-Api-Version", "2022-11-28")
         .send()
         .await
@@ -224,7 +224,7 @@ pub async fn list_installations(jwt: &str) -> crate::error::Result<Vec<AppInstal
         .get(format!("{}/app/installations", GITHUB_API_BASE))
         .header("Authorization", format!("Bearer {}", jwt))
         .header("Accept", "application/vnd.github+json")
-        .header("User-Agent", "Gitnado-Git-Client")
+        .header("User-Agent", "Gitduda-Git-Client")
         .header("X-GitHub-Api-Version", "2022-11-28")
         .send()
         .await

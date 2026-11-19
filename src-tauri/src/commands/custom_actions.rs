@@ -661,7 +661,7 @@ mod tests {
         let repo = TestRepo::with_initial_commit();
 
         // Write malformed JSON to the actions file
-        let actions_dir = repo.path.join(".git").join("gitnado");
+        let actions_dir = repo.path.join(".git").join("gitduda");
         std::fs::create_dir_all(&actions_dir).unwrap();
         std::fs::write(actions_dir.join("custom_actions.json"), "not valid json").unwrap();
 
@@ -675,7 +675,7 @@ mod tests {
         let result = actions_file_path(path);
         assert_eq!(
             result,
-            Path::new("/my/repo/.git/gitnado/custom_actions.json")
+            Path::new("/my/repo/.git/gitduda/custom_actions.json")
         );
     }
 

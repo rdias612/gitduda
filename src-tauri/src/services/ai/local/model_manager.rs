@@ -332,7 +332,7 @@ impl ModelManager {
         let client = reqwest::Client::new();
         let response = client
             .get(&url)
-            .header("User-Agent", "Gitnado-Git-GUI")
+            .header("User-Agent", "Gitduda-Git-GUI")
             .send()
             .await
             .map_err(|e| format!("Failed to start download: {e}"))?;

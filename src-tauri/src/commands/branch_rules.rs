@@ -454,10 +454,10 @@ mod tests {
         assert!(
             rules_path
                 .to_string_lossy()
-                .contains("gitnado/branch_rules.json")
+                .contains("gitduda/branch_rules.json")
                 || rules_path
                     .to_string_lossy()
-                    .contains("gitnado\\branch_rules.json")
+                    .contains("gitduda\\branch_rules.json")
         );
     }
 }

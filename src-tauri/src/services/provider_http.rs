@@ -10,7 +10,7 @@ use crate::error::{GitnadoError, Result};
 
 /// Default User-Agent header sent on outbound provider HTTP requests when
 /// a request does not override it.
-pub const DEFAULT_PROVIDER_USER_AGENT: &str = "Gitnado/1.0";
+pub const DEFAULT_PROVIDER_USER_AGENT: &str = "Gitduda/1.0";
 
 /// Default timeout (in seconds) for outbound provider HTTP requests.
 pub const DEFAULT_PROVIDER_TIMEOUT_SECS: u64 = 30;
@@ -172,7 +172,7 @@ mod tests {
 
     #[test]
     fn test_constants() {
-        assert_eq!(DEFAULT_PROVIDER_USER_AGENT, "Gitnado/1.0");
+        assert_eq!(DEFAULT_PROVIDER_USER_AGENT, "Gitduda/1.0");
         assert_eq!(DEFAULT_PROVIDER_TIMEOUT_SECS, 30);
     }
 

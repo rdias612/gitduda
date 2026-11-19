@@ -1,4 +1,4 @@
-//! Application directory paths for Gitnado.
+//! Application directory paths for Gitduda.
 //!
 //! Every on-disk location that embeds the app name — the user-level config and
 //! data directories and the per-repository `<gitdir>/<app>` folder — resolves
@@ -9,24 +9,24 @@ use std::path::{Path, PathBuf};
 use crate::error::{GitnadoError, Result};
 
 /// Directory name under the platform config/data roots and inside a git dir.
-pub const APP_DIR_NAME: &str = "gitnado";
+pub const APP_DIR_NAME: &str = "gitduda";
 
 /// The bundle identifier the app ships with.
 pub const APP_IDENTIFIER: &str = "io.github.rdias612.gitduda";
 
-/// `base/gitnado`. Does not create the directory.
+/// `base/gitduda`. Does not create the directory.
 pub fn app_subdir(base: &Path) -> PathBuf {
     base.join(APP_DIR_NAME)
 }
 
-/// The app's private directory inside a repository's git dir (`<gitdir>/gitnado`).
+/// The app's private directory inside a repository's git dir (`<gitdir>/gitduda`).
 /// Pass the *common* dir for state that should be shared by every worktree of
 /// the repository. Does not create the directory.
 pub fn repo_dir(git_dir: &Path) -> PathBuf {
     app_subdir(git_dir)
 }
 
-/// The user-level config directory (`<config root>/gitnado`), created if missing.
+/// The user-level config directory (`<config root>/gitduda`), created if missing.
 pub fn config_dir() -> Result<PathBuf> {
     let root = dirs::config_dir().ok_or_else(|| {
         GitnadoError::OperationFailed("Could not find config directory".to_string())
@@ -34,7 +34,7 @@ pub fn config_dir() -> Result<PathBuf> {
     ensure_app_subdir(&root, "config")
 }
 
-/// The user-level data directory (`<data root>/gitnado`), created if missing.
+/// The user-level data directory (`<data root>/gitduda`), created if missing.
 pub fn data_dir() -> Result<PathBuf> {
     let root = dirs::data_dir().ok_or_else(|| {
         GitnadoError::OperationFailed("Could not find data directory".to_string())
@@ -66,26 +66,26 @@ mod tests {
     }
 
     #[test]
-    fn app_subdir_returns_gitnado_path_without_creating_it() {
+    fn app_subdir_returns_gitduda_path_without_creating_it() {
         let base = TempDir::new().unwrap();
         let dir = app_subdir(base.path());
-        assert_eq!(dir, base.path().join("gitnado"));
+        assert_eq!(dir, base.path().join("gitduda"));
         assert!(!dir.exists(), "resolving a path must not create it");
     }
 
     #[test]
-    fn repo_dir_returns_gitnado_folder_inside_git_dir() {
+    fn repo_dir_returns_gitduda_folder_inside_git_dir() {
         let repo = crate::test_utils::TestRepo::new();
         let git_dir = repo.repo().path().to_path_buf();
         let dir = repo_dir(&git_dir);
-        assert_eq!(dir, git_dir.join("gitnado"));
+        assert_eq!(dir, git_dir.join("gitduda"));
     }
 
     #[test]
     fn ensure_app_subdir_creates_directory() {
         let fresh = TempDir::new().unwrap();
         let dir = ensure_app_subdir(fresh.path(), "app").unwrap();
-        assert_eq!(dir, fresh.path().join("gitnado"));
+        assert_eq!(dir, fresh.path().join("gitduda"));
         assert!(dir.is_dir());
     }
 }

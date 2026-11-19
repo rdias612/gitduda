@@ -1317,7 +1317,7 @@ mod tests {
         // save_rules is a non-atomic write, so a crash mid-save can leave this
         // truncated.
         let git_repo = repo.repo();
-        let rules_dir = git_repo.path().join("gitnado");
+        let rules_dir = git_repo.path().join("gitduda");
         std::fs::create_dir_all(&rules_dir).unwrap();
         std::fs::write(rules_dir.join("branch_rules.json"), "{ not json").unwrap();
 

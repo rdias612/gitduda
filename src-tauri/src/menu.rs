@@ -151,7 +151,7 @@ pub const APP_MENU: &[MenuSection] = &[
         label: "Help",
         entries: &[
             item("keyboard-shortcuts", "Keyboard Shortcuts"),
-            item("about", "About Gitnado"),
+            item("about", "About Gitduda"),
         ],
     },
 ];
@@ -259,11 +259,11 @@ pub fn init_app_menu(app: &AppHandle) -> tauri::Result<()> {
     #[cfg(target_os = "macos")]
     {
         let about_metadata = tauri::menu::AboutMetadata {
-            name: Some("Gitnado".into()),
+            name: Some("Gitduda".into()),
             version: Some(env!("CARGO_PKG_VERSION").into()),
             ..Default::default()
         };
-        let app_menu = SubmenuBuilder::new(app, "Gitnado")
+        let app_menu = SubmenuBuilder::new(app, "Gitduda")
             .about(Some(about_metadata))
             .separator()
             .services()

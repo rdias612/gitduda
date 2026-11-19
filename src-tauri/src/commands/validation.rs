@@ -838,10 +838,10 @@ mod tests {
         assert!(
             rules_path
                 .to_string_lossy()
-                .contains("gitnado/commit_rules.json")
+                .contains("gitduda/commit_rules.json")
                 || rules_path
                     .to_string_lossy()
-                    .contains("gitnado\\commit_rules.json")
+                    .contains("gitduda\\commit_rules.json")
         );
     }
 

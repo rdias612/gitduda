@@ -338,7 +338,7 @@ fn initialize_params() -> Value {
     json!({
         "protocolVersion": PROTOCOL_VERSION,
         "capabilities": {},
-        "clientInfo": { "name": "gitnado", "version": env!("CARGO_PKG_VERSION") }
+        "clientInfo": { "name": "gitduda", "version": env!("CARGO_PKG_VERSION") }
     })
 }
 

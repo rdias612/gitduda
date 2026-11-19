@@ -946,7 +946,7 @@ mod tests {
         let repo_path = repo.path.clone();
         let repo_path = repo_path.as_path();
 
-        std::fs::create_dir_all(repo_path.join(".git").join("gitnado")).unwrap();
+        std::fs::create_dir_all(repo_path.join(".git").join("gitduda")).unwrap();
 
         let config = JiraConfig {
             base_url: "https://test.atlassian.net".to_string(),
@@ -956,7 +956,7 @@ mod tests {
         };
 
         // Save
-        let config_path = repo_path.join(".git").join("gitnado").join("jira.json");
+        let config_path = repo_path.join(".git").join("gitduda").join("jira.json");
         let content = serde_json::to_string_pretty(&config).unwrap();
         std::fs::write(&config_path, content).unwrap();
 

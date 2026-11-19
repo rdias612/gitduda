@@ -518,7 +518,7 @@ impl LoopbackServer {
     <div class="container">
         <div class="check"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
         <h1>Authorization Successful</h1>
-        <p>You can close this window and return to Gitnado.</p>
+        <p>You can close this window and return to Gitduda.</p>
         <p>This window closes by itself in a few seconds.</p>
     </div>
     <script>setTimeout(() => window.close(), 3000);</script>
@@ -708,7 +708,7 @@ mod tests {
         let html = LoopbackServer::success_page_html();
         assert!(html.contains("<title>Authorization Successful</title>"));
         assert!(html.contains("Authorization Successful</h1>"));
-        assert!(html.contains("return to Gitnado"));
+        assert!(html.contains("return to Gitduda"));
         assert!(html.contains("window.close()"));
         // format! braces must all have been consumed — no CSS left doubled.
         assert!(!html.contains("{{") && !html.contains("}}"));

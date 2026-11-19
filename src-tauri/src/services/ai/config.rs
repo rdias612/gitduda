@@ -8,7 +8,7 @@ use std::path::Path;
 const CONFIG_FILE: &str = "ai_config.json";
 
 /// OS keyring service under which provider API keys are stored.
-pub const AI_KEYRING_SERVICE: &str = "gitnado-ai";
+pub const AI_KEYRING_SERVICE: &str = "gitduda-ai";
 
 /// Secret storage for provider API keys. The production implementation is the
 /// OS keyring; tests substitute an in-memory store.
