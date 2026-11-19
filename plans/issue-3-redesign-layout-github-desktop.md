@@ -3,7 +3,8 @@
 - **Data**: 2026-11-18
 - **Status**: [ ] Planejado
 - **Debate Técnico**: Validado e revisado
-- **Arquivo de Controle**: `plans/redesign-layout-github-desktop.md`
+- **Arquivo de Controle**: `plans/issue-3-redesign-layout-github-desktop.md`
+- **Issue**: `#3` ([Issue #3](https://github.com/rdias612/gitduda/issues/3))
 - **Spec de Origem**: `spec/redesign-layout-github-desktop.md`
 
 ---

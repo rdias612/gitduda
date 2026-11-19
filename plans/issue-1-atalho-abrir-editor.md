@@ -3,7 +3,8 @@
 - **Data**: 2026-11-18
 - **Status**: [ ] Planejado
 - **Debate Técnico**: Validado e revisado
-- **Arquivo de Controle**: `plans/atalho-abrir-editor.md`
+- **Arquivo de Controle**: `plans/issue-1-atalho-abrir-editor.md`
+- **Issue**: `#1` ([Issue #1](https://github.com/rdias612/gitduda/issues/1))
 - **Spec de Origem**: `spec/atalho-abrir-editor.md`
 
 ## 1. Visão Geral e Regras Locais Aplicáveis

@@ -55,6 +55,60 @@ function Ensure-CMake {
     exit 1
 }
 
+function Ensure-Nasm {
+    if (Get-Command "nasm" -ErrorAction SilentlyContinue) {
+        return
+    }
+
+    $candidates = @(
+        "$env:LOCALAPPDATA\bin\NASM\nasm.exe",
+        "C:\Program Files\NASM\nasm.exe",
+        "C:\Program Files (x86)\NASM\nasm.exe"
+    )
+
+    foreach ($pattern in $candidates) {
+        $match = Get-Item $pattern -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($match) {
+            $nasmDir = Split-Path -Parent $match.FullName
+            $env:PATH = "$nasmDir;$env:PATH"
+            Write-Host "==> NASM encontrado e adicionado ao PATH: $nasmDir" -ForegroundColor DarkGray
+            return
+        }
+    }
+
+    Write-Host "[ERRO] 'nasm' nao encontrado no PATH. Instale o NASM (winget install NASM.NASM)." -ForegroundColor Red
+    exit 1
+}
+
+function Ensure-LibClang {
+    if ($env:LIBCLANG_PATH -and (Test-Path (Join-Path $env:LIBCLANG_PATH "libclang.dll"))) {
+        return
+    }
+
+    $candidates = @(
+        "C:\Program Files\LLVM\bin\libclang.dll",
+        "C:\Program Files (x86)\LLVM\bin\libclang.dll",
+        "C:\Program Files\Microsoft Visual Studio\*\*\VC\Tools\Llvm\x64\bin\libclang.dll",
+        "C:\Program Files (x86)\Microsoft Visual Studio\*\*\VC\Tools\Llvm\x64\bin\libclang.dll"
+    )
+
+    foreach ($pattern in $candidates) {
+        $match = Get-Item $pattern -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($match) {
+            $llvmDir = Split-Path -Parent $match.FullName
+            $env:LIBCLANG_PATH = $llvmDir
+            if ($env:PATH -notlike "*$llvmDir*") {
+                $env:PATH = "$llvmDir;$env:PATH"
+            }
+            Write-Host "==> libclang encontrado e configurado em LIBCLANG_PATH: $llvmDir" -ForegroundColor DarkGray
+            return
+        }
+    }
+
+    Write-Host "[ERRO] 'libclang.dll' nao encontrado. Instale o LLVM (winget install LLVM.LLVM) ou defina LIBCLANG_PATH." -ForegroundColor Red
+    exit 1
+}
+
 function Assert-PortFree {
     param([int]$Port)
     $listener = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1
@@ -84,6 +138,8 @@ try {
     Assert-Command "cargo" "Instale o Rust via rustup (https://rustup.rs/)."
     Assert-Command "git" "Instale o Git (https://git-scm.com/)."
     Ensure-CMake
+    Ensure-Nasm
+    Ensure-LibClang
 
     if ($Install -or -not (Test-Path (Join-Path $PSScriptRoot "node_modules"))) {
         Invoke-Step "Instalando dependencias Node (npm install)..." { npm install }
