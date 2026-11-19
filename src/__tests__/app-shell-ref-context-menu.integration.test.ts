@@ -268,11 +268,12 @@ describe('app-shell ref context menu handlers (integration)', () => {
   });
 
   describe('handleRefCreateBranchFromTag', () => {
-    type AppShellRefCreateBranchHost = AppShell & {
+    interface AppShellRefCreateBranchHost {
       activeRepository: OpenRepository | null;
       refContextMenu: { visible: boolean };
+      createBranchDialog?: { open: (startPoint?: string) => void };
       handleRefCreateBranchFromTag: () => void;
-    };
+    }
 
     function stubCreateBranchDialog(el: AppShell): Array<string | undefined> {
       const openCalls: Array<string | undefined> = [];
