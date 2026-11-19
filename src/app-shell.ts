@@ -2857,6 +2857,16 @@ export class AppShell extends LitElement {
     }
   }
 
+  private handleRefCreateBranchFromTag(): void {
+    if (!this.activeRepository || this.refContextMenu.refType !== 'tag') return;
+    const refName = this.refContextMenu.refName;
+    const startPoint = this.refContextMenu.fullName || (refName ? `refs/tags/${refName}` : '');
+    this.refContextMenu = { ...this.refContextMenu, visible: false };
+    if (startPoint) {
+      this.createBranchDialog?.open(startPoint);
+    }
+  }
+
   private async handleRefDeleteTag(): Promise<void> {
     if (!this.activeRepository) return;
     // Serialized with the rest of this menu — see handleRefDeleteBranch.
@@ -6698,6 +6708,18 @@ export class AppShell extends LitElement {
                           <polyline points="20 6 9 17 4 12"></polyline>
                         </svg>
                         Checkout tag
+                      </button>
+                      <button
+                        class="context-menu-item"
+                        @click=${this.handleRefCreateBranchFromTag}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <line x1="6" y1="3" x2="6" y2="15"></line>
+                          <circle cx="18" cy="6" r="3"></circle>
+                          <circle cx="6" cy="18" r="3"></circle>
+                          <path d="M18 9a9 9 0 0 1-9 9"></path>
+                        </svg>
+                        Create branch from this tag
                       </button>
                       <button
                         class="context-menu-item"
