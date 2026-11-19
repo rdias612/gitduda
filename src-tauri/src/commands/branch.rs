@@ -1785,6 +1785,71 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_create_branch_from_lightweight_tag() {
+        let repo = TestRepo::with_initial_commit();
+        let commit1_oid = repo.head_oid();
+        repo.create_lightweight_tag("v1.0.0-light");
+        repo.create_commit("Second commit", &[("file2.txt", "content2")]);
+
+        let result = create_branch(
+            repo.path_str(),
+            "from-light-tag".to_string(),
+            Some("refs/tags/v1.0.0-light".to_string()),
+            Some(true),
+        )
+        .await;
+
+        assert!(result.is_ok());
+        let branch = result.unwrap();
+        assert_eq!(branch.target_oid, commit1_oid.to_string());
+        assert!(branch.is_head);
+        assert_eq!(repo.current_branch(), "from-light-tag");
+    }
+
+    #[tokio::test]
+    async fn test_create_branch_from_annotated_tag() {
+        let repo = TestRepo::with_initial_commit();
+        let commit1_oid = repo.head_oid();
+        repo.create_tag("v1.0.0");
+        repo.create_commit("Second commit", &[("file2.txt", "content2")]);
+
+        let result = create_branch(
+            repo.path_str(),
+            "from-annotated-tag".to_string(),
+            Some("refs/tags/v1.0.0".to_string()),
+            Some(false),
+        )
+        .await;
+
+        assert!(result.is_ok());
+        let branch = result.unwrap();
+        assert_eq!(branch.target_oid, commit1_oid.to_string());
+        assert!(!branch.is_head);
+    }
+
+    #[tokio::test]
+    async fn test_create_branch_from_tag_prefers_tag_when_branch_has_same_name() {
+        let repo = TestRepo::with_initial_commit();
+        let commit1_oid = repo.head_oid();
+        repo.create_tag("release");
+        let commit2_oid = repo.create_commit("Second commit", &[("file2.txt", "content2")]);
+        repo.create_branch("release");
+
+        let result = create_branch(
+            repo.path_str(),
+            "hotfix-release".to_string(),
+            Some("refs/tags/release".to_string()),
+            Some(false),
+        )
+        .await;
+
+        assert!(result.is_ok());
+        let branch = result.unwrap();
+        assert_eq!(branch.target_oid, commit1_oid.to_string());
+        assert_ne!(branch.target_oid, commit2_oid.to_string());
+    }
+
+    #[tokio::test]
     async fn test_create_branch_duplicate_fails() {
         let repo = TestRepo::with_initial_commit();
         repo.create_branch("existing");

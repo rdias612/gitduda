@@ -1,7 +1,7 @@
 # Plano de Desenvolvimento: Criar branch a partir de uma tag (Issue #2)
 
 - **Data**: 2026-11-19
-- **Status**: [ ] Em Execução
+- **Status**: [x] Concluído
 - **Arquivo de Controle**: `plans/issue-2-create-branch-from-tag.md`
 - **Issue**: `#2`
 
@@ -18,7 +18,7 @@
 ## 2. Checklist de Execução de Etapas
 - [x] Etapa 1: Adicionar ação `Create branch from this tag` nos menus de contexto de tags (`gn-tag-list.ts` e `app-shell.ts`)
 - [x] Etapa 2: Adicionar testes de componente e integração frontend (`gn-tag-list.test.ts` e `app-shell-ref-context-menu.integration.test.ts`)
-- [ ] Etapa 3: Adicionar testes unitários Rust em `branch.rs` para criação de branch a partir de tags leves, anotadas e com colisão de nome
+- [x] Etapa 3: Adicionar testes unitários Rust em `branch.rs` para criação de branch a partir de tags leves, anotadas e com colisão de nome
 
 ---
 
