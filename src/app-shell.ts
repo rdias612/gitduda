@@ -5343,8 +5343,8 @@ export class AppShell extends LitElement {
     try {
       const version = await updateService.getAppVersion();
       await showMessage(
-        'About Gitnado',
-        `Gitnado ${version}\n\nA fully-featured, open-source, cross-platform Git GUI client.`
+        'About Gitduda',
+        `Gitduda ${version}\n\nA fully-featured, open-source, cross-platform Git GUI client.`
       );
     } catch (error) {
       log.warn('Failed to show the About dialog:', error);

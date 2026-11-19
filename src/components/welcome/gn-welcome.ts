@@ -594,8 +594,8 @@ export class GnWelcome extends LitElement {
         : ''}
 
       <div class="welcome-content">
-        <img class="mascot" src="${mascotImage}" alt=${msg('Gitnado - a tornado of git branches')} />
-        <div class="logo">Gitnado</div>
+        <img class="mascot" src="${mascotImage}" alt=${msg('Gitduda - a tornado of git branches')} />
+        <div class="logo">Gitduda</div>
         <p class="tagline">${msg('A powerful, open-source Git client')}</p>
 
         <div class="actions">

@@ -84,7 +84,7 @@ describe('gn-mcp-clients', () => {
     await waitUntil(() => el.shadowRoot!.querySelectorAll('.tab').length === 4, 'stdio tab missing');
 
     expect(invokeCalls.find((c) => c.command === 'create_mcp_client')!.args).to.deep.equal({ name: 'Cursor' });
-    expect($(el, '.snippet')!.textContent).to.contain('claude mcp add --transport http gitnado http://127.0.0.1:4100/mcp');
+    expect($(el, '.snippet')!.textContent).to.contain('claude mcp add --transport http gitduda http://127.0.0.1:4100/mcp');
     expect($(el, '.snippet')!.textContent).to.contain('gnc_secret');
 
     (el.shadowRoot!.querySelector('.tab[data-kind="vscode"]') as HTMLElement).click();

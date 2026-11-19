@@ -19,7 +19,7 @@
 ## 2. Checklist de Execução de Etapas
 - [x] Etapa 1: Identidade de Pacote, Manifesto Tauri, Updater e Scripts Locais
 - [x] Etapa 2: Isolamento de Diretórios, Keyring, Deep-Link, Menus, Tray e User-Agent (Backend Rust)
-- [ ] Etapa 3: Rebrand de UI, Deep-Link OAuth, Snippets MCP, i18n e Specs E2E (Frontend)
+- [x] Etapa 3: Rebrand de UI, Deep-Link OAuth, Snippets MCP, i18n e Specs E2E (Frontend)
 - [ ] Etapa 4: Workflows do GitHub Actions e Manifestos em `packaging/`
 - [ ] Etapa 5: Rename do Repositório no GitHub, Atualização do Remote Local e Validação de Coexistência
 - [ ] Etapa 6: Empacotamento MSIX e Distribuição via Microsoft Store Web Installer (Sem SmartScreen)

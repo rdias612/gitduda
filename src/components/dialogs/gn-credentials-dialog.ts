@@ -986,7 +986,7 @@ export class GnCredentialsDialog extends LitElement {
                 ? html`<strong>Git Credential Manager</strong> detected${this.gcmStatus.gcmVersion ? html` (${this.gcmStatus.gcmVersion})` : ''} — credentials managed by GCM`
                 : this.gcmStatus.configuredHelper
                   ? html`<strong>Credential helper</strong>: <code>${this.gcmStatus.configuredHelper}</code> — credentials managed by system`
-                  : html`No credential manager detected — using Gitnado's built-in credential storage`}
+                  : html`No credential manager detected — using Gitduda's built-in credential storage`}
             </div>
           ` : ''}
 

@@ -25,7 +25,7 @@ test.describe('Welcome Screen', () => {
 
   test('should display welcome screen when no repository is open', async () => {
     await expect(app.welcomeScreen).toBeVisible();
-    await expect(app.welcomeLogo).toHaveText('Gitnado');
+    await expect(app.welcomeLogo).toHaveText('Gitduda');
     await expect(app.welcomeTagline).toContainText('Git client');
   });
 

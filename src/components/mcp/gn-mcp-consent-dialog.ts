@@ -214,7 +214,7 @@ export class GnMcpConsentDialog extends LitElement {
     const label = TOOL_LABEL[request.tool] ?? request.tool;
     return html`
       <div class="content">
-        <p class="lead">A tool connected through MCP asked Gitnado to:</p>
+        <p class="lead">A tool connected through MCP asked Gitduda to:</p>
         <div>
           <div class="summary">${request.summary}</div>
           <div class="where">

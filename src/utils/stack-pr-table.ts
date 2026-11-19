@@ -27,7 +27,7 @@ export function renderStackSection(
   });
   return [
     STACK_SECTION_START,
-    '**Stack** (top to bottom; kept up to date by Gitnado)',
+    '**Stack** (top to bottom; kept up to date by Gitduda)',
     '',
     ...lines,
     `- \`${stack.base}\``,

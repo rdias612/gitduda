@@ -46,7 +46,7 @@ test.describe('MCP client tokens', () => {
     await clients(page).locator('.add-client-btn').click();
 
     await expect(clients(page).locator('.snippet')).toContainText(
-      "claude mcp add --transport http gitnado http://127.0.0.1:3001/mcp --header 'Authorization: Bearer gnc_e2e_token'",
+      "claude mcp add --transport http gitduda http://127.0.0.1:3001/mcp --header 'Authorization: Bearer gnc_e2e_token'",
     );
     expect((await findCommand(page, 'create_mcp_client'))[0].args).toEqual({ name: 'Claude Code' });
 

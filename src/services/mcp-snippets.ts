@@ -24,12 +24,12 @@ function shellQuote(value: string): string {
 }
 
 export function claudeCodeSnippet(port: number, token: string): string {
-  return `claude mcp add --transport http gitnado ${mcpUrl(port)} --header ${shellQuote(`Authorization: Bearer ${token}`)}`;
+  return `claude mcp add --transport http gitduda ${mcpUrl(port)} --header ${shellQuote(`Authorization: Bearer ${token}`)}`;
 }
 
 export function cursorSnippet(port: number, token: string): string {
   return JSON.stringify(
-    { mcpServers: { gitnado: { url: mcpUrl(port), headers: { Authorization: `Bearer ${token}` } } } },
+    { mcpServers: { gitduda: { url: mcpUrl(port), headers: { Authorization: `Bearer ${token}` } } } },
     null,
     2,
   );
@@ -39,7 +39,7 @@ export function vscodeSnippet(port: number, token: string): string {
   return JSON.stringify(
     {
       servers: {
-        gitnado: { type: 'http', url: mcpUrl(port), headers: { Authorization: `Bearer ${token}` } },
+        gitduda: { type: 'http', url: mcpUrl(port), headers: { Authorization: `Bearer ${token}` } },
       },
     },
     null,
@@ -51,7 +51,7 @@ export function stdioSnippet(port: number, token: string, program: string, args:
   return JSON.stringify(
     {
       mcpServers: {
-        gitnado: {
+        gitduda: {
           command: program,
           args,
           env: { GITNADO_MCP_TOKEN: token, GITNADO_MCP_URL: mcpUrl(port) },

@@ -185,7 +185,7 @@ export async function initOAuthListener(): Promise<void> {
  * OAuth callback deep-link prefixes (see `deep-link.desktop.schemes` in
  * tauri.conf.json).
  */
-export const OAUTH_DEEP_LINK_PREFIXES = ['gitnado://oauth/'] as const;
+export const OAUTH_DEEP_LINK_PREFIXES = ['gitduda://oauth/'] as const;
 
 /**
  * The provider segment of an OAuth callback deep link
@@ -218,7 +218,7 @@ async function handleDeepLink(url: string): Promise<void> {
   }
 
   try {
-    // Parse the URL: gitnado://oauth/{provider}/callback?code=xxx&state=yyy
+    // Parse the URL: gitduda://oauth/{provider}/callback?code=xxx&state=yyy
     const parsed = new URL(url);
     const code = parsed.searchParams.get('code');
     const state = parsed.searchParams.get('state');

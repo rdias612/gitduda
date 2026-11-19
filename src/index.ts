@@ -30,4 +30,4 @@ import { loggers } from './utils/logger.ts';
 // rendered, or Settings would keep naming a language the UI is not in.
 void applyPersistedLocale();
 
-loggers.app.info('Gitnado initialized');
+loggers.app.info('Gitduda initialized');

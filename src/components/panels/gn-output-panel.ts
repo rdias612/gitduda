@@ -370,7 +370,7 @@ export class GnOutputPanel extends LitElement {
     const duration =
       entry.durationMs === undefined ? '' : formatDuration(entry.durationMs);
     const tooltip = synthesized
-      ? `${line}\n\nEquivalent command — Gitnado performed this with libgit2 (IPC: ${entry.command})`
+      ? `${line}\n\nEquivalent command — Gitduda performed this with libgit2 (IPC: ${entry.command})`
       : line;
 
     return html`
@@ -486,7 +486,7 @@ export class GnOutputPanel extends LitElement {
       </div>
       ${hasSynthesized
         ? html`<div class="legend">
-            ${SYNTHESIZED_MARK} Gitnado runs these operations with libgit2 —
+            ${SYNTHESIZED_MARK} Gitduda runs these operations with libgit2 —
             the line shown is the equivalent <code>git</code> command, not one
             that was executed.
           </div>`

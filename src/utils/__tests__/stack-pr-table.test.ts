@@ -13,7 +13,7 @@ describe('stack PR table', () => {
     const section = renderStackSection(stack, prs, 'feat-a', '#');
     expect(section.split('\n')).to.deep.equal([
       STACK_SECTION_START,
-      '**Stack** (top to bottom; kept up to date by Gitnado)',
+      '**Stack** (top to bottom; kept up to date by Gitduda)',
       '',
       '- [#12](https://x/12) `feat-b`',
       '- [#11](https://x/11) `feat-a` ← this one',

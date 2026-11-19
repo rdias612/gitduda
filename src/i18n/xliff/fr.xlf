@@ -14,9 +14,6 @@
 <trans-unit id="s112e91e220154a7a">
   <source>Could not open workspace: <x id="0" equiv-text="${workspace.name}"/> — no repository could be opened</source>
   <target>Impossible d'ouvrir l'espace de travail : <x id="0" equiv-text="${workspace.name}"/> — aucun dépôt n'a pu être ouvert</target></trans-unit>
-<trans-unit id="s4f035d0ef56d6721">
-  <source>Gitnado - a tornado of git branches</source>
-  <target>Gitnado - une tornade de branches git</target></trans-unit>
 <trans-unit id="sc4e51f82f9e539e5">
   <source>A powerful, open-source Git client</source>
   <target>Un client Git puissant et open source</target></trans-unit>
@@ -280,9 +277,6 @@
 <trans-unit id="s0a3128b5ad6841b8">
   <source>Reopen Last Repositories</source>
   <target>Rouvrir les derniers dépôts</target></trans-unit>
-<trans-unit id="se67b6027e793dd14">
-  <source>Reopen the repository tabs from your last session when Gitnado starts. Turn this off to start on the welcome screen — the tabs are remembered, so turning it back on restores them.</source>
-  <target>Rouvrir les onglets de dépôt de votre dernière session au démarrage de Gitnado. Désactivez cette option pour démarrer sur l'écran d'accueil — les onglets sont mémorisés, donc les réactiver les restaure.</target></trans-unit>
 <trans-unit id="sb62f052f83da2ed4">
   <source>Confirm Before Discard</source>
   <target>Confirmer avant d'abandonner</target></trans-unit>
@@ -506,9 +500,6 @@
 <trans-unit id="s3a28f5d7ecab6d1c">
   <source>MCP Client Configuration</source>
   <target>Configuration du client MCP</target></trans-unit>
-<trans-unit id="s99491da831b9dae4">
-  <source>Paste this into your MCP client. A client set up before Gitnado required a token must add the Authorization header, or its requests are refused with 401.</source>
-  <target>Collez ceci dans votre client MCP. Un client configuré avant que Gitnado n'exige un jeton doit ajouter l'en-tête Authorization, sans quoi ses requêtes sont refusées avec une erreur 401.</target></trans-unit>
 <trans-unit id="s0487f33d9ddaabde">
   <source>About</source>
   <target>À propos</target></trans-unit>
@@ -819,6 +810,18 @@
 <trans-unit id="sdc0738463d5a0472">
   <source>Failed to install update. Try again later.</source>
   <target>Impossible d'installer la mise à jour. Réessayez plus tard.</target>
+</trans-unit>
+<trans-unit id="s8d2f68d1e0557348">
+  <source>Reopen the repository tabs from your last session when Gitduda starts. Turn this off to start on the welcome screen — the tabs are remembered, so turning it back on restores them.</source>
+  <target>Rouvrir les onglets de dépôt de votre dernière session au démarrage de Gitduda. Désactivez cette option pour démarrer sur l'écran d'accueil — les onglets sont mémorisés, donc les réactiver les restaure.</target>
+</trans-unit>
+<trans-unit id="s7c80bf10fb1cf760">
+  <source>Paste this into your MCP client. A client set up before Gitduda required a token must add the Authorization header, or its requests are refused with 401.</source>
+  <target>Collez ceci dans votre client MCP. Un client configuré avant que Gitduda n'exige un jeton doit ajouter l'en-tête Authorization, sans quoi ses requêtes sont refusées avec une erreur 401.</target>
+</trans-unit>
+<trans-unit id="s9a32ecff99487d61">
+  <source>Gitduda - a tornado of git branches</source>
+  <target>Gitduda - une tornade de branches git</target>
 </trans-unit>
 </body>
 </file>
