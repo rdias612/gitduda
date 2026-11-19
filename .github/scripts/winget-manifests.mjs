@@ -1,5 +1,5 @@
 /**
- * Renders the winget manifests for one Gitnado release.
+ * Renders the winget manifests for one Gitduda release.
  *
  * Komac's `new` command is interactive by design (it always asks for install
  * modes and a handful of other fields, with no flag to preset them), so the
@@ -17,7 +17,7 @@ import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-export const PACKAGE_IDENTIFIER = "hegsie.Gitnado";
+export const PACKAGE_IDENTIFIER = "rdias612.Gitduda";
 
 /** Directory holding `<manifest name>.template` files. */
 export const TEMPLATE_DIR = fileURLToPath(
@@ -41,7 +41,7 @@ const UPPERCASE = new Set(["EXE_SHA256", "MSI_SHA256", "MSI_PRODUCT_CODE"]);
 
 /**
  * Path of a version's manifests inside winget-pkgs, e.g.
- * `manifests/h/hegsie/Gitnado/0.9.0`. `komac submit` is pointed at this
+ * `manifests/r/rdias612/Gitduda/0.9.0`. `komac submit` is pointed at this
  * directory.
  */
 export function manifestDir(version) {

@@ -1,0 +1,30 @@
+# Rendered by .github/workflows/publish-packages.yml on each release and
+# pushed to the rdias612/homebrew-gitduda tap as Casks/gitduda.rb.
+cask "gitduda" do
+  version "__VERSION__"
+  sha256 "__SHA256__"
+
+  url "https://github.com/rdias612/gitduda/releases/download/v#{version}/Gitduda_#{version}_aarch64.dmg"
+  name "Gitduda"
+  desc "Fast, privacy-first Git GUI client"
+  homepage "https://github.com/rdias612/gitduda"
+
+  livecheck do
+    url :url
+    strategy :github_latest
+  end
+
+  auto_updates true
+  depends_on arch: :arm64
+  depends_on macos: ">= :big_sur"
+
+  app "Gitduda.app"
+
+  zap trash: [
+    "~/Library/Application Support/io.github.rdias612.gitduda",
+    "~/Library/Caches/io.github.rdias612.gitduda",
+    "~/Library/Preferences/io.github.rdias612.gitduda.plist",
+    "~/Library/Saved Application State/io.github.rdias612.gitduda.savedState",
+    "~/Library/WebKit/io.github.rdias612.gitduda",
+  ]
+end

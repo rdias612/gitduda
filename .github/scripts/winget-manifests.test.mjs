@@ -27,7 +27,7 @@ const SCRIPT = fileURLToPath(
 const WORKFLOW = readFileSync(
   fileURLToPath(new URL("../workflows/publish-packages.yml", import.meta.url)),
   "utf8",
-);
+).replace(/\r\n/g, "\n");
 
 const EXE_SHA =
   "ea96669ad6bdd13051e06502d0d401e3e9891e6af9637347cc5d7a19f6ce72c1";
@@ -44,9 +44,9 @@ const VALUES = {
 };
 
 const MANIFEST_FILES = [
-  "hegsie.Gitnado.installer.yaml",
-  "hegsie.Gitnado.locale.en-US.yaml",
-  "hegsie.Gitnado.yaml",
+  "rdias612.Gitduda.installer.yaml",
+  "rdias612.Gitduda.locale.en-US.yaml",
+  "rdias612.Gitduda.yaml",
 ];
 
 /** A minimal reader for the flat `Key: value` lines the manifests use. */
@@ -56,8 +56,11 @@ function topLevel(yaml, key) {
 }
 
 test("manifestDir follows the winget-pkgs layout for the package identifier", () => {
-  assert.equal(PACKAGE_IDENTIFIER, "hegsie.Gitnado");
-  assert.equal(manifestDir("0.9.0"), "manifests/h/hegsie/Gitnado/0.9.0");
+  assert.equal(PACKAGE_IDENTIFIER, "rdias612.Gitduda");
+  assert.equal(
+    manifestDir("0.9.0"),
+    join("manifests", "r", "rdias612", "Gitduda", "0.9.0"),
+  );
 });
 
 test("normalizeValues trims and upper-cases hashes and product codes", () => {
@@ -81,7 +84,7 @@ test("normalizeValues reports every missing or malformed value at once", () => {
         RELEASE_DATE: "",
         EXE_SHA256: "not-a-hash",
         MSI_SHA256: MSI_SHA,
-        MSI_PRODUCT_CODE: "Gitnado",
+        MSI_PRODUCT_CODE: "Gitduda",
       }),
     (error) => {
       assert.match(error.message, /VERSION has unexpected value "v0\.9\.0"/);
@@ -98,10 +101,10 @@ test("renderTemplate substitutes every placeholder and rejects unknown ones", ()
   const values = normalizeValues(VALUES);
   assert.equal(
     renderTemplate(
-      "v{{VERSION}} Gitnado_{{VERSION}}_x64 {{EXE_SHA256}}",
+      "v{{VERSION}} Gitduda_{{VERSION}}_x64 {{EXE_SHA256}}",
       values,
     ),
-    `v0.9.0 Gitnado_0.9.0_x64 ${EXE_SHA.toUpperCase()}`,
+    `v0.9.0 Gitduda_0.9.0_x64 ${EXE_SHA.toUpperCase()}`,
   );
   assert.throws(
     () => renderTemplate("{{NOPE}}", values),
@@ -138,21 +141,24 @@ test("renderManifests produces the three winget manifests with no placeholders l
       /\{\{|\}\}/,
       `${name} still has a placeholder`,
     );
-    assert.equal(topLevel(content, "PackageIdentifier"), "hegsie.Gitnado");
+    assert.equal(topLevel(content, "PackageIdentifier"), "rdias612.Gitduda");
     assert.equal(topLevel(content, "PackageVersion"), "0.9.0");
     assert.equal(topLevel(content, "ManifestVersion"), "1.28.0");
   }
 
-  const installer = manifests["hegsie.Gitnado.installer.yaml"];
+  const installer = manifests["rdias612.Gitduda.installer.yaml"].replace(
+    /\r\n/g,
+    "\n",
+  );
   assert.equal(topLevel(installer, "ManifestType"), "installer");
   assert.equal(topLevel(installer, "ReleaseDate"), "2026-09-09");
   assert.match(
     installer,
-    /InstallerUrl: https:\/\/github\.com\/hegsie\/gitnado\/releases\/download\/v0\.9\.0\/Gitnado_0\.9\.0_x64-setup\.exe\n\s+InstallerSha256: EA96669AD6BDD13051E06502D0D401E3E9891E6AF9637347CC5D7A19F6CE72C1/,
+    /InstallerUrl: https:\/\/github\.com\/rdias612\/gitduda\/releases\/download\/v0\.9\.0\/Gitduda_0\.9\.0_x64-setup\.exe\n\s+InstallerSha256: EA96669AD6BDD13051E06502D0D401E3E9891E6AF9637347CC5D7A19F6CE72C1/,
   );
   assert.match(
     installer,
-    /InstallerUrl: https:\/\/github\.com\/hegsie\/gitnado\/releases\/download\/v0\.9\.0\/Gitnado_0\.9\.0_x64_en-US\.msi\n\s+InstallerSha256: 4A913B86EE3028DD3E69EC61B8FE8640B296A267FEB46011E7B1809392542AE5/,
+    /InstallerUrl: https:\/\/github\.com\/rdias612\/gitduda\/releases\/download\/v0\.9\.0\/Gitduda_0\.9\.0_x64_en-US\.msi\n\s+InstallerSha256: 4A913B86EE3028DD3E69EC61B8FE8640B296A267FEB46011E7B1809392542AE5/,
   );
   // The MSI ProductCode changes every build; the UpgradeCode is pinned in
   // tauri.conf.json so MSI upgrades replace the previous install.
@@ -163,11 +169,11 @@ test("renderManifests produces the three winget manifests with no placeholders l
   );
   assert.match(
     installer,
-    /UpgradeCode: '\{84C95AFF-09D5-5959-BE4D-927B1CC7FC1B\}'/,
+    /UpgradeCode: '\{E1CEB44F-5CE7-48DE-B212-AD351FC2C1C5\}'/,
   );
   // The NSIS installer registers under Uninstall\<productName>, so its
   // ProductCode is the product name.
-  assert.equal(installer.match(/ProductCode: Gitnado$/gm).length, 2);
+  assert.equal(installer.match(/ProductCode: Gitduda$/gm).length, 2);
   assert.match(installer, /InstallerType: nullsoft\n\s+Scope: user/);
   assert.match(installer, /InstallerType: wix\n\s+Scope: machine/);
   assert.match(
@@ -186,16 +192,16 @@ test("renderManifests produces the three winget manifests with no placeholders l
   assert.doesNotMatch(installer, /^\s*DisplayVersion:/m);
   assert.equal(installer.match(/AppsAndFeaturesEntries:/g).length, 2);
 
-  const locale = manifests["hegsie.Gitnado.locale.en-US.yaml"];
+  const locale = manifests["rdias612.Gitduda.locale.en-US.yaml"];
   assert.equal(topLevel(locale, "ManifestType"), "defaultLocale");
   assert.equal(topLevel(locale, "PackageLocale"), "en-US");
-  assert.equal(topLevel(locale, "Moniker"), "gitnado");
+  assert.equal(topLevel(locale, "Moniker"), "gitduda");
   assert.equal(
     topLevel(locale, "ReleaseNotesUrl"),
-    "https://github.com/hegsie/gitnado/releases/tag/v0.9.0",
+    "https://github.com/rdias612/gitduda/releases/tag/v0.9.0",
   );
 
-  const version = manifests["hegsie.Gitnado.yaml"];
+  const version = manifests["rdias612.Gitduda.yaml"];
   assert.equal(topLevel(version, "ManifestType"), "version");
   assert.equal(topLevel(version, "DefaultLocale"), "en-US");
 });
@@ -215,12 +221,12 @@ test("renderManifests rejects a directory without templates and bad values", () 
 test("writeManifests places the files at the winget-pkgs path for the version", () => {
   const out = mkdtempSync(join(tmpdir(), "winget-out-"));
   const { dir, files } = writeManifests(VALUES, out);
-  assert.equal(dir, join(out, "manifests", "h", "hegsie", "Gitnado", "0.9.0"));
+  assert.equal(dir, join(out, "manifests", "r", "rdias612", "Gitduda", "0.9.0"));
   assert.deepEqual(readdirSync(dir).sort(), MANIFEST_FILES);
   assert.equal(files.length, 3);
   assert.equal(
-    readFileSync(join(dir, "hegsie.Gitnado.yaml"), "utf8"),
-    renderManifests(VALUES)["hegsie.Gitnado.yaml"],
+    readFileSync(join(dir, "rdias612.Gitduda.yaml"), "utf8"),
+    renderManifests(VALUES)["rdias612.Gitduda.yaml"],
   );
 });
 
@@ -243,7 +249,7 @@ test("parseProductCode reads the code from komac analyze output, ignoring colour
     "ProductCode: '{1a0c259a-26df-403e-aad3-dd086617e759}'",
     "AppsAndFeaturesEntries:",
     "- ProductCode: '{1A0C259A-26DF-403E-AAD3-DD086617E759}'",
-    "  UpgradeCode: '{84C95AFF-09D5-5959-BE4D-927B1CC7FC1B}'",
+    "  UpgradeCode: '{E1CEB44F-5CE7-48DE-B212-AD351FC2C1C5}'",
   ].join("\n");
   assert.equal(parseProductCode(output), PRODUCT_CODE);
   assert.equal(
@@ -251,7 +257,7 @@ test("parseProductCode reads the code from komac analyze output, ignoring colour
     PRODUCT_CODE,
   );
   assert.throws(
-    () => parseProductCode("ProductCode: Gitnado\n"),
+    () => parseProductCode("ProductCode: Gitduda\n"),
     /No ProductCode found/,
   );
   assert.throws(() => parseProductCode(""), /No ProductCode found/);
@@ -330,10 +336,10 @@ test("main hashes the installers, reads the product code and writes the manifest
   const { out, argv } = fixtureRun();
   const logs = [];
   const dir = main(argv, { log: (line) => logs.push(line) });
-  assert.equal(dir, join(out, "manifests", "h", "hegsie", "Gitnado", "0.9.0"));
+  assert.equal(dir, join(out, "manifests", "r", "rdias612", "Gitduda", "0.9.0"));
   assert.equal(logs.at(-1), dir);
   const installer = readFileSync(
-    join(dir, "hegsie.Gitnado.installer.yaml"),
+    join(dir, "rdias612.Gitduda.installer.yaml"),
     "utf8",
   );
   assert.match(installer, new RegExp(`InstallerSha256: ${sha256Of(argv[3])}`));
@@ -352,11 +358,11 @@ test("the script runs from the command line and prints the manifest directory la
   assert.equal(result.status, 0, result.stderr);
   assert.equal(
     result.stdout.trim().split("\n").at(-1),
-    join(out, "manifests", "h", "hegsie", "Gitnado", "0.9.0"),
+    join(out, "manifests", "r", "rdias612", "Gitduda", "0.9.0"),
   );
   assert.deepEqual(
     readdirSync(
-      join(out, "manifests", "h", "hegsie", "Gitnado", "0.9.0"),
+      join(out, "manifests", "r", "rdias612", "Gitduda", "0.9.0"),
     ).sort(),
     MANIFEST_FILES,
   );
@@ -398,7 +404,7 @@ test("publish-packages.yml submits every release from the templates, never via w
   // this exact version is already in winget-pkgs (so re-runs don't duplicate).
   assert.match(
     WORKFLOW,
-    /path="manifests\/h\/\$\{WINGET_ID\/\/\.\/\\\/\}\/\$\{VERSION\}"/,
+    /path="manifests\/r\/\$\{WINGET_ID\/\/\.\/\\\/\}\/\$\{VERSION\}"/,
   );
   const winget = WORKFLOW.slice(
     WORKFLOW.indexOf("  winget:\n"),

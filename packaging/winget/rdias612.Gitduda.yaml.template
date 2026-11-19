@@ -2,7 +2,7 @@
 # microsoft/winget-pkgs by .github/workflows/publish-packages.yml.
 # yaml-language-server: $schema=https://aka.ms/winget-manifest.version.1.28.0.schema.json
 
-PackageIdentifier: hegsie.Gitnado
+PackageIdentifier: rdias612.Gitduda
 PackageVersion: {{VERSION}}
 DefaultLocale: en-US
 ManifestType: version

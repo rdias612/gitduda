@@ -2,7 +2,7 @@
 # submitted to microsoft/winget-pkgs by .github/workflows/publish-packages.yml.
 # yaml-language-server: $schema=https://aka.ms/winget-manifest.installer.1.28.0.schema.json
 
-PackageIdentifier: hegsie.Gitnado
+PackageIdentifier: rdias612.Gitduda
 PackageVersion: {{VERSION}}
 InstallerLocale: en-US
 InstallModes:
@@ -10,7 +10,7 @@ InstallModes:
 - silent
 - silentWithProgress
 UpgradeBehavior: install
-# gitnado.exe imports MSVCP140.dll, which only ships with the VC++ 2015+
+# gitduda.exe imports MSVCP140.dll, which only ships with the VC++ 2015+
 # redistributable; WebView2 is the embedded browser. winget installs both
 # first, so the app starts on a clean Windows (winget-pkgs#431940 review).
 Dependencies:
@@ -22,29 +22,29 @@ Installers:
 - Architecture: x64
   InstallerType: nullsoft
   Scope: user
-  InstallerUrl: https://github.com/hegsie/gitnado/releases/download/v{{VERSION}}/Gitnado_{{VERSION}}_x64-setup.exe
+  InstallerUrl: https://github.com/rdias612/gitduda/releases/download/v{{VERSION}}/Gitduda_{{VERSION}}_x64-setup.exe
   InstallerSha256: {{EXE_SHA256}}
-  ProductCode: Gitnado
+  ProductCode: Gitduda
   # No DisplayVersion: winget moderators reject a DisplayVersion that equals
   # PackageVersion (winget-pkgs#433064 review); winget falls back to it.
   AppsAndFeaturesEntries:
-  - DisplayName: Gitnado
-    Publisher: Gitnado Contributors
-    ProductCode: Gitnado
+  - DisplayName: Gitduda
+    Publisher: Gitduda Contributors
+    ProductCode: Gitduda
   InstallationMetadata:
-    DefaultInstallLocation: '%LocalAppData%\Gitnado'
+    DefaultInstallLocation: '%LocalAppData%\Gitduda'
 - Architecture: x64
   InstallerType: wix
   Scope: machine
-  InstallerUrl: https://github.com/hegsie/gitnado/releases/download/v{{VERSION}}/Gitnado_{{VERSION}}_x64_en-US.msi
+  InstallerUrl: https://github.com/rdias612/gitduda/releases/download/v{{VERSION}}/Gitduda_{{VERSION}}_x64_en-US.msi
   InstallerSha256: {{MSI_SHA256}}
   ProductCode: '{{MSI_PRODUCT_CODE}}'
   AppsAndFeaturesEntries:
-  - DisplayName: Gitnado
-    Publisher: Gitnado Contributors
+  - DisplayName: Gitduda
+    Publisher: Gitduda Contributors
     ProductCode: '{{MSI_PRODUCT_CODE}}'
-    UpgradeCode: '{84C95AFF-09D5-5959-BE4D-927B1CC7FC1B}'
+    UpgradeCode: '{E1CEB44F-5CE7-48DE-B212-AD351FC2C1C5}'
   InstallationMetadata:
-    DefaultInstallLocation: '%ProgramFiles%\Gitnado'
+    DefaultInstallLocation: '%ProgramFiles%\Gitduda'
 ManifestType: installer
 ManifestVersion: 1.28.0

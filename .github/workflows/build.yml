@@ -171,7 +171,7 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         with:
           tagName: v__VERSION__
-          releaseName: 'Gitnado v__VERSION__'
+          releaseName: 'Gitduda v__VERSION__'
           releaseBody: 'See the assets below to download and install this version.'
           releaseDraft: true
           prerelease: false
@@ -180,7 +180,7 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: gitnado-${{ matrix.name }}
+          name: gitduda-${{ matrix.name }}
           path: |
             src-tauri/target/${{ matrix.target }}/release/bundle/macos/*.app
             src-tauri/target/${{ matrix.target }}/release/bundle/deb/*.deb
@@ -221,6 +221,10 @@ jobs:
           tag="v$(jq -r .version src-tauri/tauri.conf.json)"
           gh api "repos/${{ github.repository }}/releases?per_page=20" \
             | jq -e --arg tag "$tag" 'map(select(.tag_name == $tag)) | first' > release.json
+          if ! jq -e '.assets[] | select(.name == "latest.json")' release.json >/dev/null; then
+            echo "::notice::No latest.json asset in $tag (updater disabled); skipping normalization."
+            exit 0
+          fi
           gh release download "$tag" -p latest.json --clobber
           status=$(node .github/scripts/normalize-latest-json.mjs \
             --latest latest.json \

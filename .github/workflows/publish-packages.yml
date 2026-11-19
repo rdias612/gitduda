@@ -2,8 +2,8 @@ name: Publish Packages
 
 # Publishes each GitHub release to package managers:
 #   - winget   (Windows)  — opens a PR against microsoft/winget-pkgs
-#   - Homebrew (macOS)    — updates the cask in the hegsie/homebrew-gitnado tap
-#   - Scoop    (Windows)  — updates packaging/scoop/gitnado.json on main
+#   - Homebrew (macOS)    — updates the cask in the rdias612/homebrew-gitduda tap
+#   - Scoop    (Windows)  — updates packaging/scoop/gitduda.json on main
 #
 # One-time maintainer setup (secrets, tap repository, first winget submission)
 # is documented in docs/packaging.md. Jobs that are missing their secret are
@@ -59,9 +59,9 @@ jobs:
             "https://api.github.com/repos/${{ github.repository }}/releases/tags/${TAG}" \
             | jq -r '.assets[].name')
           for name in \
-            "Gitnado_${VERSION}_x64-setup.exe" \
-            "Gitnado_${VERSION}_x64_en-US.msi" \
-            "Gitnado_${VERSION}_aarch64.dmg"; do
+            "Gitduda_${VERSION}_x64-setup.exe" \
+            "Gitduda_${VERSION}_x64_en-US.msi" \
+            "Gitduda_${VERSION}_aarch64.dmg"; do
             if ! echo "$assets" | grep -qxF "$name"; then
               echo "::error::Release ${TAG} is missing asset ${name}"
               exit 1
@@ -107,7 +107,7 @@ jobs:
     if: needs.preflight.outputs.has-winget-token == 'true'
     runs-on: ubuntu-latest
     env:
-      WINGET_ID: hegsie.Gitnado
+      WINGET_ID: rdias612.Gitduda
       TAG: ${{ needs.preflight.outputs.tag }}
       VERSION: ${{ needs.preflight.outputs.version }}
     steps:
@@ -122,7 +122,7 @@ jobs:
       - name: Check whether this version is already in winget-pkgs
         id: exists
         run: |
-          path="manifests/h/${WINGET_ID//./\/}/${VERSION}"
+          path="manifests/r/${WINGET_ID//./\/}/${VERSION}"
           code=$(curl -s -o /dev/null -w "%{http_code}" \
             "https://api.github.com/repos/microsoft/winget-pkgs/contents/${path}")
           echo "exists=$([ "$code" = "200" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
@@ -153,8 +153,8 @@ jobs:
         run: |
           cargo binstall komac -y
           base="https://github.com/${{ github.repository }}"
-          curl -fsSL -o setup.exe "${base}/releases/download/${TAG}/Gitnado_${VERSION}_x64-setup.exe"
-          curl -fsSL -o setup.msi "${base}/releases/download/${TAG}/Gitnado_${VERSION}_x64_en-US.msi"
+          curl -fsSL -o setup.exe "${base}/releases/download/${TAG}/Gitduda_${VERSION}_x64-setup.exe"
+          curl -fsSL -o setup.msi "${base}/releases/download/${TAG}/Gitduda_${VERSION}_x64_en-US.msi"
           komac analyze setup.msi > msi-analysis.txt
           release_date=$(curl -fsSL -H "Authorization: Bearer ${RELEASE_API_TOKEN}" \
             "https://api.github.com/repos/${{ github.repository }}/releases/tags/${TAG}" \
@@ -190,29 +190,29 @@ jobs:
       - name: Compute DMG checksum
         id: dmg
         run: |
-          curl -fsSL -o gitnado.dmg \
-            "https://github.com/${{ github.repository }}/releases/download/${TAG}/Gitnado_${VERSION}_aarch64.dmg"
-          echo "sha256=$(sha256sum gitnado.dmg | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
-          rm gitnado.dmg
+          curl -fsSL -o gitduda.dmg \
+            "https://github.com/${{ github.repository }}/releases/download/${TAG}/Gitduda_${VERSION}_aarch64.dmg"
+          echo "sha256=$(sha256sum gitduda.dmg | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+          rm gitduda.dmg
 
       - name: Push cask to tap
         env:
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
           SHA256: ${{ steps.dmg.outputs.sha256 }}
         run: |
-          git clone "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/${{ github.repository_owner }}/homebrew-gitnado.git" tap
+          git clone "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/${{ github.repository_owner }}/homebrew-gitduda.git" tap
           mkdir -p tap/Casks
           sed -e "s/__VERSION__/${VERSION}/g" -e "s/__SHA256__/${SHA256}/g" \
-            packaging/homebrew/gitnado.rb.template > tap/Casks/gitnado.rb
+            packaging/homebrew/gitduda.rb.template > tap/Casks/gitduda.rb
           cd tap
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add Casks/gitnado.rb
+          git add Casks/gitduda.rb
           if git diff --cached --quiet; then
             echo "Cask already up to date for ${VERSION}"
             exit 0
           fi
-          git commit -m "gitnado ${VERSION}"
+          git commit -m "gitduda ${VERSION}"
           git push
 
   scoop:
@@ -230,22 +230,22 @@ jobs:
 
       - name: Update manifest
         run: |
-          url="https://github.com/${{ github.repository }}/releases/download/${TAG}/Gitnado_${VERSION}_x64_en-US.msi"
-          curl -fsSL -o gitnado.msi "$url"
-          hash=$(sha256sum gitnado.msi | cut -d' ' -f1)
-          rm gitnado.msi
+          url="https://github.com/${{ github.repository }}/releases/download/${TAG}/Gitduda_${VERSION}_x64_en-US.msi"
+          curl -fsSL -o gitduda.msi "$url"
+          hash=$(sha256sum gitduda.msi | cut -d' ' -f1)
+          rm gitduda.msi
           jq --arg version "$VERSION" --arg url "$url" --arg hash "$hash" \
             '.version = $version
              | .architecture."64bit".url = $url
              | .architecture."64bit".hash = $hash' \
-            packaging/scoop/gitnado.json > gitnado.json.tmp
-          mv gitnado.json.tmp packaging/scoop/gitnado.json
+            packaging/scoop/gitduda.json > gitduda.json.tmp
+          mv gitduda.json.tmp packaging/scoop/gitduda.json
 
       - name: Commit and push
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add packaging/scoop/gitnado.json
+          git add packaging/scoop/gitduda.json
           if git diff --cached --quiet; then
             echo "Scoop manifest already up to date for ${VERSION}"
             exit 0
