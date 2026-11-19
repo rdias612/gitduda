@@ -1,8 +1,9 @@
 # Plano de Desenvolvimento: Ações em Lote no Menu de Contexto para Múltiplos Arquivos Selecionados (`gn-file-status`)
 
 - **Data**: 2026-11-19
-- **Status**: [ ] Planejado
-- **Arquivo de Controle**: `plans/context-menu-multi-select-stage.md`
+- **Status**: [ ] Em Execução
+- **Arquivo de Controle**: `plans/issue-5-context-menu-multi-select-stage.md`
+- **Issue**: `#5` ([Issue #5](https://github.com/rdias612/gitduda/issues/5))
 
 ## 1. Visão Geral e Regras Locais Aplicáveis
 - **Objetivo**: Fazer com que as ações `Stage`, `Unstage` e `Discard changes` do menu de contexto em `gn-file-status.ts` operem sobre todos os arquivos selecionados na seção quando múltiplos arquivos daquela seção estiverem selecionados e o clique com o botão direito ocorrer sobre um deles (espelhando o comportamento já existente dos botões da linha `handleStageFile`, `handleUnstageFile` e `handleDiscardFile`), exibindo a contagem nos rótulos do menu (ex.: `Stage (3)`, `Unstage (3)`, `Discard changes (3)`).
@@ -13,7 +14,7 @@
 - **Comando de Build Global**: `npm run lint && npm run typecheck && npm test`
 
 ## 2. Checklist de Execução de Etapas
-- [ ] Etapa 1: Suporte a multi-seleção e rótulos dinâmicos em `gn-file-status.ts`
+- [x] Etapa 1: Suporte a multi-seleção e rótulos dinâmicos em `gn-file-status.ts`
 - [ ] Etapa 2: Testes unitários de regressão em `gn-file-status.test.ts` e validação completa
 
 ---

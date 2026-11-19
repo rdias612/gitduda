@@ -2014,6 +2014,12 @@ export class GnFileStatus extends LitElement {
     return files.filter((f) => this.selectedFiles.has(f.path));
   }
 
+  private getContextBatchCount(file: StatusEntry, isStaged: boolean): number {
+    if (!this.selectedFiles.has(file.path)) return 0;
+    const count = this.getSelectedFilesInSection(isStaged).length;
+    return count > 1 ? count : 0;
+  }
+
   private handleFileClick(file: StatusEntry, e?: MouseEvent): void {
     const allFiles = this.getAllVisibleFiles();
     const clickedIndex = allFiles.findIndex((f) => f.path === file.path);
@@ -2167,9 +2173,13 @@ export class GnFileStatus extends LitElement {
   }
 
   private async handleContextStage(): Promise<void> {
-    const file = this.contextMenu.file;
+    const { file, isStaged } = this.contextMenu;
     if (!file) return;
     this.contextMenu = { ...this.contextMenu, visible: false };
+    if (this.getContextBatchCount(file, isStaged) > 1) {
+      await this.handleStageSelected();
+      return;
+    }
     if (file.isConflicted) {
       this.redirectConflictedToMergeEditor(file);
       return;
@@ -2185,9 +2195,13 @@ export class GnFileStatus extends LitElement {
   }
 
   private async handleContextUnstage(): Promise<void> {
-    const file = this.contextMenu.file;
+    const { file, isStaged } = this.contextMenu;
     if (!file) return;
     this.contextMenu = { ...this.contextMenu, visible: false };
+    if (this.getContextBatchCount(file, isStaged) > 1) {
+      await this.handleUnstageSelected();
+      return;
+    }
     const result = await gitService.unstageFiles(this.repositoryPath, {
       paths: [file.path],
     });
@@ -2367,9 +2381,13 @@ export class GnFileStatus extends LitElement {
   }
 
   private async handleContextDiscard(): Promise<void> {
-    const file = this.contextMenu.file;
+    const { file, isStaged } = this.contextMenu;
     if (!file) return;
     this.contextMenu = { ...this.contextMenu, visible: false };
+    if (this.getContextBatchCount(file, isStaged) > 1) {
+      await this.handleDiscardSelected();
+      return;
+    }
     if (file.isConflicted) {
       this.redirectConflictedToMergeEditor(file);
       return;
@@ -2831,6 +2849,8 @@ export class GnFileStatus extends LitElement {
     // menu's vocabulary — but are marked unavailable and say why.
     const hasHistory = this.fileHasHistory(file);
     const canBlame = this.fileCanBlame(file);
+    const batchCount = this.getContextBatchCount(file, isStaged);
+    const countSuffix = batchCount > 1 ? ` (${batchCount})` : '';
 
     return html`
       <div class="context-menu" role="menu" aria-label="File actions" style="left: ${x}px; top: ${y}px"
@@ -2851,7 +2871,7 @@ export class GnFileStatus extends LitElement {
                 >
                   <line x1="5" y1="12" x2="19" y2="12"></line>
                 </svg>
-                Unstage
+                Unstage${countSuffix}
               </button>
             `
           : html`
@@ -2869,7 +2889,7 @@ export class GnFileStatus extends LitElement {
                   <line x1="12" y1="5" x2="12" y2="19"></line>
                   <line x1="5" y1="12" x2="19" y2="12"></line>
                 </svg>
-                Stage
+                Stage${countSuffix}
               </button>
             `}
         <button class="context-menu-item" role="menuitem" @click=${this.handleContextViewDiff}>
@@ -3040,7 +3060,7 @@ export class GnFileStatus extends LitElement {
               d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
             ></path>
           </svg>
-          Discard changes
+          Discard changes${countSuffix}
         </button>
         `}
       </div>
