@@ -1,7 +1,7 @@
 # Plano de Desenvolvimento: Preenchimento Automático de Mensagem de Commit Padrão (Issue #4)
 
 - **Data**: 2026-11-19
-- **Status**: [ ] Em Execução
+- **Status**: [x] Concluído
 - **Referência**: [Issue #4](https://github.com/rdias612/gitduda/issues/4)
 - **Arquivo de Controle**: `plans/auto-default-commit-message.md`
 
@@ -18,7 +18,7 @@
 ## 2. Checklist de Execução de Etapas
 - [x] Etapa 1: Utilitário puro de geração de mensagem padrão (`default-commit-message.ts`) e testes unitários
 - [x] Etapa 2: Propagação de `stagedFiles` (`gn-file-status` → `gn-right-panel` → `gn-commit-panel`) e lógica de auto-preenchimento
-- [ ] Etapa 3: Testes de componente no `gn-commit-panel` e validação de regressão
+- [x] Etapa 3: Testes de componente no `gn-commit-panel` e validação de regressão
 
 ---
 
