@@ -1,7 +1,7 @@
 # Plano de Desenvolvimento: Ações em Lote no Menu de Contexto para Múltiplos Arquivos Selecionados (`gn-file-status`)
 
 - **Data**: 2026-11-19
-- **Status**: [ ] Em Execução
+- **Status**: [x] Concluído
 - **Arquivo de Controle**: `plans/issue-5-context-menu-multi-select-stage.md`
 - **Issue**: `#5` ([Issue #5](https://github.com/rdias612/gitduda/issues/5))
 
@@ -15,7 +15,7 @@
 
 ## 2. Checklist de Execução de Etapas
 - [x] Etapa 1: Suporte a multi-seleção e rótulos dinâmicos em `gn-file-status.ts`
-- [ ] Etapa 2: Testes unitários de regressão em `gn-file-status.test.ts` e validação completa
+- [x] Etapa 2: Testes unitários de regressão em `gn-file-status.test.ts` e validação completa
 
 ---
 

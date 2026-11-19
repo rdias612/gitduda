@@ -733,6 +733,209 @@ describe('gn-file-status', () => {
       const items = Array.from(el.shadowRoot!.querySelectorAll('.context-menu-item'));
       expect(items.some((i) => i.textContent!.includes('Discard'))).to.equal(false);
     });
+
+    it('stages all selected unstaged files via context menu and clears staged selection', async () => {
+      const el = await renderFileStatus();
+
+      const unstagedItems = el.shadowRoot!.querySelectorAll('.section')[1].querySelectorAll('.file-item');
+      unstagedItems[0].dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await el.updateComplete;
+      unstagedItems[1].dispatchEvent(
+        new MouseEvent('click', { bubbles: true, ctrlKey: true }),
+      );
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelectorAll('.file-item.selected').length).to.equal(2);
+
+      clearHistory();
+
+      unstagedItems[0].dispatchEvent(
+        new MouseEvent('contextmenu', { bubbles: true, clientX: 100, clientY: 100 }),
+      );
+      await el.updateComplete;
+
+      const stageItem = Array.from(
+        el.shadowRoot!.querySelectorAll<HTMLButtonElement>('.context-menu-item'),
+      ).find((item) => item.textContent!.trim().startsWith('Stage'));
+      expect(stageItem).to.not.be.undefined;
+      expect(stageItem!.textContent!.trim()).to.equal('Stage (2)');
+
+      stageItem!.click();
+      await waitUntil(
+        () => findCommands('stage_files').length === 1 && findCommands('get_status').length === 1,
+      );
+      await el.updateComplete;
+
+      const stageCalls = findCommands('stage_files');
+      expect(stageCalls).to.have.length(1);
+      const stageArgs = stageCalls[0].args as { path: string; paths: string[] };
+      expect(stageArgs.path).to.equal(REPO_PATH);
+      expect(stageArgs.paths).to.deep.equal(['src/utils/helper.ts', 'README.md']);
+      expect(el.shadowRoot!.querySelectorAll('.file-item.selected').length).to.equal(0);
+    });
+
+    it('unstages all selected staged files via context menu', async () => {
+      const el = await renderFileStatus();
+
+      const stagedItems = el.shadowRoot!.querySelectorAll('.section')[0].querySelectorAll('.file-item');
+      stagedItems[0].dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await el.updateComplete;
+      stagedItems[1].dispatchEvent(
+        new MouseEvent('click', { bubbles: true, ctrlKey: true }),
+      );
+      await el.updateComplete;
+
+      clearHistory();
+
+      stagedItems[1].dispatchEvent(
+        new MouseEvent('contextmenu', { bubbles: true, clientX: 100, clientY: 100 }),
+      );
+      await el.updateComplete;
+
+      const unstageItem = Array.from(
+        el.shadowRoot!.querySelectorAll<HTMLButtonElement>('.context-menu-item'),
+      ).find((item) => item.textContent!.trim().startsWith('Unstage'));
+      expect(unstageItem).to.not.be.undefined;
+      expect(unstageItem!.textContent!.trim()).to.equal('Unstage (2)');
+
+      unstageItem!.click();
+      await waitUntil(
+        () => findCommands('unstage_files').length === 1 && findCommands('get_status').length === 1,
+      );
+      await el.updateComplete;
+
+      const unstageCalls = findCommands('unstage_files');
+      expect(unstageCalls).to.have.length(1);
+      const unstageArgs = unstageCalls[0].args as { path: string; paths: string[] };
+      expect(unstageArgs.path).to.equal(REPO_PATH);
+      expect(unstageArgs.paths).to.deep.equal(['src/app.ts', 'src/new-file.ts']);
+      expect(el.shadowRoot!.querySelectorAll('.file-item.selected').length).to.equal(0);
+    });
+
+    it('discards all selected unstaged files via context menu after confirmation', async () => {
+      const el = await renderFileStatus();
+
+      const unstagedItems = el.shadowRoot!.querySelectorAll('.section')[1].querySelectorAll('.file-item');
+      unstagedItems[0].dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await el.updateComplete;
+      unstagedItems[1].dispatchEvent(
+        new MouseEvent('click', { bubbles: true, ctrlKey: true }),
+      );
+      await el.updateComplete;
+
+      clearHistory();
+
+      unstagedItems[0].dispatchEvent(
+        new MouseEvent('contextmenu', { bubbles: true, clientX: 100, clientY: 100 }),
+      );
+      await el.updateComplete;
+
+      const discardItem = Array.from(
+        el.shadowRoot!.querySelectorAll<HTMLButtonElement>('.context-menu-item.danger'),
+      ).find((item) => item.textContent!.trim().startsWith('Discard changes'));
+      expect(discardItem).to.not.be.undefined;
+      expect(discardItem!.textContent!.trim()).to.equal('Discard changes (2)');
+
+      discardItem!.click();
+      await waitUntil(
+        () => findCommands('discard_changes').length === 1 && findCommands('get_status').length === 1,
+      );
+      await el.updateComplete;
+
+      expect(invokeHistory.some((h) => isConfirmCommand(h.command))).to.be.true;
+      const discardCalls = findCommands('discard_changes');
+      expect(discardCalls).to.have.length(1);
+      const discardArgs = discardCalls[0].args as { path: string; paths: string[] };
+      expect(discardArgs.path).to.equal(REPO_PATH);
+      expect(discardArgs.paths).to.deep.equal(['src/utils/helper.ts', 'README.md']);
+      expect(el.shadowRoot!.querySelectorAll('.file-item.selected').length).to.equal(0);
+    });
+
+    it('acts only on the right-clicked file when it is outside the current selection', async () => {
+      const el = await renderFileStatus();
+
+      const unstagedItems = el.shadowRoot!.querySelectorAll('.section')[1].querySelectorAll('.file-item');
+      unstagedItems[0].dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await el.updateComplete;
+      unstagedItems[1].dispatchEvent(
+        new MouseEvent('click', { bubbles: true, ctrlKey: true }),
+      );
+      await el.updateComplete;
+
+      clearHistory();
+
+      // Right-click a 3rd unstaged file that is NOT selected (temp.log)
+      unstagedItems[2].dispatchEvent(
+        new MouseEvent('contextmenu', { bubbles: true, clientX: 100, clientY: 100 }),
+      );
+      await el.updateComplete;
+
+      const menuItems = Array.from(
+        el.shadowRoot!.querySelectorAll<HTMLButtonElement>('.context-menu-item'),
+      );
+      const stageItem = menuItems.find((item) => item.textContent!.trim().startsWith('Stage'));
+      const discardItem = menuItems.find((item) =>
+        item.textContent!.trim().startsWith('Discard changes'),
+      );
+      expect(stageItem).to.not.be.undefined;
+      expect(stageItem!.textContent!.trim()).to.equal('Stage');
+      expect(discardItem).to.not.be.undefined;
+      expect(discardItem!.textContent!.trim()).to.equal('Discard changes');
+
+      stageItem!.click();
+      await waitUntil(() => findCommands('stage_files').length === 1);
+      await el.updateComplete;
+
+      const stageCalls = findCommands('stage_files');
+      expect(stageCalls).to.have.length(1);
+      const stageArgs = stageCalls[0].args as { path: string; paths: string[] };
+      expect(stageArgs.path).to.equal(REPO_PATH);
+      expect(stageArgs.paths).to.deep.equal(['temp.log']);
+    });
+
+    it('does not trigger batch staging when selection is split across Staged and Changes', async () => {
+      const el = await renderFileStatus();
+
+      const sections = el.shadowRoot!.querySelectorAll('.section');
+      const stagedItems = sections[0].querySelectorAll('.file-item');
+      const unstagedItems = sections[1].querySelectorAll('.file-item');
+
+      stagedItems[0].dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await el.updateComplete;
+      unstagedItems[0].dispatchEvent(
+        new MouseEvent('click', { bubbles: true, ctrlKey: true }),
+      );
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelectorAll('.file-item.selected').length).to.equal(2);
+
+      clearHistory();
+
+      unstagedItems[0].dispatchEvent(
+        new MouseEvent('contextmenu', { bubbles: true, clientX: 100, clientY: 100 }),
+      );
+      await el.updateComplete;
+
+      const menuItems = Array.from(
+        el.shadowRoot!.querySelectorAll<HTMLButtonElement>('.context-menu-item'),
+      );
+      const stageItem = menuItems.find((item) => item.textContent!.trim().startsWith('Stage'));
+      const discardItem = menuItems.find((item) =>
+        item.textContent!.trim().startsWith('Discard changes'),
+      );
+      expect(stageItem).to.not.be.undefined;
+      expect(stageItem!.textContent!.trim()).to.equal('Stage');
+      expect(discardItem).to.not.be.undefined;
+      expect(discardItem!.textContent!.trim()).to.equal('Discard changes');
+
+      stageItem!.click();
+      await waitUntil(() => findCommands('stage_files').length === 1);
+      await el.updateComplete;
+
+      const stageCalls = findCommands('stage_files');
+      expect(stageCalls).to.have.length(1);
+      const stageArgs = stageCalls[0].args as { path: string; paths: string[] };
+      expect(stageArgs.path).to.equal(REPO_PATH);
+      expect(stageArgs.paths).to.deep.equal(['src/utils/helper.ts']);
+    });
   });
 
   // ── 8b. File history and blame ───────────────────────────────────────
