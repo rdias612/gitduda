@@ -29,9 +29,47 @@ function Assert-Command {
     }
 }
 
+function Ensure-CMake {
+    if (Get-Command "cmake" -ErrorAction SilentlyContinue) {
+        return
+    }
+
+    $candidates = @(
+        "C:\Program Files\CMake\bin\cmake.exe",
+        "C:\Program Files (x86)\CMake\bin\cmake.exe",
+        "C:\Program Files\Microsoft Visual Studio\*\*\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe",
+        "C:\Program Files (x86)\Microsoft Visual Studio\*\*\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe"
+    )
+
+    foreach ($pattern in $candidates) {
+        $match = Get-Item $pattern -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($match) {
+            $cmakeDir = Split-Path -Parent $match.FullName
+            $env:PATH = "$cmakeDir;$env:PATH"
+            Write-Host "==> CMake encontrado e adicionado ao PATH: $cmakeDir" -ForegroundColor DarkGray
+            return
+        }
+    }
+
+    Write-Host "[ERRO] 'cmake' nao encontrado no PATH nem no Visual Studio Build Tools. Instale o CMake ou o workload C++ do Visual Studio Build Tools." -ForegroundColor Red
+    exit 1
+}
+
+function Assert-PortFree {
+    param([int]$Port)
+    $listener = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($listener) {
+        $proc = Get-Process -Id $listener.OwningProcess -ErrorAction SilentlyContinue
+        $procName = if ($proc) { "$($proc.ProcessName) (PID $($listener.OwningProcess))" } else { "PID $($listener.OwningProcess)" }
+        Write-Host "[ERRO] A porta $Port ja esta em uso por $procName. Encerre o processo antes de iniciar o modo dev." -ForegroundColor Red
+        exit 1
+    }
+}
+
 function Invoke-Step {
     param([string]$Label, [scriptblock]$Command)
     Write-Host "==> $Label" -ForegroundColor Cyan
+    $global:LASTEXITCODE = 0
     & $Command
     if ($LASTEXITCODE -ne 0) {
         Write-Host "[ERRO] Falha em: $Label (codigo $LASTEXITCODE)" -ForegroundColor Red
@@ -44,6 +82,8 @@ try {
     Assert-Command "node" "Instale o Node.js (https://nodejs.org/)."
     Assert-Command "npm" "Instale o Node.js/npm."
     Assert-Command "cargo" "Instale o Rust via rustup (https://rustup.rs/)."
+    Assert-Command "git" "Instale o Git (https://git-scm.com/)."
+    Ensure-CMake
 
     if ($Install -or -not (Test-Path (Join-Path $PSScriptRoot "node_modules"))) {
         Invoke-Step "Instalando dependencias Node (npm install)..." { npm install }
@@ -56,7 +96,7 @@ try {
 
     if ($Release) {
         Invoke-Step "Compilando release sem pacote (tauri build --no-bundle)..." {
-            npm run tauri -- build --no-bundle
+            npm run tauri '--' build --no-bundle
         }
 
         $exePath = Join-Path $PSScriptRoot "src-tauri\target\release\gitduda.exe"
@@ -66,10 +106,11 @@ try {
         }
 
         Write-Host "==> Iniciando $exePath" -ForegroundColor Green
-        & $exePath
-        exit $LASTEXITCODE
+        Start-Process -FilePath $exePath
+        exit 0
     }
     else {
+        Assert-PortFree -Port 1420
         Invoke-Step "Iniciando Gitduda em modo dev (npm run tauri:dev)..." {
             npm run tauri:dev
         }
