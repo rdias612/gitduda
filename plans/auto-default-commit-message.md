@@ -17,7 +17,7 @@
 
 ## 2. Checklist de Execução de Etapas
 - [x] Etapa 1: Utilitário puro de geração de mensagem padrão (`default-commit-message.ts`) e testes unitários
-- [ ] Etapa 2: Propagação de `stagedFiles` (`gn-file-status` → `gn-right-panel` → `gn-commit-panel`) e lógica de auto-preenchimento
+- [x] Etapa 2: Propagação de `stagedFiles` (`gn-file-status` → `gn-right-panel` → `gn-commit-panel`) e lógica de auto-preenchimento
 - [ ] Etapa 3: Testes de componente no `gn-commit-panel` e validação de regressão
 
 ---

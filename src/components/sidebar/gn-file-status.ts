@@ -1596,6 +1596,7 @@ export class GnFileStatus extends LitElement {
             detail: {
               stagedCount: this.stagedFiles.length,
               totalCount: this.stagedFiles.length + this.unstagedFiles.length,
+              stagedFiles: this.stagedFiles,
             },
             bubbles: true,
             composed: true,

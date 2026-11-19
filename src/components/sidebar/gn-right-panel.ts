@@ -7,7 +7,7 @@ import './gn-file-status.ts';
 import './gn-commit-panel.ts';
 import '../panels/gn-commit-details.ts';
 import '../panels/gn-analytics-panel.ts';
-import type { Commit, RefInfo } from '../../types/git.types.ts';
+import type { Commit, RefInfo, StatusEntry } from '../../types/git.types.ts';
 
 type TabType = 'changes' | 'details' | 'analytics';
 
@@ -176,6 +176,7 @@ export class GnRightPanel extends LitElement {
 
   @state() private repositoryPath: string | null = null;
   @state() private stagedCount: number = 0;
+  @state() private stagedFiles: StatusEntry[] = [];
   @state() private changesCount: number = 0;
   @state() private activeTab: TabType = 'changes';
   @state() private githubOwner: string = '';
@@ -188,7 +189,10 @@ export class GnRightPanel extends LitElement {
   connectedCallback(): void {
     super.connectedCallback();
     const initialState = repositoryStore.getState();
-    this.repositoryPath = initialState.getActiveRepository()?.repository.path ?? null;
+    const initialActiveRepo = initialState.getActiveRepository();
+    this.repositoryPath = initialActiveRepo?.repository.path ?? null;
+    this.stagedFiles = initialActiveRepo?.stagedFiles ?? [];
+    this.stagedCount = this.stagedFiles.length;
     if (this.repositoryPath) {
       this.detectGitHubRepo();
     }
@@ -198,6 +202,8 @@ export class GnRightPanel extends LitElement {
       const newPath = activeRepo?.repository.path ?? null;
       if (newPath !== this.repositoryPath) {
         this.repositoryPath = newPath;
+        this.stagedFiles = activeRepo?.stagedFiles ?? [];
+        this.stagedCount = this.stagedFiles.length;
         if (newPath) {
           this.detectGitHubRepo();
         } else {
@@ -349,6 +355,7 @@ export class GnRightPanel extends LitElement {
               <gn-commit-panel
                 .repositoryPath=${this.repositoryPath}
                 .stagedCount=${this.stagedCount}
+                .stagedFiles=${this.stagedFiles}
                 @commit-created=${this.handleCommitCreated}
               ></gn-commit-panel>
             </div>
@@ -381,8 +388,13 @@ export class GnRightPanel extends LitElement {
     `;
   }
 
-  private handleStatusChanged(e: CustomEvent<{ stagedCount: number; totalCount?: number }>): void {
+  private handleStatusChanged(
+    e: CustomEvent<{ stagedCount: number; totalCount?: number; stagedFiles?: StatusEntry[] }>,
+  ): void {
     this.stagedCount = e.detail.stagedCount;
+    if (e.detail.stagedFiles !== undefined) {
+      this.stagedFiles = e.detail.stagedFiles;
+    }
     if (e.detail.totalCount !== undefined) {
       const previousCount = this.changesCount;
       this.changesCount = e.detail.totalCount;
