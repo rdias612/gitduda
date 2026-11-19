@@ -308,7 +308,7 @@ describe('gn-tag-list', () => {
       expect(el.shadowRoot!.querySelector('.context-menu')).to.not.be.null;
     });
 
-    it('menu has "Checkout", "Push to Remote", "Delete" items', async () => {
+    it('menu has "Checkout", "Create branch from this tag", "Push to Remote", "Delete" items', async () => {
       const el = await renderTagList();
 
       const tagItem = el.shadowRoot!.querySelector('.tag-item') as HTMLElement;
@@ -318,6 +318,7 @@ describe('gn-tag-list', () => {
       const menuItems = el.shadowRoot!.querySelectorAll('.context-menu-item');
       const labels = Array.from(menuItems).map((item) => item.textContent?.trim());
       expect(labels).to.include('Checkout');
+      expect(labels).to.include('Create branch from this tag');
       expect(labels).to.include('Push to Remote');
       expect(labels).to.include('Delete');
     });
@@ -364,6 +365,70 @@ describe('gn-tag-list', () => {
       const deleteCalls = findCommands('delete_tag');
       expect(deleteCalls.length).to.equal(1);
       expect(deleteCalls[0].args).to.deep.include({ name: 'v2.1.0', path: REPO_PATH });
+    });
+
+    it('click "Create branch from this tag" on annotated tag closes menu and dispatches create-branch', async () => {
+      const el = await renderTagList();
+
+      const tagItems = el.shadowRoot!.querySelectorAll('.tag-item');
+      const targetItem = Array.from(tagItems).find(
+        (item) => item.querySelector('.tag-name')?.textContent?.trim() === 'v2.1.0'
+      ) as HTMLElement;
+      expect(targetItem).to.not.be.undefined;
+
+      targetItem.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 100, clientY: 100 }));
+      await el.updateComplete;
+
+      let capturedEvent: CustomEvent<{ startPoint: string }> | null = null;
+      el.addEventListener('create-branch', (e) => {
+        capturedEvent = e as CustomEvent<{ startPoint: string }>;
+      });
+
+      const menuItems = el.shadowRoot!.querySelectorAll('.context-menu-item');
+      const createBranchBtn = Array.from(menuItems).find(
+        (item) => item.textContent?.trim() === 'Create branch from this tag'
+      ) as HTMLElement;
+      expect(createBranchBtn).to.not.be.undefined;
+      createBranchBtn.click();
+      await el.updateComplete;
+
+      expect(el.shadowRoot!.querySelector('.context-menu')).to.be.null;
+      expect(capturedEvent).to.not.be.null;
+      expect(capturedEvent!.bubbles).to.be.true;
+      expect(capturedEvent!.composed).to.be.true;
+      expect(capturedEvent!.detail.startPoint).to.equal('refs/tags/v2.1.0');
+    });
+
+    it('click "Create branch from this tag" on lightweight tag closes menu and dispatches create-branch', async () => {
+      const el = await renderTagList();
+
+      const tagItems = el.shadowRoot!.querySelectorAll('.tag-item');
+      const targetItem = Array.from(tagItems).find(
+        (item) => item.querySelector('.tag-name')?.textContent?.trim() === 'beta'
+      ) as HTMLElement;
+      expect(targetItem).to.not.be.undefined;
+
+      targetItem.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 100, clientY: 100 }));
+      await el.updateComplete;
+
+      let capturedEvent: CustomEvent<{ startPoint: string }> | null = null;
+      el.addEventListener('create-branch', (e) => {
+        capturedEvent = e as CustomEvent<{ startPoint: string }>;
+      });
+
+      const menuItems = el.shadowRoot!.querySelectorAll('.context-menu-item');
+      const createBranchBtn = Array.from(menuItems).find(
+        (item) => item.textContent?.trim() === 'Create branch from this tag'
+      ) as HTMLElement;
+      expect(createBranchBtn).to.not.be.undefined;
+      createBranchBtn.click();
+      await el.updateComplete;
+
+      expect(el.shadowRoot!.querySelector('.context-menu')).to.be.null;
+      expect(capturedEvent).to.not.be.null;
+      expect(capturedEvent!.bubbles).to.be.true;
+      expect(capturedEvent!.composed).to.be.true;
+      expect(capturedEvent!.detail.startPoint).to.equal('refs/tags/beta');
     });
   });
 

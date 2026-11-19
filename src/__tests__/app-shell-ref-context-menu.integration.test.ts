@@ -267,6 +267,77 @@ describe('app-shell ref context menu handlers (integration)', () => {
     });
   });
 
+  describe('handleRefCreateBranchFromTag', () => {
+    type AppShellRefCreateBranchHost = AppShell & {
+      activeRepository: OpenRepository | null;
+      refContextMenu: { visible: boolean };
+      handleRefCreateBranchFromTag: () => void;
+    };
+
+    function stubCreateBranchDialog(el: AppShell): Array<string | undefined> {
+      const openCalls: Array<string | undefined> = [];
+      Object.defineProperty(el, 'createBranchDialog', {
+        value: {
+          open: (startPoint?: string) => {
+            openCalls.push(startPoint);
+          },
+        },
+        configurable: true,
+      });
+      return openCalls;
+    }
+
+    it('closes the menu and opens createBranchDialog with the qualified tag ref even on branch name collision', () => {
+      const el = createAppShell();
+      const shell = el as unknown as AppShellRefCreateBranchHost;
+      shell.activeRepository = {
+        ...mockOpenRepository,
+        branches: [
+          {
+            name: 'release',
+            shorthand: 'release',
+            isHead: false,
+            isRemote: false,
+            upstream: null,
+            targetOid: 'branch-oid',
+            isStale: false,
+          },
+        ],
+      };
+      const openCalls = stubCreateBranchDialog(el);
+      setRefContextMenu(el, 'release', 'tag', 'refs/tags/release');
+
+      shell.handleRefCreateBranchFromTag();
+
+      expect(shell.refContextMenu.visible).to.be.false;
+      expect(openCalls).to.deep.equal(['refs/tags/release']);
+    });
+
+    it('falls back to refs/tags/<refName> when fullName is empty', () => {
+      const el = createAppShell();
+      const shell = el as unknown as AppShellRefCreateBranchHost;
+      const openCalls = stubCreateBranchDialog(el);
+      setRefContextMenu(el, 'v1.0.0', 'tag', '');
+
+      shell.handleRefCreateBranchFromTag();
+
+      expect(shell.refContextMenu.visible).to.be.false;
+      expect(openCalls).to.deep.equal(['refs/tags/v1.0.0']);
+    });
+
+    it('does not open createBranchDialog when activeRepository is null', () => {
+      const el = createAppShell();
+      const shell = el as unknown as AppShellRefCreateBranchHost;
+      shell.activeRepository = null;
+      const openCalls = stubCreateBranchDialog(el);
+      setRefContextMenu(el, 'v1.0.0', 'tag', 'refs/tags/v1.0.0');
+
+      shell.handleRefCreateBranchFromTag();
+
+      expect(openCalls).to.have.length(0);
+    });
+  });
+
   describe('handleRefMerge', () => {
     it('calls merge with the correct source ref', async () => {
       const el = createAppShell();
