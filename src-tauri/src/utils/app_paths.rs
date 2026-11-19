@@ -12,7 +12,7 @@ use crate::error::{GitnadoError, Result};
 pub const APP_DIR_NAME: &str = "gitnado";
 
 /// The bundle identifier the app ships with.
-pub const APP_IDENTIFIER: &str = "io.github.hegsie.gitnado";
+pub const APP_IDENTIFIER: &str = "io.github.rdias612.gitduda";
 
 /// `base/gitnado`. Does not create the directory.
 pub fn app_subdir(base: &Path) -> PathBuf {

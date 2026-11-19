@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Gitnado",
+  "productName": "Gitduda",
   "version": "1.1.2",
-  "identifier": "io.github.hegsie.gitnado",
+  "identifier": "io.github.rdias612.gitduda",
   "build": {
     "beforeBuildCommand": "npm run build",
     "beforeDevCommand": "npm run dev",
@@ -13,7 +13,7 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "Gitnado",
+        "title": "Gitduda",
         "width": 1280,
         "height": 800,
         "minWidth": 800,
@@ -31,9 +31,9 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "publisher": "Gitnado Contributors",
-    "homepage": "https://gitnado.dev",
-    "copyright": "Copyright © 2024 Gitnado Contributors",
+    "publisher": "rdias612",
+    "homepage": "https://github.com/rdias612/gitduda",
+    "copyright": "Copyright © 2026 rdias612",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -42,7 +42,7 @@
       "icons/icon.ico",
       "icons/icon.icns"
     ],
-    "createUpdaterArtifacts": true,
+    "createUpdaterArtifacts": false,
     "category": "DeveloperTool",
     "shortDescription": "Git GUI Client",
     "longDescription": "A fully-featured, open-source, cross-platform Git GUI client",
@@ -52,7 +52,7 @@
     },
     "windows": {
       "wix": {
-        "upgradeCode": "84c95aff-09d5-5959-be4d-927b1cc7fc1b"
+        "upgradeCode": "e1ceb44f-5ce7-48de-b212-ad351fc2c1c5"
       },
       "nsis": {
         "displayLanguageSelector": false,
@@ -71,13 +71,13 @@
     },
     "updater": {
       "endpoints": [
-        "https://github.com/hegsie/gitnado/releases/latest/download/latest.json"
+        "https://github.com/rdias612/gitduda/releases/latest/download/latest.json"
       ],
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDI3MTNGRTQ2NTVGRUI5QzMKUldURHVmNVZSdjRUSnlkZHlCRWRtR0lxRVdMeFByU3JHRFlXNlQ4VmY2RUx2OUhGUFBmWW1ReUYK"
     },
     "deep-link": {
       "desktop": {
-        "schemes": ["gitnado"]
+        "schemes": ["gitduda"]
       }
     }
   }
