@@ -1,6 +1,6 @@
 //! Higher-level MCP read tools (roadmap 4.2, issue #611).
 //!
-//! Expose Gitnado's analysis features to any MCP client:
+//! Expose Gitduda's analysis features to any MCP client:
 //!
 //! - `get_conflicts` — files currently in conflict in the working tree
 //! - `predict_rebase_conflicts` — the "Ghost Rebase" dry run
@@ -78,7 +78,7 @@ fn str_arg<'a>(args: &'a Value, key: &str) -> Result<&'a str, String> {
         .ok_or_else(|| format!("Missing required argument: {key}"))
 }
 
-fn err_string(e: crate::error::GitnadoError) -> String {
+fn err_string(e: crate::error::GitdudaError) -> String {
     e.to_string()
 }
 
@@ -188,7 +188,7 @@ pub async fn call(
                 .unwrap_or(10)
                 .clamp(1, 50) as usize;
             let index = ctx.embeddings().ok_or_else(|| {
-                "Semantic search is not available in this Gitnado session".to_string()
+                "Semantic search is not available in this Gitduda session".to_string()
             })?;
             let results = crate::services::embedding::embedding_index::semantic_search(
                 &index,
@@ -198,7 +198,7 @@ pub async fn call(
             )
             .await
             .map_err(|e| {
-                format!("Semantic search failed ({e}). Build the semantic index in Gitnado first.")
+                format!("Semantic search failed ({e}). Build the semantic index in Gitduda first.")
             })?;
             serde_json::to_value(results).map_err(|e| e.to_string())
         }
@@ -211,7 +211,7 @@ pub async fn call(
                     .map_err(|e| e.to_string())??;
             let ai = ctx
                 .ai()
-                .ok_or_else(|| "AI is not available in this Gitnado session".to_string())?;
+                .ok_or_else(|| "AI is not available in this Gitduda session".to_string())?;
             let service = ai.read().await;
             if let Some(endpoint) = service.active_provider_endpoint() {
                 crate::services::security::guard_endpoint(&endpoint).map_err(err_string)?;
@@ -240,7 +240,7 @@ pub async fn call(
 }
 
 fn repo_prop() -> Value {
-    json!({ "type": "string", "description": "Absolute path of the repository (must be open in Gitnado)" })
+    json!({ "type": "string", "description": "Absolute path of the repository (must be open in Gitduda)" })
 }
 
 pub fn insight_tool_list() -> Vec<McpTool> {
@@ -264,13 +264,13 @@ pub fn insight_tool_list() -> Vec<McpTool> {
         ),
         tool(
             "semantic_search_history",
-            "Find commits by meaning rather than exact words, using Gitnado's local semantic index.",
+            "Find commits by meaning rather than exact words, using Gitduda's local semantic index.",
             json!({ "repo_path": repo_prop(), "query": { "type": "string" }, "limit": { "type": "integer", "minimum": 1, "maximum": 50 } }),
             vec!["repo_path", "query"],
         ),
         tool(
             "explain_commit",
-            "Explain a commit in plain language using the AI provider configured in Gitnado.",
+            "Explain a commit in plain language using the AI provider configured in Gitduda.",
             json!({ "repo_path": repo_prop(), "oid": { "type": "string", "description": "Commit SHA or ref" } }),
             vec!["repo_path", "oid"],
         ),

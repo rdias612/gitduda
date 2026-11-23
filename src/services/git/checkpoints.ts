@@ -2,7 +2,7 @@
  * Working-tree checkpoints (roadmap 4.1, issue #607).
  *
  * Snapshots of the working tree (including untracked files) stored under
- * `refs/gitnado/checkpoints/*`. Taking one never touches the index or HEAD;
+ * `refs/gitduda/checkpoints/*`. Taking one never touches the index or HEAD;
  * restoring one makes the working tree match it and first backs up the state
  * it replaces.
  */

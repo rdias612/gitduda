@@ -366,7 +366,7 @@ describe('gn-branch-list stacks', () => {
       confirmText = '';
       mocks({
         get_branches: PUSHED,
-        detect_github_repo: { owner: 'octo', repo: 'gitnado', remoteName: 'origin' },
+        detect_github_repo: { owner: 'octo', repo: 'gitduda', remoteName: 'origin' },
         get_keyring_token: 'tok',
         list_pull_requests: [ghPr(11, 'feat-a', 'main')],
         create_pull_request: ghPr(12, 'feat-b', 'feat-a'),
@@ -415,7 +415,7 @@ describe('gn-branch-list stacks', () => {
 
       expect(confirmText).to.contain('feat-a: update the stack table on pull request 11');
       expect(confirmText).to.contain('feat-b: open a pull request into feat-a');
-      expect(invokeCalls.find((c) => c.command === 'create_pull_request')!.args).to.deep.include({ owner: 'octo', repo: 'gitnado' });
+      expect(invokeCalls.find((c) => c.command === 'create_pull_request')!.args).to.deep.include({ owner: 'octo', repo: 'gitduda' });
       expect(invokeCalls.filter((c) => c.command === 'update_pull_request')).to.have.length(2);
       expect(toastMessages()[0]).to.equal('success:Stack pull requests: created 1 pull request, updated 1 pull request');
       expect(changed).to.be.true;

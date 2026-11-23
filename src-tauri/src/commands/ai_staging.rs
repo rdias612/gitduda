@@ -575,7 +575,7 @@ pub async fn suggest_hunk_splits(
     let repo_path = path.clone();
     let extracted = crate::utils::blocking_git(move || {
         let repo = Repository::open(Path::new(&repo_path))?;
-        extract_all_repo_hunks(&repo).map_err(crate::error::GitnadoError::OperationFailed)
+        extract_all_repo_hunks(&repo).map_err(crate::error::GitdudaError::OperationFailed)
     })
     .await
     .map_err(|e| e.to_string())?;
@@ -683,7 +683,7 @@ fn build_file_hunks_patch(file_path: &str, hunks: &[&ExtractedHunk]) -> String {
 /// `git apply --cached --unidiff-zero`.
 fn apply_patch_to_index(repo_path: &str, patch: &str) -> Result<(), String> {
     let mut tmp = tempfile::Builder::new()
-        .prefix("gitnado_ai_hunk_")
+        .prefix("gitduda_ai_hunk_")
         .suffix(".patch")
         .tempfile()
         .map_err(|e| format!("Failed to create temporary patch file: {e}"))?;
@@ -811,7 +811,7 @@ pub async fn stage_hunk_group(path: String, hunks: Vec<HunkRef>) -> Result<usize
 
         let repo = Repository::open(repo_path)?;
         let extracted =
-            extract_all_repo_hunks(&repo).map_err(crate::error::GitnadoError::OperationFailed)?;
+            extract_all_repo_hunks(&repo).map_err(crate::error::GitdudaError::OperationFailed)?;
 
         // Group requested hunks by file_path while preserving order.
         let mut requested_by_file: BTreeMap<String, Vec<HunkRef>> = BTreeMap::new();
@@ -837,7 +837,7 @@ pub async fn stage_hunk_group(path: String, hunks: Vec<HunkRef>) -> Result<usize
                 for target in target_refs {
                     let matched = find_matching_hunk(&unstaged_candidates, target, &picked_indices)
                         .ok_or_else(|| {
-                            crate::error::GitnadoError::OperationFailed(format!(
+                            crate::error::GitdudaError::OperationFailed(format!(
                                 "Hunk index {} not found in unstaged diff for {}",
                                 target.hunk_index, file_path
                             ))
@@ -848,7 +848,7 @@ pub async fn stage_hunk_group(path: String, hunks: Vec<HunkRef>) -> Result<usize
 
                 let patch = build_file_hunks_patch(file_path, &chosen);
                 apply_patch_to_index(&path, &patch)
-                    .map_err(crate::error::GitnadoError::OperationFailed)?;
+                    .map_err(crate::error::GitdudaError::OperationFailed)?;
                 total_staged += chosen.len();
             } else {
                 // Hunks for this file were already staged in the index; reset the
@@ -859,7 +859,7 @@ pub async fn stage_hunk_group(path: String, hunks: Vec<HunkRef>) -> Result<usize
                     .collect();
 
                 if staged_candidates.is_empty() {
-                    return Err(crate::error::GitnadoError::OperationFailed(format!(
+                    return Err(crate::error::GitdudaError::OperationFailed(format!(
                         "No diff hunks found for file {file_path}"
                     )));
                 }
@@ -869,7 +869,7 @@ pub async fn stage_hunk_group(path: String, hunks: Vec<HunkRef>) -> Result<usize
                 for target in target_refs {
                     let matched = find_matching_hunk(&staged_candidates, target, &picked_indices)
                         .ok_or_else(|| {
-                        crate::error::GitnadoError::OperationFailed(format!(
+                        crate::error::GitdudaError::OperationFailed(format!(
                             "Hunk index {} not found for {}",
                             target.hunk_index, file_path
                         ))
@@ -879,10 +879,10 @@ pub async fn stage_hunk_group(path: String, hunks: Vec<HunkRef>) -> Result<usize
                 }
 
                 reset_file_in_index(&repo, file_path)
-                    .map_err(crate::error::GitnadoError::OperationFailed)?;
+                    .map_err(crate::error::GitdudaError::OperationFailed)?;
                 let patch = build_file_hunks_patch(file_path, &chosen);
                 apply_patch_to_index(&path, &patch)
-                    .map_err(crate::error::GitnadoError::OperationFailed)?;
+                    .map_err(crate::error::GitdudaError::OperationFailed)?;
                 total_staged += chosen.len();
             }
         }
@@ -1195,9 +1195,9 @@ pub async fn suggest_fixup_targets(
     let (mut candidates, diff_summary) = crate::utils::blocking_git(move || {
         let repo = Repository::open(Path::new(&repo_path))?;
         let (active_hunks, summary) = collect_active_fixup_hunks(&repo)
-            .map_err(crate::error::GitnadoError::OperationFailed)?;
+            .map_err(crate::error::GitdudaError::OperationFailed)?;
         let candidates = compute_fixup_candidates(&repo, &active_hunks, limit)
-            .map_err(crate::error::GitnadoError::OperationFailed)?;
+            .map_err(crate::error::GitdudaError::OperationFailed)?;
         Ok((candidates, summary))
     })
     .await

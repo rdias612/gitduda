@@ -2,7 +2,7 @@
  * Start Agent on a Task (roadmap 4.1, issue #605)
  *
  * One form: pick an agent CLI, describe the task (optionally with an issue
- * reference), and Gitnado creates a fresh branch in its own worktree and
+ * reference), and Gitduda creates a fresh branch in its own worktree and
  * starts the agent there in the embedded terminal with the task as its first
  * prompt. The agent works in isolation; your checkout is untouched.
  */

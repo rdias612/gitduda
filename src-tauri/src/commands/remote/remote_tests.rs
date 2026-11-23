@@ -25,7 +25,7 @@ mod tests {
 
     fn blocked_host(result: Result<()>) -> String {
         match result {
-            Err(GitnadoError::NetworkBlocked(message)) => message,
+            Err(GitdudaError::NetworkBlocked(message)) => message,
             other => panic!("expected a NetworkBlocked refusal, got {:?}", other),
         }
     }
@@ -228,7 +228,7 @@ mod tests {
         let result = await_remote_task(ELAPSES_FIRST, "Pull", handle, on_late).await;
 
         match result {
-            Err(GitnadoError::OperationTimeout(m)) => {
+            Err(GitdudaError::OperationTimeout(m)) => {
                 assert_eq!(m, "Pull operation timed out");
             }
             other => panic!("expected a Pull timeout, got {:?}", other.map(|_| ())),
@@ -269,7 +269,7 @@ mod tests {
 
         let result = await_remote_task(ELAPSES_FIRST, "Push", handle, on_late).await;
         match result {
-            Err(GitnadoError::OperationTimeout(m)) => assert_eq!(m, "Push operation timed out"),
+            Err(GitdudaError::OperationTimeout(m)) => assert_eq!(m, "Push operation timed out"),
             other => panic!("expected a Push timeout, got {:?}", other.map(|_| ())),
         }
 
@@ -346,13 +346,13 @@ mod tests {
         let mark_ended = Arc::clone(&ended);
         let (release, handle) = gated_task(move || {
             mark_ended.store(true, std::sync::atomic::Ordering::SeqCst);
-            Err(GitnadoError::OperationTimeout(
+            Err(GitdudaError::OperationTimeout(
                 "Pull operation timed out".to_string(),
             ))
         });
 
         let result = await_remote_task(ELAPSES_FIRST, "Pull", handle, on_late).await;
-        assert!(matches!(result, Err(GitnadoError::OperationTimeout(_))));
+        assert!(matches!(result, Err(GitdudaError::OperationTimeout(_))));
 
         // Let the abandoned task end, and give the reporter its turn to
         // decide what to do with the outcome.
@@ -375,17 +375,17 @@ mod tests {
     async fn test_a_timeout_after_the_repository_changed_is_still_reported() {
         let (seen, on_late) = late_slot::<()>();
         let (release, handle) = gated_task(|| {
-            Err(GitnadoError::OperationTimeoutAfterChange(
+            Err(GitdudaError::OperationTimeoutAfterChange(
                 "Pull operation timed out".to_string(),
             ))
         });
 
         let result = await_remote_task(ELAPSES_FIRST, "Pull", handle, on_late).await;
-        assert!(matches!(result, Err(GitnadoError::OperationTimeout(_))));
+        assert!(matches!(result, Err(GitdudaError::OperationTimeout(_))));
 
         release.send(()).unwrap();
         match late_outcome(&seen).await {
-            Some(Err(GitnadoError::OperationTimeoutAfterChange(_))) => {}
+            Some(Err(GitdudaError::OperationTimeoutAfterChange(_))) => {}
             Some(other) => panic!("unexpected late outcome: {:?}", other.err()),
             None => panic!("a timeout that had already changed the repo went unreported"),
         }
@@ -396,7 +396,7 @@ mod tests {
     #[test]
     fn test_a_post_fetch_timeout_reports_the_ordinary_timeout_code() {
         let response = crate::error::ErrorResponse::from(
-            GitnadoError::OperationTimeoutAfterChange("Pull operation timed out".to_string()),
+            GitdudaError::OperationTimeoutAfterChange("Pull operation timed out".to_string()),
         );
         assert_eq!(response.code, "OPERATION_TIMEOUT");
     }
@@ -410,11 +410,11 @@ mod tests {
         let (release, handle) = gated_task(|| -> Result<()> { unwind("boom") });
 
         let result = await_remote_task(ELAPSES_FIRST, "Pull", handle, on_late).await;
-        assert!(matches!(result, Err(GitnadoError::OperationTimeout(_))));
+        assert!(matches!(result, Err(GitdudaError::OperationTimeout(_))));
 
         release.send(()).unwrap();
         match late_outcome(&seen).await {
-            Some(Err(GitnadoError::Custom(m))) => assert!(
+            Some(Err(GitdudaError::Custom(m))) => assert!(
                 m.starts_with("Pull task failed:"),
                 "unexpected late join failure: {}",
                 m
@@ -435,7 +435,7 @@ mod tests {
         );
         assert!(fetch_late_event(
             true,
-            Err(GitnadoError::OperationFailed("boom".to_string())),
+            Err(GitdudaError::OperationFailed("boom".to_string())),
             "origin".to_string(),
             "/repos/a".to_string(),
         )
@@ -457,7 +457,7 @@ mod tests {
 
         let failed = fetch_late_event(
             false,
-            Err(GitnadoError::OperationFailed("boom".to_string())),
+            Err(GitdudaError::OperationFailed("boom".to_string())),
             "origin".to_string(),
             "/repos/a".to_string(),
         )
@@ -491,7 +491,7 @@ mod tests {
         .expect_err("fetching a remote that does not exist must fail");
 
         assert!(
-            !matches!(err, GitnadoError::OperationTimeout(_)),
+            !matches!(err, GitdudaError::OperationTimeout(_)),
             "a connection failure must not be relabelled as a timeout: {}",
             err
         );
@@ -510,7 +510,7 @@ mod tests {
         let result = await_remote_task(Some(Duration::from_secs(5)), "Push", handle, on_late).await;
 
         match result {
-            Err(GitnadoError::Custom(m)) => assert!(
+            Err(GitdudaError::Custom(m)) => assert!(
                 m.starts_with("Push task failed:"),
                 "unexpected join error: {}",
                 m
@@ -594,7 +594,7 @@ mod tests {
         );
 
         match result {
-            Err(GitnadoError::OperationTimeout(m)) => {
+            Err(GitdudaError::OperationTimeout(m)) => {
                 assert_eq!(m, "Pull operation timed out");
             }
             other => panic!("expected a Pull timeout, got {:?}", other.map(|_| ())),
@@ -635,7 +635,7 @@ mod tests {
         // remote-tracking refs, so this outcome must still reach the late
         // reporter (await_remote_task suppresses a plain OperationTimeout).
         match result {
-            Err(GitnadoError::OperationTimeoutAfterChange(m)) => {
+            Err(GitdudaError::OperationTimeoutAfterChange(m)) => {
                 assert_eq!(m, "Pull operation timed out");
             }
             other => panic!("expected a Pull timeout, got {:?}", other.map(|_| ())),
@@ -773,7 +773,7 @@ mod tests {
         local.create_commit("local edits contested", &[("contested.txt", "ours\n")]);
 
         let err = pull_rebase(&local, &branch).expect_err("the pull must stop on the conflict");
-        assert!(matches!(err, GitnadoError::RebaseConflict), "{:?}", err);
+        assert!(matches!(err, GitdudaError::RebaseConflict), "{:?}", err);
 
         crate::commands::merge::resolve_conflict(
             local.path_str(),
@@ -851,7 +851,7 @@ mod tests {
             .expect_err("a conflicting rebase pull must report the conflict");
 
         assert!(
-            matches!(err, GitnadoError::RebaseConflict),
+            matches!(err, GitdudaError::RebaseConflict),
             "unexpected error: {}",
             err
         );
@@ -1306,7 +1306,7 @@ mod tests {
             .expect_err("a repo with no remotes has no push destination");
 
         assert!(
-            matches!(err, GitnadoError::RemoteNotFound(ref name) if name == "origin"),
+            matches!(err, GitdudaError::RemoteNotFound(ref name) if name == "origin"),
             "the missing destination is named: {err:?}"
         );
     }
@@ -1330,7 +1330,7 @@ mod tests {
             .expect_err("a pushDefault naming a missing remote must not resolve");
 
         assert!(
-            matches!(err, GitnadoError::RemoteNotFound(ref name) if name == "nope"),
+            matches!(err, GitdudaError::RemoteNotFound(ref name) if name == "nope"),
             "the missing destination is named: {err:?}"
         );
     }
@@ -1491,7 +1491,7 @@ mod tests {
         let err = get_pull_remote(repo_dir.path.to_string_lossy().to_string(), None, None)
             .await
             .unwrap_err();
-        assert!(matches!(err, GitnadoError::RemoteNotFound(name) if name == "deleted"));
+        assert!(matches!(err, GitdudaError::RemoteNotFound(name) if name == "deleted"));
     }
 
     /// Detached HEAD: `pull_branch` refuses outright, so this must too rather
@@ -1546,7 +1546,7 @@ mod tests {
         let err = get_push_remote(repo_dir.path.to_string_lossy().to_string(), None)
             .await
             .unwrap_err();
-        assert!(matches!(err, GitnadoError::RemoteNotFound(name) if name == "gone"));
+        assert!(matches!(err, GitdudaError::RemoteNotFound(name) if name == "gone"));
     }
 
     // ---- pull's normal-merge arm (merge_fetched_commit) ----
@@ -1772,7 +1772,7 @@ mod tests {
         let head_before = test_repo.head_oid();
 
         let err = merge_origin(&test_repo, &branch).expect_err("the merge must conflict");
-        assert!(matches!(err, GitnadoError::MergeConflict));
+        assert!(matches!(err, GitdudaError::MergeConflict));
         assert_eq!(
             test_repo.head_oid(),
             head_before,
@@ -2844,13 +2844,13 @@ mod tests {
 
         // Neither flag: the real error survives untouched.
         let plain = transfer_failure(&abort, raw(), "Fetch operation timed out");
-        assert!(matches!(plain, GitnadoError::Git(_)));
+        assert!(matches!(plain, GitdudaError::Git(_)));
 
         abort
             .timed_out
             .store(true, std::sync::atomic::Ordering::SeqCst);
         let timed_out = transfer_failure(&abort, raw(), "Fetch operation timed out");
-        assert!(matches!(timed_out, GitnadoError::OperationTimeout(_)));
+        assert!(matches!(timed_out, GitdudaError::OperationTimeout(_)));
 
         // Cancellation wins over a deadline that also expired: the user is
         // told what they did, not what the clock did.
@@ -2858,7 +2858,7 @@ mod tests {
             .cancelled
             .store(true, std::sync::atomic::Ordering::SeqCst);
         let cancelled = transfer_failure(&abort, raw(), "Fetch operation timed out");
-        assert!(matches!(cancelled, GitnadoError::OperationCancelled));
+        assert!(matches!(cancelled, GitdudaError::OperationCancelled));
         assert_eq!(
             crate::error::ErrorResponse::from(cancelled).code,
             "OPERATION_CANCELLED",
@@ -2880,7 +2880,7 @@ mod tests {
         let err = fetch_internal(&local.path_str(), "origin", false, None, None, monitor)
             .expect_err("a cancelled fetch must not succeed");
 
-        assert!(matches!(err, GitnadoError::OperationCancelled));
+        assert!(matches!(err, GitdudaError::OperationCancelled));
         assert!(
             events.lock().unwrap().is_empty(),
             "nothing transferred, so nothing to report"
@@ -2909,7 +2909,7 @@ mod tests {
         )
         .expect_err("a cancelled push must not succeed");
 
-        assert!(matches!(err, GitnadoError::OperationCancelled));
+        assert!(matches!(err, GitdudaError::OperationCancelled));
     }
 
     /// And for the git-CLI push path force push uses — there the child process
@@ -2935,7 +2935,7 @@ mod tests {
         )
         .expect_err("a cancelled force push must not succeed");
 
-        assert!(matches!(err, GitnadoError::OperationCancelled));
+        assert!(matches!(err, GitdudaError::OperationCancelled));
     }
 
     // ---- the push poll: reap first, cancel only what is still running ----
@@ -2953,7 +2953,7 @@ mod tests {
             .arg(repo.path_str())
             .arg("rev-parse")
             .arg("--verify")
-            .arg("refs/heads/gitnado-no-such-branch")
+            .arg("refs/heads/gitduda-no-such-branch")
             .stdout(std::process::Stdio::null())
             .stderr(std::process::Stdio::null())
             .spawn()
@@ -3093,7 +3093,7 @@ mod tests {
             .arg(repo.path_str())
             .arg("rev-parse")
             .arg("--verify")
-            .arg("refs/heads/gitnado-no-such-branch");
+            .arg("refs/heads/gitduda-no-such-branch");
 
         let output = run_push_command(cmd, &TransferMonitor::disabled())
             .expect("a completed command must be returned, not an error");
@@ -3120,7 +3120,7 @@ mod tests {
         let err = pull_with_monitor(&local, &branch, None, monitor)
             .expect_err("a cancelled pull must not succeed");
 
-        assert!(matches!(err, GitnadoError::OperationCancelled));
+        assert!(matches!(err, GitdudaError::OperationCancelled));
         assert_eq!(local.head_oid(), before, "HEAD must not have moved");
         assert!(
             !local.path.join("b.txt").exists(),

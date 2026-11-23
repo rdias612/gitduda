@@ -131,7 +131,7 @@ test.describe('Checkpoints', () => {
   test('turning on automatic Claude Code checkpoints', async ({ page }) => {
     const paths = {
       settingsPath: '/tmp/test-repo/.claude/settings.local.json',
-      scriptPath: '/tmp/test-repo/.git/gitnado/agent-checkpoint.sh',
+      scriptPath: '/tmp/test-repo/.git/gitduda/agent-checkpoint.sh',
     };
     await startCommandCaptureWithMocks(page, {
       list_checkpoints: [],

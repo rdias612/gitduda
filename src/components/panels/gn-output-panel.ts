@@ -40,7 +40,7 @@ export function formatDuration(ms: number): string {
 }
 
 /**
- * Marker on a line Gitnado DERIVED rather than executed.
+ * Marker on a line Gitduda DERIVED rather than executed.
  *
  * Most operations run through libgit2, so no `git` process exists to quote.
  * The panel shows the equivalent command line so the user can see what git was

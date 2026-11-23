@@ -6,7 +6,7 @@ use std::time::Duration;
 
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 
-use crate::error::{GitnadoError, Result};
+use crate::error::{GitdudaError, Result};
 
 /// Default User-Agent header sent on outbound provider HTTP requests when
 /// a request does not override it.
@@ -28,7 +28,7 @@ pub fn build_provider_http_client() -> Result<reqwest::Client> {
         .timeout(Duration::from_secs(DEFAULT_PROVIDER_TIMEOUT_SECS))
         .user_agent(DEFAULT_PROVIDER_USER_AGENT)
         .build()
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to build HTTP client: {}", e)))
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to build HTTP client: {}", e)))
 }
 
 /// Validate `url` against the security gate and build a provider HTTP client.
@@ -102,27 +102,27 @@ pub fn map_provider_api_error_with_headers(
     status: reqwest::StatusCode,
     headers: Option<&reqwest::header::HeaderMap>,
     body: &str,
-) -> GitnadoError {
+) -> GitdudaError {
     if body.trim().is_empty() {
         if let Some(hdrs) = headers {
             if let Some(hint) = extract_rate_limit_hint(status, hdrs) {
-                return GitnadoError::OperationFailed(format!(
+                return GitdudaError::OperationFailed(format!(
                     "{} API error {}: {}",
                     provider_label, status, hint
                 ));
             }
         }
     }
-    GitnadoError::OperationFailed(format!("{} API error {}: {}", provider_label, status, body))
+    GitdudaError::OperationFailed(format!("{} API error {}: {}", provider_label, status, body))
 }
 
 /// Map a non-2xx provider API response status and body into
-/// `GitnadoError::OperationFailed("<Provider> API error <status>: <body>")`.
+/// `GitdudaError::OperationFailed("<Provider> API error <status>: <body>")`.
 pub fn map_provider_api_error(
     provider_label: &str,
     status: reqwest::StatusCode,
     body: &str,
-) -> GitnadoError {
+) -> GitdudaError {
     map_provider_api_error_with_headers(provider_label, status, None, body)
 }
 
@@ -134,12 +134,12 @@ pub fn map_repository_list_api_error(
     status: reqwest::StatusCode,
     body: &str,
     treat_203_as_auth_required: bool,
-) -> GitnadoError {
+) -> GitdudaError {
     if status == reqwest::StatusCode::UNAUTHORIZED
         || (treat_203_as_auth_required
             && status == reqwest::StatusCode::NON_AUTHORITATIVE_INFORMATION)
     {
-        return GitnadoError::AuthenticationRequired;
+        return GitdudaError::AuthenticationRequired;
     }
     map_provider_api_error(provider_label, status, body)
 }
@@ -192,14 +192,14 @@ mod tests {
             let _guard = test_support::offline();
             let err = ensure_url_allowed("https://api.github.com")
                 .expect_err("offline mode must block outbound URLs");
-            assert!(matches!(err, GitnadoError::NetworkBlocked(_)));
+            assert!(matches!(err, GitdudaError::NetworkBlocked(_)));
         }
         {
             let _guard = test_support::allowlist(&["gitlab.example.com"]);
             assert!(ensure_url_allowed("https://gitlab.example.com/api/v4/user").is_ok());
             let blocked = ensure_url_allowed("https://api.github.com")
                 .expect_err("non-allowlisted host must be blocked");
-            assert!(matches!(blocked, GitnadoError::NetworkBlocked(_)));
+            assert!(matches!(blocked, GitdudaError::NetworkBlocked(_)));
         }
     }
 
@@ -208,7 +208,7 @@ mod tests {
         let _guard = test_support::offline();
         let err = build_guarded_provider_http_client("https://api.bitbucket.org/2.0")
             .expect_err("offline mode must block guarded client creation");
-        assert!(matches!(err, GitnadoError::NetworkBlocked(_)));
+        assert!(matches!(err, GitdudaError::NetworkBlocked(_)));
     }
 
     #[test]
@@ -272,7 +272,7 @@ mod tests {
             "Bad credentials",
             false,
         );
-        assert!(matches!(gh_unauth, GitnadoError::AuthenticationRequired));
+        assert!(matches!(gh_unauth, GitdudaError::AuthenticationRequired));
 
         let gh_203 = map_repository_list_api_error(
             "GitHub",
@@ -280,7 +280,7 @@ mod tests {
             "body",
             false,
         );
-        assert!(matches!(gh_203, GitnadoError::OperationFailed(_)));
+        assert!(matches!(gh_203, GitdudaError::OperationFailed(_)));
 
         let ado_203 = map_repository_list_api_error(
             "Azure DevOps",
@@ -288,6 +288,6 @@ mod tests {
             "<html>sign in</html>",
             true,
         );
-        assert!(matches!(ado_203, GitnadoError::AuthenticationRequired));
+        assert!(matches!(ado_203, GitdudaError::AuthenticationRequired));
     }
 }

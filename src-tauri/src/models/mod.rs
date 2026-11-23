@@ -1,4 +1,4 @@
-//! Data models for Gitnado
+//! Data models for Gitduda
 
 pub mod branch;
 pub mod commit;

@@ -198,7 +198,7 @@ fn test_extract_file_diffs_on_real_repo() {
 #[tokio::test]
 #[ignore]
 async fn test_full_pipeline_with_model() {
-    use gitnado_lib::services::ai::providers::InferenceEngine;
+    use gitduda_lib::services::ai::providers::InferenceEngine;
 
     // Check if we have a cached model
     let model_dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -237,7 +237,7 @@ async fn test_full_pipeline_with_model() {
     eprintln!("Loading model...");
     let mp = model_path.clone();
     let engine = tokio::task::spawn_blocking(move || {
-        gitnado_lib::services::ai::local::GgufEngine::load(&mp, "Llama-3.2-1B".to_string(), None)
+        gitduda_lib::services::ai::local::GgufEngine::load(&mp, "Llama-3.2-1B".to_string(), None)
     })
     .await
     .unwrap()

@@ -5,7 +5,7 @@ use std::path::Path;
 use tauri::command;
 
 use super::path_utils::resolve_path_within_repo;
-use crate::error::{GitnadoError, Result};
+use crate::error::{GitdudaError, Result};
 use crate::utils::create_command;
 
 /// Escape cmd.exe metacharacters to prevent command injection (Windows only).
@@ -127,13 +127,13 @@ fn set_git_config_value(
 
     let output = cmd
         .output()
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to run git config: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to run git config: {}", e)))?;
 
     if output.status.success() {
         Ok(())
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
-        Err(GitnadoError::OperationFailed(format!(
+        Err(GitdudaError::OperationFailed(format!(
             "Failed to set config: {}",
             stderr
         )))
@@ -146,13 +146,13 @@ fn set_git_config_value(
 pub async fn reveal_in_file_manager(path: String) -> Result<OpenResult> {
     let target = Path::new(&path);
     if !target.exists() {
-        return Err(GitnadoError::InvalidPath(path));
+        return Err(GitdudaError::InvalidPath(path));
     }
 
     #[cfg(target_os = "windows")]
     {
         windows_reveal_command(target).spawn().map_err(|e| {
-            GitnadoError::OperationFailed(format!("Failed to reveal in explorer: {}", e))
+            GitdudaError::OperationFailed(format!("Failed to reveal in explorer: {}", e))
         })?;
     }
 
@@ -163,7 +163,7 @@ pub async fn reveal_in_file_manager(path: String) -> Result<OpenResult> {
             .args(["-R", &path])
             .spawn()
             .map_err(|e| {
-                GitnadoError::OperationFailed(format!("Failed to reveal in Finder: {}", e))
+                GitdudaError::OperationFailed(format!("Failed to reveal in Finder: {}", e))
             })?;
     }
 
@@ -178,7 +178,7 @@ pub async fn reveal_in_file_manager(path: String) -> Result<OpenResult> {
                 .arg(parent)
                 .spawn()
                 .map_err(|e| {
-                    GitnadoError::OperationFailed(format!(
+                    GitdudaError::OperationFailed(format!(
                         "Failed to reveal in file manager: {}",
                         e
                     ))
@@ -230,7 +230,7 @@ fn try_dbus_reveal(path: &Path) -> bool {
 pub async fn open_in_default_app(path: String) -> Result<OpenResult> {
     let target = Path::new(&path);
     if !target.exists() {
-        return Err(GitnadoError::InvalidPath(path));
+        return Err(GitdudaError::InvalidPath(path));
     }
 
     #[cfg(target_os = "windows")]
@@ -238,7 +238,7 @@ pub async fn open_in_default_app(path: String) -> Result<OpenResult> {
         std::process::Command::new("cmd")
             .args(["/c", "start", "", &escape_cmd_meta(&path)])
             .spawn()
-            .map_err(|e| GitnadoError::OperationFailed(format!("Failed to open file: {}", e)))?;
+            .map_err(|e| GitdudaError::OperationFailed(format!("Failed to open file: {}", e)))?;
     }
 
     #[cfg(target_os = "macos")]
@@ -246,7 +246,7 @@ pub async fn open_in_default_app(path: String) -> Result<OpenResult> {
         std::process::Command::new("open")
             .arg(&path)
             .spawn()
-            .map_err(|e| GitnadoError::OperationFailed(format!("Failed to open file: {}", e)))?;
+            .map_err(|e| GitdudaError::OperationFailed(format!("Failed to open file: {}", e)))?;
     }
 
     #[cfg(target_os = "linux")]
@@ -254,7 +254,7 @@ pub async fn open_in_default_app(path: String) -> Result<OpenResult> {
         std::process::Command::new("xdg-open")
             .arg(&path)
             .spawn()
-            .map_err(|e| GitnadoError::OperationFailed(format!("Failed to open file: {}", e)))?;
+            .map_err(|e| GitdudaError::OperationFailed(format!("Failed to open file: {}", e)))?;
     }
 
     Ok(OpenResult {
@@ -273,7 +273,7 @@ pub async fn open_in_configured_editor(
 ) -> Result<OpenResult> {
     let repo_path = Path::new(&path);
     let canonical_repo = repo_path.canonicalize().map_err(|e| {
-        GitnadoError::OperationFailed(format!("Failed to resolve repo path: {}", e))
+        GitdudaError::OperationFailed(format!("Failed to resolve repo path: {}", e))
     })?;
     let requested_path = Path::new(&filePath);
     let target_path = if requested_path == repo_path || requested_path == canonical_repo.as_path() {
@@ -289,7 +289,7 @@ pub async fn open_in_configured_editor(
 
     let target = Path::new(&target_file);
     if !target.exists() {
-        return Err(GitnadoError::InvalidPath(target_file));
+        return Err(GitdudaError::InvalidPath(target_file));
     }
 
     // Get editor from git config (local first, then global)
@@ -310,7 +310,7 @@ pub async fn open_in_configured_editor(
         }
         Some(editor_cmd) if is_terminal_editor(&editor_cmd) => Ok(editor_unavailable(format!(
             "The configured editor ({editor_cmd}) requires a terminal and cannot open files \
-             from Gitnado. Configure a GUI editor in Git settings."
+             from Gitduda. Configure a GUI editor in Git settings."
         ))),
         Some(editor_cmd) => {
             // Parse the editor command and add line number support
@@ -321,7 +321,7 @@ pub async fn open_in_configured_editor(
                 .current_dir(repo_path)
                 .spawn()
                 .map_err(|e| {
-                    GitnadoError::OperationFailed(format!(
+                    GitdudaError::OperationFailed(format!(
                         "Failed to open editor '{}': {}",
                         editor_cmd, e
                     ))
@@ -552,7 +552,7 @@ pub async fn set_editor_config(path: String, editor: String, global: bool) -> Re
     let repo_path = Path::new(&path);
 
     if !global && git2::Repository::open(repo_path).is_err() {
-        return Err(GitnadoError::RepositoryNotFound(path));
+        return Err(GitdudaError::RepositoryNotFound(path));
     }
 
     set_git_config_value(
@@ -644,7 +644,7 @@ mod tests {
     #[test]
     fn terminal_editor_fallback_reports_that_no_file_was_opened() {
         let result = editor_unavailable(
-            "The configured editor (vim) requires a terminal and cannot open files from Gitnado.",
+            "The configured editor (vim) requires a terminal and cannot open files from Gitduda.",
         );
 
         assert!(!result.success);
@@ -757,12 +757,12 @@ mod tests {
         repo.repo()
             .config()
             .unwrap()
-            .set_str("core.editor", "missing-gitnado-test-editor")
+            .set_str("core.editor", "missing-gitduda-test-editor")
             .unwrap();
 
         let result = open_in_configured_editor(repo.path_str(), repo.path_str(), None).await;
 
-        assert!(matches!(result, Err(GitnadoError::OperationFailed(_))));
+        assert!(matches!(result, Err(GitdudaError::OperationFailed(_))));
     }
 
     #[tokio::test]
@@ -773,7 +773,7 @@ mod tests {
         repo.repo()
             .config()
             .unwrap()
-            .set_str("core.editor", "missing-gitnado-test-editor")
+            .set_str("core.editor", "missing-gitduda-test-editor")
             .unwrap();
 
         let result = open_in_configured_editor(
@@ -783,7 +783,7 @@ mod tests {
         )
         .await;
 
-        assert!(matches!(result, Err(GitnadoError::InvalidPath(_))));
+        assert!(matches!(result, Err(GitdudaError::InvalidPath(_))));
     }
 
     #[tokio::test]

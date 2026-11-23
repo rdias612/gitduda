@@ -3,7 +3,7 @@
 //! Provides commands for system capability detection, model registry browsing,
 //! model downloading/deletion, and model status queries.
 
-use crate::error::{GitnadoError, Result};
+use crate::error::{GitdudaError, Result};
 use crate::services::ai::local::{ModelEntry, ModelManager, ModelRegistry, SystemCapabilities};
 use crate::services::ai::providers::{LoadedModelMeta, LocalModelStatus};
 use crate::services::ai::AiState;
@@ -46,7 +46,7 @@ pub async fn get_downloaded_models(
     state
         .model_manager
         .list_downloaded()
-        .map_err(GitnadoError::OperationFailed)
+        .map_err(GitdudaError::OperationFailed)
 }
 
 #[command]
@@ -61,7 +61,7 @@ pub async fn download_model(
         .registry
         .get_by_id(&model_id)
         .ok_or_else(|| {
-            GitnadoError::OperationFailed(format!("Model '{}' not found in registry", model_id))
+            GitdudaError::OperationFailed(format!("Model '{}' not found in registry", model_id))
         })?
         .clone();
     let manager = local.model_manager.clone();
@@ -150,7 +150,7 @@ pub async fn cancel_model_download(
         .model_manager
         .cancel_download(&model_id)
         .await
-        .map_err(GitnadoError::OperationFailed)
+        .map_err(GitdudaError::OperationFailed)
 }
 
 #[command]
@@ -159,7 +159,7 @@ pub async fn delete_model(state: State<'_, SharedLocalAiState>, model_id: String
     state
         .model_manager
         .delete_model(&model_id)
-        .map_err(GitnadoError::OperationFailed)
+        .map_err(GitdudaError::OperationFailed)
 }
 
 #[command]
@@ -204,7 +204,7 @@ fn resolve_model_meta_for_load(
         ));
     }
 
-    Err(GitnadoError::OperationFailed(format!(
+    Err(GitdudaError::OperationFailed(format!(
         "Model '{}' not found in registry",
         model_id
     )))
@@ -222,7 +222,7 @@ pub async fn load_model(
 
     // Verify the model is downloaded
     if !local.model_manager.is_downloaded(&model_id) {
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "Model '{}' is not downloaded",
             model_id
         )));
@@ -238,7 +238,7 @@ pub async fn load_model(
         service
             .load_local_model(&model_path, display_name, Some(meta))
             .await
-            .map_err(GitnadoError::OperationFailed)?;
+            .map_err(GitdudaError::OperationFailed)?;
     }
 
     // Auto-select LocalInference as active provider if none is set
@@ -280,8 +280,8 @@ pub async fn import_custom_model(
         )
     })
     .await
-    .map_err(|e| GitnadoError::OperationFailed(format!("Import task failed: {e}")))?
-    .map_err(GitnadoError::OperationFailed)
+    .map_err(|e| GitdudaError::OperationFailed(format!("Import task failed: {e}")))?
+    .map_err(GitdudaError::OperationFailed)
 }
 
 /// Unload the current local model from memory.

@@ -30,7 +30,7 @@ const pr = (number: number, headRef: string, baseRef: string) => ({
   user: { login: 'octocat', id: 1, avatarUrl: '', name: 'Octo Cat', email: null },
   createdAt: '2026-01-01T00:00:00Z', updatedAt: '2026-01-01T00:00:00Z', mergedAt: null,
   headRef, headSha: 'x', baseRef, draft: false, mergeable: true,
-  htmlUrl: `https://github.com/octo/gitnado/pull/${number}`, additions: 0, deletions: 0, changedFiles: 0,
+  htmlUrl: `https://github.com/octo/gitduda/pull/${number}`, additions: 0, deletions: 0, changedFiles: 0,
 });
 
 async function openStackOnGitHub(page: Page, overrides: Record<string, unknown> = {}): Promise<void> {
@@ -38,7 +38,7 @@ async function openStackOnGitHub(page: Page, overrides: Record<string, unknown> 
   await page.goto('/');
   await page.waitForLoadState('domcontentloaded');
   await startCommandCaptureWithMocks(page, {
-    detect_github_repo: { owner: 'octo', repo: 'gitnado', remoteName: 'origin' },
+    detect_github_repo: { owner: 'octo', repo: 'gitduda', remoteName: 'origin' },
     get_keyring_token: 'gh-token',
     get_stacks: STACKS,
     get_commit: { summary: 'Add feature B' },
@@ -65,7 +65,7 @@ test.describe('Stacked pull requests', () => {
     const created = await findCommand(page, 'create_pull_request');
     expect(created).toHaveLength(1);
     expect(created[0].args).toMatchObject({
-      owner: 'octo', repo: 'gitnado',
+      owner: 'octo', repo: 'gitduda',
       input: { head: 'feat-b', base: 'feat-a', title: 'Add feature B' },
     });
 
@@ -73,7 +73,7 @@ test.describe('Stacked pull requests', () => {
     expect(updates.map((u) => (u.args as { number: number }).number).sort()).toEqual([11, 12]);
     const body11 = (updates.find((u) => (u.args as { number: number }).number === 11)!.args as { input: { body: string } }).input.body;
     expect(body11.startsWith('Author notes')).toBe(true);
-    expect(body11).toContain('[#12](https://github.com/octo/gitnado/pull/12) `feat-b`');
+    expect(body11).toContain('[#12](https://github.com/octo/gitduda/pull/12) `feat-b`');
     expect(body11).toContain('`feat-a` ← this one');
 
     const confirm = await findCommand(page, 'plugin:dialog|message');

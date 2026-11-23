@@ -1,6 +1,6 @@
 //! Running synchronous git work off the async runtime's worker threads.
 
-use crate::error::{GitnadoError, Result};
+use crate::error::{GitdudaError, Result};
 
 /// Run a synchronous, potentially slow git operation on tokio's blocking pool.
 ///
@@ -33,14 +33,14 @@ where
         Err(join_error) => {
             if join_error.is_panic() {
                 let payload = join_error.into_panic();
-                Err(GitnadoError::Custom(format!(
+                Err(GitdudaError::Custom(format!(
                     "Git operation panicked: {}",
                     panic_message(payload.as_ref())
                 )))
             } else {
                 // Only reachable if the task was aborted; nothing here aborts
                 // one, but report it rather than silently succeeding.
-                Err(GitnadoError::Custom(format!(
+                Err(GitdudaError::Custom(format!(
                     "Git operation did not complete: {}",
                     join_error
                 )))
@@ -63,7 +63,7 @@ fn panic_message(payload: &(dyn std::any::Any + Send)) -> String {
 #[cfg(test)]
 mod tests {
     use super::blocking_git;
-    use crate::error::GitnadoError;
+    use crate::error::GitdudaError;
 
     #[tokio::test]
     async fn returns_the_closure_value() {
@@ -73,10 +73,10 @@ mod tests {
 
     #[tokio::test]
     async fn propagates_the_closure_error_unchanged() {
-        let err = blocking_git::<(), _>(|| Err(GitnadoError::CommitNotFound("abc".into())))
+        let err = blocking_git::<(), _>(|| Err(GitdudaError::CommitNotFound("abc".into())))
             .await
             .unwrap_err();
-        assert!(matches!(err, GitnadoError::CommitNotFound(oid) if oid == "abc"));
+        assert!(matches!(err, GitdudaError::CommitNotFound(oid) if oid == "abc"));
     }
 
     /// A panicking git operation must surface as an ordinary command error.

@@ -458,14 +458,14 @@ test.describe('Keyboard Shortcuts Dialog - Details', () => {
 
     // Vim mode settings are persisted to localStorage by the keyboard service
     await page.waitForFunction(() => {
-      const stored = localStorage.getItem('gitnado-keyboard-settings');
+      const stored = localStorage.getItem('gitduda-keyboard-settings');
       if (!stored) return false;
       const settings = JSON.parse(stored);
       return settings.vimMode === true;
     });
 
     const vimMode = await page.evaluate(() => {
-      const stored = localStorage.getItem('gitnado-keyboard-settings');
+      const stored = localStorage.getItem('gitduda-keyboard-settings');
       return stored ? JSON.parse(stored).vimMode : null;
     });
     expect(vimMode).toBe(true);

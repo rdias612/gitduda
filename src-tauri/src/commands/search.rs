@@ -6,7 +6,7 @@ use std::io::BufRead;
 use std::process::Command;
 use tauri::command;
 
-use crate::error::{GitnadoError, Result};
+use crate::error::{GitdudaError, Result};
 
 /// A single search match within a file
 #[derive(Debug, Clone, serde::Serialize)]
@@ -168,13 +168,13 @@ pub async fn search_in_files(
         }
 
         let output = cmd.output().map_err(|e| {
-            GitnadoError::OperationFailed(format!("Failed to execute git grep: {}", e))
+            GitdudaError::OperationFailed(format!("Failed to execute git grep: {}", e))
         })?;
 
         // git grep returns exit code 1 when no matches are found (not an error)
         if !output.status.success() && output.status.code() != Some(1) {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(GitnadoError::OperationFailed(format!(
+            return Err(GitdudaError::OperationFailed(format!(
                 "git grep failed: {}",
                 stderr
             )));
@@ -185,7 +185,7 @@ pub async fn search_in_files(
             max_results as usize,
         )
         .map_err(|e| {
-            GitnadoError::OperationFailed(format!("Failed to read git grep output: {}", e))
+            GitdudaError::OperationFailed(format!("Failed to read git grep output: {}", e))
         })?;
 
         let mut file_map: HashMap<String, Vec<SearchResult>> = HashMap::new();
@@ -240,12 +240,12 @@ pub async fn search_in_diff(
         }
 
         let output = cmd.output().map_err(|e| {
-            GitnadoError::OperationFailed(format!("Failed to execute git diff: {}", e))
+            GitdudaError::OperationFailed(format!("Failed to execute git diff: {}", e))
         })?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(GitnadoError::OperationFailed(format!(
+            return Err(GitdudaError::OperationFailed(format!(
                 "git diff failed: {}",
                 stderr
             )));
@@ -364,12 +364,12 @@ pub async fn search_in_commits(
             .arg("--name-only");
 
         let output = cmd.output().map_err(|e| {
-            GitnadoError::OperationFailed(format!("Failed to execute git log: {}", e))
+            GitdudaError::OperationFailed(format!("Failed to execute git log: {}", e))
         })?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(GitnadoError::OperationFailed(format!(
+            return Err(GitdudaError::OperationFailed(format!(
                 "git log failed: {}",
                 stderr
             )));
@@ -442,12 +442,12 @@ pub async fn search_in_commit_messages(
             .arg(format!("-{}", max_commits));
 
         let output = cmd.output().map_err(|e| {
-            GitnadoError::OperationFailed(format!("Failed to execute git log: {}", e))
+            GitdudaError::OperationFailed(format!("Failed to execute git log: {}", e))
         })?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(GitnadoError::OperationFailed(format!(
+            return Err(GitdudaError::OperationFailed(format!(
                 "git log failed: {}",
                 stderr
             )));
@@ -545,12 +545,12 @@ pub async fn search_commits_by_content(
         }
 
         let output = cmd.output().map_err(|e| {
-            GitnadoError::OperationFailed(format!("Failed to execute git log: {}", e))
+            GitdudaError::OperationFailed(format!("Failed to execute git log: {}", e))
         })?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(GitnadoError::OperationFailed(format!(
+            return Err(GitdudaError::OperationFailed(format!(
                 "git log failed: {}",
                 stderr
             )));
@@ -640,12 +640,12 @@ pub async fn search_commits_by_file(
             .arg(&file_pattern);
 
         let output = cmd.output().map_err(|e| {
-            GitnadoError::OperationFailed(format!("Failed to execute git log: {}", e))
+            GitdudaError::OperationFailed(format!("Failed to execute git log: {}", e))
         })?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(GitnadoError::OperationFailed(format!(
+            return Err(GitdudaError::OperationFailed(format!(
                 "git log failed: {}",
                 stderr
             )));

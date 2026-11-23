@@ -4,7 +4,7 @@
 use std::process::Command;
 use tauri::command;
 
-use crate::error::{GitnadoError, Result};
+use crate::error::{GitdudaError, Result};
 
 /// Filter criteria for searching commits
 #[derive(Debug, serde::Deserialize)]
@@ -83,11 +83,11 @@ fn parse_log_line(line: &str) -> Option<FilteredCommit> {
 fn execute_git_log(cmd: &mut Command) -> Result<Vec<FilteredCommit>> {
     let output = cmd
         .output()
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to execute git log: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to execute git log: {}", e)))?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "git log failed: {}",
             stderr
         )));

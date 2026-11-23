@@ -1,7 +1,7 @@
 /**
  * External MCP servers for AI context (roadmap 4.2, issue #613).
  *
- * Gitnado's AI features (commit messages, PR descriptions) can ask MCP servers
+ * Gitduda's AI features (commit messages, PR descriptions) can ask MCP servers
  * you add here — an issue tracker, your docs — for context. Each server is
  * reached over HTTP or by running a local command. A server only contributes
  * once you pick its context tool; "Preview" shows exactly what would be added

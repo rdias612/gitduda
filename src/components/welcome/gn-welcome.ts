@@ -22,7 +22,7 @@ import '../dialogs/gn-clone-dialog.ts';
 import '../dialogs/gn-init-dialog.ts';
 import type { GnCloneDialog } from '../dialogs/gn-clone-dialog.ts';
 import type { GnInitDialog } from '../dialogs/gn-init-dialog.ts';
-import mascotImage from '../../assets/mascot/gitnado-400.png';
+import mascotImage from '../../assets/mascot/gitduda-400.png';
 
 @customElement('gn-welcome')
 @localized()

@@ -28,7 +28,7 @@ use push_ops::{
 use std::path::Path;
 use tauri::{command, AppHandle, Emitter};
 
-use crate::error::{GitnadoError, Result};
+use crate::error::{GitdudaError, Result};
 use crate::models::{Remote, RemoteOperationResult};
 use crate::services::cancellation::CancellationRegistry;
 use crate::services::credentials_service::TransferAbort;
@@ -68,11 +68,11 @@ fn transfer_failure(
     abort: &TransferAbort,
     error: git2::Error,
     timeout_message: &str,
-) -> GitnadoError {
+) -> GitdudaError {
     if abort.cancelled() {
-        GitnadoError::OperationCancelled
+        GitdudaError::OperationCancelled
     } else if abort.timed_out() {
-        GitnadoError::OperationTimeout(timeout_message.to_string())
+        GitdudaError::OperationTimeout(timeout_message.to_string())
     } else {
         error.into()
     }
@@ -85,7 +85,7 @@ pub async fn add_remote(path: String, name: String, url: String) -> Result<Remot
 
     // Check if remote already exists
     if repo.find_remote(&name).is_ok() {
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "Remote '{}' already exists",
             name
         )));
@@ -107,7 +107,7 @@ pub async fn remove_remote(path: String, name: String) -> Result<()> {
 
     // Check if remote exists
     repo.find_remote(&name)
-        .map_err(|_| GitnadoError::RemoteNotFound(name.clone()))?;
+        .map_err(|_| GitdudaError::RemoteNotFound(name.clone()))?;
 
     repo.remote_delete(&name)?;
 
@@ -122,14 +122,14 @@ pub async fn rename_remote(path: String, old_name: String, new_name: String) -> 
     // Check if old remote exists
     let old_remote = repo
         .find_remote(&old_name)
-        .map_err(|_| GitnadoError::RemoteNotFound(old_name.clone()))?;
+        .map_err(|_| GitdudaError::RemoteNotFound(old_name.clone()))?;
 
     let url = old_remote.url().unwrap_or("").to_string();
     let push_url = old_remote.pushurl().ok().flatten().map(|s| s.to_string());
 
     // Check if new name already exists
     if repo.find_remote(&new_name).is_ok() {
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "Remote '{}' already exists",
             new_name
         )));
@@ -168,7 +168,7 @@ pub async fn set_remote_url(
 
     // Check if remote exists
     repo.find_remote(&name)
-        .map_err(|_| GitnadoError::RemoteNotFound(name.clone()))?;
+        .map_err(|_| GitdudaError::RemoteNotFound(name.clone()))?;
 
     let url = url.trim();
 
@@ -181,7 +181,7 @@ pub async fn set_remote_url(
         }
     } else {
         if url.is_empty() {
-            return Err(GitnadoError::OperationFailed(
+            return Err(GitdudaError::OperationFailed(
                 "Remote URL cannot be empty".to_string(),
             ));
         }
@@ -275,7 +275,7 @@ fn guard_push_destinations(path: &str, remotes: &[String]) -> Result<()> {
 ///
 /// The code is what the frontend already switches on (MERGE_CONFLICT,
 /// REBASE_CONFLICT, ...); a late completion that carried only prose lost it.
-fn late_failure(prefix: &str, error: GitnadoError) -> (String, Option<String>) {
+fn late_failure(prefix: &str, error: GitdudaError) -> (String, Option<String>) {
     let message = format!("{}: {}", prefix, error);
     (message, Some(crate::error::ErrorResponse::from(error).code))
 }
@@ -324,12 +324,12 @@ fn ensure_pullable(repo_path: &Path) -> Result<()> {
     let repo = git2::Repository::open(repo_path)?;
     match repo.state() {
         git2::RepositoryState::Clean => Ok(()),
-        git2::RepositoryState::Merge => Err(GitnadoError::OperationFailed(
+        git2::RepositoryState::Merge => Err(GitdudaError::OperationFailed(
             "You have not concluded your merge (MERGE_HEAD exists). Resolve the \
              conflicts and commit, or abort the merge, before pulling."
                 .to_string(),
         )),
-        state => Err(GitnadoError::OperationFailed(format!(
+        state => Err(GitdudaError::OperationFailed(format!(
             "Cannot pull: another operation is in progress ({:?}). \
              Complete or abort it first.",
             state
@@ -376,7 +376,7 @@ async fn await_remote_task<T: Send + 'static>(
     let label_owned = label.to_string();
     let late_label = label.to_string();
     let join_failed = move |e: tokio::task::JoinError| {
-        GitnadoError::Custom(format!("{} task failed: {}", label_owned, e))
+        GitdudaError::Custom(format!("{} task failed: {}", label_owned, e))
     };
 
     let Some(timeout) = timeout else {
@@ -390,7 +390,7 @@ async fn await_remote_task<T: Send + 'static>(
         Err(_) => {
             tokio::spawn(async move {
                 match handle.await {
-                    Ok(Err(GitnadoError::OperationTimeout(_))) => {}
+                    Ok(Err(GitdudaError::OperationTimeout(_))) => {}
                     Ok(result) => on_late(result),
                     // A panic AFTER the task moved refs or rewrote the working
                     // tree is exactly the silent mutation this reporter exists
@@ -398,14 +398,14 @@ async fn await_remote_task<T: Send + 'static>(
                     // any other late failure so the frontend refreshes.
                     Err(e) => {
                         tracing::warn!("abandoned remote task failed to join: {}", e);
-                        on_late(Err(GitnadoError::Custom(format!(
+                        on_late(Err(GitdudaError::Custom(format!(
                             "{} task failed: {}",
                             late_label, e
                         ))));
                     }
                 }
             });
-            Err(GitnadoError::OperationTimeout(format!(
+            Err(GitdudaError::OperationTimeout(format!(
                 "{} operation timed out",
                 label
             )))
@@ -438,11 +438,11 @@ pub async fn deepen_repository(path: String, depth: u32) -> Result<()> {
         .arg("fetch")
         .arg(format!("--deepen={}", depth))
         .output()
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to deepen: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to deepen: {}", e)))?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "Deepen failed: {}",
             stderr.trim()
         )));
@@ -461,11 +461,11 @@ pub async fn unshallow_repository(path: String) -> Result<()> {
         .arg("fetch")
         .arg("--unshallow")
         .output()
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to unshallow: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to unshallow: {}", e)))?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "Unshallow failed: {}",
             stderr.trim()
         )));

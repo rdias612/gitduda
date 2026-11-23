@@ -1,15 +1,15 @@
 //! MCP client mode commands (roadmap 4.2, issue #613): manage the external
-//! MCP servers Gitnado's AI features may call for context.
+//! MCP servers Gitduda's AI features may call for context.
 
 use tauri::{command, State};
 
-use crate::error::{GitnadoError, Result};
+use crate::error::{GitdudaError, Result};
 use crate::services::ai::mcp_client::{
     self, ExternalContext, ExternalMcpServer, ExternalTool, SharedExternalServers,
 };
 
-fn err(e: String) -> GitnadoError {
-    GitnadoError::OperationFailed(e)
+fn err(e: String) -> GitdudaError {
+    GitdudaError::OperationFailed(e)
 }
 
 fn find(servers: &SharedExternalServers, id: &str) -> Result<ExternalMcpServer> {

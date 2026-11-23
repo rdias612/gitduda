@@ -346,7 +346,7 @@ describe('gn-repository-card', () => {
 
   describe('with repository', () => {
     it('renders repository name', async () => {
-      const repo = makeRepository({ name: 'gitnado' });
+      const repo = makeRepository({ name: 'gitduda' });
       const el = await fixture<GnRepositoryCard>(
         html`<gn-repository-card .repository=${repo}></gn-repository-card>`
       );
@@ -354,7 +354,7 @@ describe('gn-repository-card', () => {
 
       const name = el.shadowRoot!.querySelector('.repo-name');
       expect(name).to.not.be.null;
-      expect(name!.textContent).to.include('gitnado');
+      expect(name!.textContent).to.include('gitduda');
     });
 
     it('renders repository path', async () => {

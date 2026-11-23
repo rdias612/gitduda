@@ -1,5 +1,5 @@
 //! Workspace models for multi-repository workspaces
-//! Persisted globally at ~/.config/gitnado/workspaces.json
+//! Persisted globally at ~/.config/gitduda/workspaces.json
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};

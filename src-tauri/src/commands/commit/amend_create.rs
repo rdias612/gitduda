@@ -4,7 +4,7 @@ use std::path::Path;
 use tauri::command;
 
 use super::{parse_iso8601_to_git_time, should_sign_commit, signature_with_date};
-use crate::error::{GitnadoError, Result};
+use crate::error::{GitdudaError, Result};
 use crate::models::Commit;
 
 /// Create a new commit
@@ -41,7 +41,7 @@ pub async fn create_commit(
     if amend.unwrap_or(false) {
         let state = git2::Repository::open(Path::new(&path))?.state();
         if let Some(what) = crate::commands::branch::in_progress_operation(state) {
-            return Err(GitnadoError::OperationFailed(format!(
+            return Err(GitdudaError::OperationFailed(format!(
                 "Cannot amend while a {} is in progress. Finish or abort it first.",
                 what
             )));
@@ -156,7 +156,7 @@ pub async fn create_commit(
                     .unwrap_or(false),
             };
             if nothing_staged {
-                return Err(GitnadoError::OperationFailed(
+                return Err(GitdudaError::OperationFailed(
                     "No staged changes to commit".to_string(),
                 ));
             }
@@ -275,11 +275,11 @@ async fn create_commit_with_git_cli(
 
     let output = cmd
         .output()
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to run git commit: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to run git commit: {}", e)))?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "Git commit failed: {}",
             stderr
         )));
@@ -332,7 +332,7 @@ pub async fn amend_commit(
         let head_commit = repo
             .head()?
             .peel_to_commit()
-            .map_err(|_| GitnadoError::CommitNotFound("HEAD".to_string()))?;
+            .map_err(|_| GitdudaError::CommitNotFound("HEAD".to_string()))?;
 
         let old_oid = head_commit.id().to_string();
         let tree = head_commit.tree()?;
@@ -374,7 +374,7 @@ pub async fn amend_commit(
         if head_ref.is_branch() {
             let branch_name = head_ref
                 .name()
-                .map_err(|_| GitnadoError::OperationFailed("Invalid HEAD ref".to_string()))?;
+                .map_err(|_| GitdudaError::OperationFailed("Invalid HEAD ref".to_string()))?;
             repo.reference(
                 branch_name,
                 new_oid,
@@ -435,12 +435,12 @@ async fn amend_commit_with_git_cli(
         .args(&args)
         .output()
         .map_err(|e| {
-            GitnadoError::OperationFailed(format!("Failed to run git commit --amend: {}", e))
+            GitdudaError::OperationFailed(format!("Failed to run git commit --amend: {}", e))
         })?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "Git commit --amend failed: {}",
             stderr
         )));
@@ -480,7 +480,7 @@ pub async fn edit_commit_date(
     committer_date: Option<String>,
 ) -> Result<AmendResult> {
     if author_date.is_none() && committer_date.is_none() {
-        return Err(GitnadoError::OperationFailed(
+        return Err(GitdudaError::OperationFailed(
             "At least one of author_date or committer_date must be provided".to_string(),
         ));
     }
@@ -496,23 +496,23 @@ pub async fn edit_commit_date(
         parent_ids: Vec<git2::Oid>,
     }
 
-    let info: std::result::Result<CommitDateInfo, GitnadoError> = {
+    let info: std::result::Result<CommitDateInfo, GitdudaError> = {
         let path = path.clone();
         let oid = oid.clone();
         crate::utils::blocking_git(move || {
             let repo = git2::Repository::open(Path::new(&path))?;
 
             let target_oid =
-                git2::Oid::from_str(&oid).map_err(|_| GitnadoError::CommitNotFound(oid.clone()))?;
+                git2::Oid::from_str(&oid).map_err(|_| GitdudaError::CommitNotFound(oid.clone()))?;
             let target_commit = repo
                 .find_commit(target_oid)
-                .map_err(|_| GitnadoError::CommitNotFound(oid.clone()))?;
+                .map_err(|_| GitdudaError::CommitNotFound(oid.clone()))?;
 
             let head_oid = repo.head()?.peel_to_commit()?.id();
             let is_head = head_oid == target_oid;
 
             if repo.state() != git2::RepositoryState::Clean {
-                return Err(GitnadoError::OperationFailed(
+                return Err(GitdudaError::OperationFailed(
                     "Another operation is in progress".to_string(),
                 ));
             }
@@ -614,7 +614,7 @@ pub async fn edit_commit_date(
                 // HEAD points to a branch - update the branch target
                 let branch_name = head_ref
                     .name()
-                    .map_err(|_| GitnadoError::OperationFailed("Invalid HEAD ref".to_string()))?;
+                    .map_err(|_| GitdudaError::OperationFailed("Invalid HEAD ref".to_string()))?;
                 repo.reference(
                     branch_name,
                     new_oid,
@@ -659,13 +659,13 @@ async fn edit_commit_date_with_rebase(
     let (parent_oid_str, pre_rebase_head) = {
         let repo = git2::Repository::open(Path::new(path))?;
         let target_oid =
-            git2::Oid::from_str(oid).map_err(|_| GitnadoError::CommitNotFound(oid.to_string()))?;
+            git2::Oid::from_str(oid).map_err(|_| GitdudaError::CommitNotFound(oid.to_string()))?;
         let target_commit = repo
             .find_commit(target_oid)
-            .map_err(|_| GitnadoError::CommitNotFound(oid.to_string()))?;
+            .map_err(|_| GitdudaError::CommitNotFound(oid.to_string()))?;
 
         let parent = target_commit.parent(0).map_err(|_| {
-            GitnadoError::OperationFailed("Cannot edit date of root commit".to_string())
+            GitdudaError::OperationFailed("Cannot edit date of root commit".to_string())
         })?;
         let head = repo.head()?.peel_to_commit()?.id().to_string();
         (parent.id().to_string(), head)
@@ -700,7 +700,7 @@ async fn edit_commit_date_with_rebase(
         .args(["-c", "rebase.autostash=false"])
         .args(["rebase", "-i", &parent_oid_str])
         .output()
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to start rebase: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to start rebase: {}", e)))?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
@@ -723,7 +723,7 @@ async fn edit_commit_date_with_rebase(
                 .args(["rebase", "--abort"])
                 .output();
         }
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "Rebase failed: {}",
             stderr
         )));
@@ -756,7 +756,7 @@ async fn edit_commit_date_with_rebase(
             .output()
             .map(|out| out.status.success())
             .unwrap_or(false);
-        return Err(GitnadoError::OperationFailed(if restored {
+        return Err(GitdudaError::OperationFailed(if restored {
             "Rebase did not stop at the target commit — is it a merge commit? Nothing was changed."
                 .to_string()
         } else {
@@ -780,7 +780,7 @@ async fn edit_commit_date_with_rebase(
     }
 
     let amend_output = amend_cmd.output().map_err(|e| {
-        GitnadoError::OperationFailed(format!("Failed to amend commit date: {}", e))
+        GitdudaError::OperationFailed(format!("Failed to amend commit date: {}", e))
     })?;
 
     if !amend_output.status.success() {
@@ -790,7 +790,7 @@ async fn edit_commit_date_with_rebase(
             .current_dir(path)
             .args(["rebase", "--abort"])
             .output();
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "Failed to amend commit date: {}",
             stderr
         )));
@@ -813,12 +813,12 @@ async fn edit_commit_date_with_rebase(
         .current_dir(path)
         .args(["rebase", "--continue"])
         .output()
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to continue rebase: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to continue rebase: {}", e)))?;
 
     if !continue_output.status.success() {
         let stderr = String::from_utf8_lossy(&continue_output.stderr);
         if stderr.contains("CONFLICT") || stderr.contains("conflict") {
-            return Err(GitnadoError::RebaseConflict);
+            return Err(GitdudaError::RebaseConflict);
         }
         // Sometimes rebase --continue fails because there's nothing to continue
         // (single commit case) - check if we're in a clean state
@@ -828,7 +828,7 @@ async fn edit_commit_date_with_rebase(
                 .current_dir(path)
                 .args(["rebase", "--abort"])
                 .output();
-            return Err(GitnadoError::OperationFailed(format!(
+            return Err(GitdudaError::OperationFailed(format!(
                 "Rebase continue failed: {}",
                 stderr
             )));
@@ -856,7 +856,7 @@ async fn edit_commit_date_with_rebase(
 pub async fn reword_commit(path: String, oid: String, message: String) -> Result<AmendResult> {
     // Run the inspection on the blocking pool, and inside one closure: git2
     // types are not Send, so no handle may cross the await that follows.
-    let result: std::result::Result<(bool, Option<git2::Oid>), GitnadoError> = {
+    let result: std::result::Result<(bool, Option<git2::Oid>), GitdudaError> = {
         let path = path.clone();
         let oid = oid.clone();
         crate::utils::blocking_git(move || {
@@ -864,10 +864,10 @@ pub async fn reword_commit(path: String, oid: String, message: String) -> Result
 
             // Verify the commit exists
             let target_oid =
-                git2::Oid::from_str(&oid).map_err(|_| GitnadoError::CommitNotFound(oid.clone()))?;
+                git2::Oid::from_str(&oid).map_err(|_| GitdudaError::CommitNotFound(oid.clone()))?;
             let target_commit = repo
                 .find_commit(target_oid)
-                .map_err(|_| GitnadoError::CommitNotFound(oid.clone()))?;
+                .map_err(|_| GitdudaError::CommitNotFound(oid.clone()))?;
 
             // Check if this is the HEAD commit - if so, use amend instead
             let head_oid = repo.head()?.peel_to_commit()?.id();
@@ -875,7 +875,7 @@ pub async fn reword_commit(path: String, oid: String, message: String) -> Result
 
             // Check for existing operations in progress
             if repo.state() != git2::RepositoryState::Clean {
-                return Err(GitnadoError::OperationFailed(
+                return Err(GitdudaError::OperationFailed(
                     "Another operation is in progress".to_string(),
                 ));
             }
@@ -895,7 +895,7 @@ pub async fn reword_commit(path: String, oid: String, message: String) -> Result
                 // `isMergeCommit`. (The `is_head` path amends in place and keeps
                 // every parent, so it stays allowed.)
                 if target_commit.parent_count() > 1 {
-                    return Err(GitnadoError::OperationFailed(
+                    return Err(GitdudaError::OperationFailed(
                         "Cannot reword a merge commit".to_string(),
                     ));
                 }
@@ -903,7 +903,7 @@ pub async fn reword_commit(path: String, oid: String, message: String) -> Result
                     target_commit
                         .parent(0)
                         .map_err(|_| {
-                            GitnadoError::OperationFailed("Cannot reword root commit".to_string())
+                            GitdudaError::OperationFailed("Cannot reword root commit".to_string())
                         })?
                         .id(),
                 )
@@ -951,7 +951,7 @@ pub async fn reword_commit(path: String, oid: String, message: String) -> Result
             .args(crate::utils::TODO_FORMAT_ARGS)
             .args(["rebase", "-i", &parent_oid.to_string()])
             .output()
-            .map_err(|e| GitnadoError::OperationFailed(e.to_string()))?;
+            .map_err(|e| GitdudaError::OperationFailed(e.to_string()))?;
 
         // Clean up temporary files
         let _ = std::fs::remove_file(&msg_file);
@@ -959,9 +959,9 @@ pub async fn reword_commit(path: String, oid: String, message: String) -> Result
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
             if stderr.contains("CONFLICT") || stderr.contains("conflict") {
-                return Err(GitnadoError::RebaseConflict);
+                return Err(GitdudaError::RebaseConflict);
             }
-            return Err(GitnadoError::OperationFailed(format!(
+            return Err(GitdudaError::OperationFailed(format!(
                 "Rebase failed: {}",
                 stderr
             )));

@@ -10,7 +10,7 @@
 - **Restrições do Projeto (`eslint.config.mjs` / convenções locais)**:
   - Imports relativos internos usam extensão explícita `.ts` (`../../types/git.types.ts`, `../../utils/default-commit-message.ts`).
   - TypeScript estrito sem `@typescript-eslint/no-explicit-any` nem variáveis não utilizadas (`@typescript-eslint/no-unused-vars`).
-  - Componentes em `src/components/**/*.ts` seguem a regra `gitnado/overlay-stack-membership`.
+  - Componentes em `src/components/**/*.ts` seguem a regra `gitduda/overlay-stack-membership`.
   - Testes unitários e de componente rodam via `@open-wc/testing` + `web-test-runner` (com mock de `__TAURI_INTERNALS__` e `__TAURI_EVENT_PLUGIN_INTERNALS__` antes dos imports de componente).
   - Retrocompatibilidade com testes existentes que instanciam `<gn-commit-panel .repositoryPath=... .stagedCount=...>` sem passar `.stagedFiles` (default `[]`).
 - **Comando de Build Global**: `npm run typecheck && npm run lint && npm run build`

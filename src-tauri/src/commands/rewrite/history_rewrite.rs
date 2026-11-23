@@ -3,7 +3,7 @@
 use std::path::Path;
 use tauri::command;
 
-use crate::error::{GitnadoError, Result};
+use crate::error::{GitdudaError, Result};
 
 /// Result of a drop commit operation
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -30,7 +30,7 @@ pub async fn drop_commit(path: String, commit_oid: String) -> Result<DropCommitR
 
     // Check for existing operations in progress
     if repo.state() != git2::RepositoryState::Clean {
-        return Err(GitnadoError::OperationFailed(
+        return Err(GitdudaError::OperationFailed(
             "Another operation is in progress".to_string(),
         ));
     }
@@ -42,7 +42,7 @@ pub async fn drop_commit(path: String, commit_oid: String) -> Result<DropCommitR
             .iter()
             .any(|s| s.status() != git2::Status::IGNORED && s.status() != git2::Status::CURRENT);
         if has_changes {
-            return Err(GitnadoError::OperationFailed(
+            return Err(GitdudaError::OperationFailed(
                 "Working directory has uncommitted changes. Commit or stash them first."
                     .to_string(),
             ));
@@ -51,11 +51,11 @@ pub async fn drop_commit(path: String, commit_oid: String) -> Result<DropCommitR
 
     // Parse the commit OID
     let target_oid = git2::Oid::from_str(&commit_oid)
-        .map_err(|_| GitnadoError::CommitNotFound(commit_oid.clone()))?;
+        .map_err(|_| GitdudaError::CommitNotFound(commit_oid.clone()))?;
 
     let target_commit = repo
         .find_commit(target_oid)
-        .map_err(|_| GitnadoError::CommitNotFound(commit_oid.clone()))?;
+        .map_err(|_| GitdudaError::CommitNotFound(commit_oid.clone()))?;
 
     let dropped_message = target_commit
         .message()
@@ -67,14 +67,14 @@ pub async fn drop_commit(path: String, commit_oid: String) -> Result<DropCommitR
 
     // Cannot drop root commit (no parent to rebase onto)
     if target_commit.parent_count() == 0 {
-        return Err(GitnadoError::OperationFailed(
+        return Err(GitdudaError::OperationFailed(
             "Cannot drop root commit".to_string(),
         ));
     }
 
     // Cannot drop a merge commit directly
     if target_commit.parent_count() > 1 {
-        return Err(GitnadoError::OperationFailed(
+        return Err(GitdudaError::OperationFailed(
             "Cannot drop a merge commit".to_string(),
         ));
     }
@@ -117,7 +117,7 @@ pub async fn drop_commit(path: String, commit_oid: String) -> Result<DropCommitR
 
     // Verify that target_commit is an ancestor of HEAD
     if !repo.graph_descendant_of(head_commit.id(), target_commit.id())? {
-        return Err(GitnadoError::OperationFailed(
+        return Err(GitdudaError::OperationFailed(
             "Commit to drop is not an ancestor of HEAD".to_string(),
         ));
     }
@@ -144,7 +144,7 @@ pub async fn drop_commit(path: String, commit_oid: String) -> Result<DropCommitR
 
     for commit in &commits_after_drop {
         if commit.parent_count() > 1 {
-            return Err(GitnadoError::OperationFailed(format!(
+            return Err(GitdudaError::OperationFailed(format!(
                 "Cannot drop commit: descendant commit {} is a merge commit",
                 commit.id()
             )));
@@ -252,7 +252,7 @@ pub async fn reorder_commits(
 
     // Check for existing operations in progress
     if repo.state() != git2::RepositoryState::Clean {
-        return Err(GitnadoError::OperationFailed(
+        return Err(GitdudaError::OperationFailed(
             "Another operation is in progress".to_string(),
         ));
     }
@@ -264,7 +264,7 @@ pub async fn reorder_commits(
             .iter()
             .any(|s| s.status() != git2::Status::IGNORED && s.status() != git2::Status::CURRENT);
         if has_changes {
-            return Err(GitnadoError::OperationFailed(
+            return Err(GitdudaError::OperationFailed(
                 "Working directory has uncommitted changes. Commit or stash them first."
                     .to_string(),
             ));
@@ -272,26 +272,26 @@ pub async fn reorder_commits(
     }
 
     if commit_order.is_empty() {
-        return Err(GitnadoError::OperationFailed(
+        return Err(GitdudaError::OperationFailed(
             "No commits specified for reordering".to_string(),
         ));
     }
 
     // Parse the base commit
     let base_oid = git2::Oid::from_str(&base_commit)
-        .map_err(|_| GitnadoError::CommitNotFound(base_commit.clone()))?;
+        .map_err(|_| GitdudaError::CommitNotFound(base_commit.clone()))?;
     let _base = repo
         .find_commit(base_oid)
-        .map_err(|_| GitnadoError::CommitNotFound(base_commit.clone()))?;
+        .map_err(|_| GitdudaError::CommitNotFound(base_commit.clone()))?;
 
     // Parse and validate all commit OIDs in the new order
     let mut commits_in_order = Vec::new();
     for oid_str in &commit_order {
         let oid = git2::Oid::from_str(oid_str)
-            .map_err(|_| GitnadoError::CommitNotFound(oid_str.clone()))?;
+            .map_err(|_| GitdudaError::CommitNotFound(oid_str.clone()))?;
         let commit = repo
             .find_commit(oid)
-            .map_err(|_| GitnadoError::CommitNotFound(oid_str.clone()))?;
+            .map_err(|_| GitdudaError::CommitNotFound(oid_str.clone()))?;
         commits_in_order.push(commit);
     }
 
@@ -313,7 +313,7 @@ pub async fn reorder_commits(
         commits_in_order.iter().map(|c| c.id()).collect();
 
     if original_oids != reorder_oids {
-        return Err(GitnadoError::OperationFailed(
+        return Err(GitdudaError::OperationFailed(
             "Reorder list must contain exactly the same commits as the original range".to_string(),
         ));
     }
@@ -329,7 +329,7 @@ pub async fn reorder_commits(
 
         // Cherry-pick this commit onto the new base using tree merge
         let commit_parent = commit.parent(0).map_err(|_| {
-            GitnadoError::OperationFailed(format!("Cannot reorder root commit {}", commit.id()))
+            GitdudaError::OperationFailed(format!("Cannot reorder root commit {}", commit.id()))
         })?;
         let parent_tree = commit_parent.tree()?;
         let commit_tree = commit.tree()?;

@@ -1,6 +1,6 @@
 //! MCP client mode (roadmap 4.2, issue #613).
 //!
-//! Gitnado's own AI features can call MCP servers the user configures —
+//! Gitduda's own AI features can call MCP servers the user configures —
 //! issue trackers, docs, internal tools — for extra context. Each server is
 //! reached over Streamable HTTP or by launching a local stdio command.
 //!
@@ -818,7 +818,7 @@ done
     #[tokio::test]
     async fn http_servers_list_tools_from_a_real_mcp_server() {
         let _policy = crate::services::security::test_support::no_policy();
-        // Gitnado's own MCP server stands in for an external one.
+        // Gitduda's own MCP server stands in for an external one.
         let dir = tempfile::TempDir::new().unwrap();
         let mut server = crate::services::ai::mcp::McpServer::new(dir.path().to_path_buf());
         let port = crate::test_utils::reserve_test_port();

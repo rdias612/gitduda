@@ -5,7 +5,7 @@ use std::path::Path;
 use std::sync::{Mutex, OnceLock};
 use tauri::command;
 
-use crate::error::{GitnadoError, Result};
+use crate::error::{GitdudaError, Result};
 use crate::models::{Commit, FileHistoryEntry};
 
 /// Cached full revwalk (OIDs only) per repository for the all-branches graph
@@ -51,7 +51,7 @@ fn refs_snapshot(repo: &git2::Repository) -> (u64, Vec<git2::Oid>) {
 
     if let Ok(refs) = repo.references() {
         for reference in refs.flatten() {
-            // Checkpoints are Gitnado's bookkeeping, not history the user made.
+            // Checkpoints are Gitduda's bookkeeping, not history the user made.
             if reference.name().is_ok_and(crate::utils::is_internal_ref) {
                 continue;
             }
@@ -208,7 +208,7 @@ pub async fn get_commit(path: String, oid: String) -> Result<Commit> {
         let oid = git2::Oid::from_str(&oid)?;
         let commit = repo
             .find_commit(oid)
-            .map_err(|_| GitnadoError::CommitNotFound(oid.to_string()))?;
+            .map_err(|_| GitdudaError::CommitNotFound(oid.to_string()))?;
 
         Ok(Commit::from_git2(&commit))
     })
@@ -238,7 +238,7 @@ pub async fn search_commits(
             // Push only the specified branch/ref
             let reference = repo
                 .resolve_reference_from_short_name(branch_name)
-                .map_err(|_| crate::error::GitnadoError::BranchNotFound(branch_name.clone()))?;
+                .map_err(|_| crate::error::GitdudaError::BranchNotFound(branch_name.clone()))?;
             if let Ok(commit) = reference.peel_to_commit() {
                 revwalk.push(commit.id())?;
             }

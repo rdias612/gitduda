@@ -12,7 +12,7 @@ pub use history::*;
 use std::path::Path;
 use tauri::command;
 
-use crate::error::{GitnadoError, Result};
+use crate::error::{GitdudaError, Result};
 
 /// Parse an ISO 8601 date string into a git2::Time
 ///
@@ -21,7 +21,7 @@ use crate::error::{GitnadoError, Result};
 /// - "2024-01-15T10:30:00+05:00"
 /// - "2024-01-15T10:30:00-03:00"
 /// - Unix timestamp as string (e.g., "1705312200")
-fn parse_iso8601_to_git_time(date_str: &str) -> std::result::Result<git2::Time, GitnadoError> {
+fn parse_iso8601_to_git_time(date_str: &str) -> std::result::Result<git2::Time, GitdudaError> {
     // Try parsing as unix timestamp first
     if let Ok(ts) = date_str.parse::<i64>() {
         return Ok(git2::Time::new(ts, 0));
@@ -37,10 +37,10 @@ fn parse_iso8601_to_git_time(date_str: &str) -> std::result::Result<git2::Time, 
         if (last6.starts_with('+') || last6.starts_with('-')) && last6.chars().nth(3) == Some(':') {
             let sign = if last6.starts_with('+') { 1 } else { -1 };
             let hours: i32 = last6[1..3].parse().map_err(|_| {
-                GitnadoError::OperationFailed(format!("Invalid timezone offset in: {}", date_str))
+                GitdudaError::OperationFailed(format!("Invalid timezone offset in: {}", date_str))
             })?;
             let mins: i32 = last6[4..6].parse().map_err(|_| {
-                GitnadoError::OperationFailed(format!("Invalid timezone offset in: {}", date_str))
+                GitdudaError::OperationFailed(format!("Invalid timezone offset in: {}", date_str))
             })?;
             (&date_str[..date_str.len() - 6], sign * (hours * 60 + mins))
         } else {
@@ -53,7 +53,7 @@ fn parse_iso8601_to_git_time(date_str: &str) -> std::result::Result<git2::Time, 
     // Parse datetime: YYYY-MM-DDTHH:MM:SS
     let parts: Vec<&str> = datetime_str.split('T').collect();
     if parts.len() != 2 {
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "Invalid ISO 8601 date format: {}. Expected YYYY-MM-DDTHH:MM:SS[Z|+HH:MM]",
             date_str
         )));
@@ -63,32 +63,32 @@ fn parse_iso8601_to_git_time(date_str: &str) -> std::result::Result<git2::Time, 
     let time_parts: Vec<&str> = parts[1].split(':').collect();
 
     if date_parts.len() != 3 || time_parts.len() < 2 {
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "Invalid ISO 8601 date format: {}. Expected YYYY-MM-DDTHH:MM:SS[Z|+HH:MM]",
             date_str
         )));
     }
 
     let year: i32 = date_parts[0].parse().map_err(|_| {
-        GitnadoError::OperationFailed(format!("Invalid year in date: {}", date_str))
+        GitdudaError::OperationFailed(format!("Invalid year in date: {}", date_str))
     })?;
     let month: u32 = date_parts[1].parse().map_err(|_| {
-        GitnadoError::OperationFailed(format!("Invalid month in date: {}", date_str))
+        GitdudaError::OperationFailed(format!("Invalid month in date: {}", date_str))
     })?;
     let day: u32 = date_parts[2]
         .parse()
-        .map_err(|_| GitnadoError::OperationFailed(format!("Invalid day in date: {}", date_str)))?;
+        .map_err(|_| GitdudaError::OperationFailed(format!("Invalid day in date: {}", date_str)))?;
     let hour: u32 = time_parts[0].parse().map_err(|_| {
-        GitnadoError::OperationFailed(format!("Invalid hour in date: {}", date_str))
+        GitdudaError::OperationFailed(format!("Invalid hour in date: {}", date_str))
     })?;
     let minute: u32 = time_parts[1].parse().map_err(|_| {
-        GitnadoError::OperationFailed(format!("Invalid minute in date: {}", date_str))
+        GitdudaError::OperationFailed(format!("Invalid minute in date: {}", date_str))
     })?;
     let second: u32 = if time_parts.len() >= 3 {
         // Handle fractional seconds by taking only the integer part
         let sec_str = time_parts[2].split('.').next().unwrap_or("0");
         sec_str.parse().map_err(|_| {
-            GitnadoError::OperationFailed(format!("Invalid second in date: {}", date_str))
+            GitdudaError::OperationFailed(format!("Invalid second in date: {}", date_str))
         })?
     } else {
         0
@@ -130,7 +130,7 @@ fn signature_with_date<'a>(
     name: &str,
     email: &str,
     date_str: Option<&str>,
-) -> std::result::Result<git2::Signature<'a>, GitnadoError> {
+) -> std::result::Result<git2::Signature<'a>, GitdudaError> {
     match date_str {
         Some(ds) => {
             let time = parse_iso8601_to_git_time(ds)?;
@@ -215,7 +215,7 @@ pub async fn get_commit_message(path: String, oid: String) -> Result<String> {
         let oid = git2::Oid::from_str(&oid)?;
         let commit = repo
             .find_commit(oid)
-            .map_err(|_| GitnadoError::CommitNotFound(oid.to_string()))?;
+            .map_err(|_| GitdudaError::CommitNotFound(oid.to_string()))?;
 
         Ok(commit.message().ok().unwrap_or("").to_string())
     })

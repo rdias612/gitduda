@@ -7,7 +7,7 @@
 
 use tauri::{AppHandle, Manager};
 
-use crate::error::{GitnadoError, Result};
+use crate::error::{GitdudaError, Result};
 use crate::menu::{AppMenuState, MenuItemUpdate};
 
 /// Update the enabled state and accelerator of application menu items.
@@ -19,7 +19,7 @@ pub fn sync_app_menu(app: AppHandle, items: Vec<MenuItemUpdate>) -> Result<()> {
     // the whole command bridge down.
     let state = app
         .try_state::<AppMenuState>()
-        .ok_or_else(|| GitnadoError::OperationFailed("application menu is not available".into()))?;
+        .ok_or_else(|| GitdudaError::OperationFailed("application menu is not available".into()))?;
 
     state.apply(&items)
 }

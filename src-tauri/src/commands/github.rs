@@ -4,7 +4,7 @@
 use serde::{Deserialize, Serialize};
 use tauri::command;
 
-use crate::error::{GitnadoError, Result};
+use crate::error::{GitdudaError, Result};
 use crate::models::{ProviderRepository, ProviderRepositoryPage, ProviderUserStatus};
 use crate::services::provider_http;
 
@@ -268,7 +268,7 @@ async fn resolve_github_token_with_source(
         return Ok((app_token, GitHubTokenSource::AppInstallation));
     }
 
-    Err(GitnadoError::OperationFailed(
+    Err(GitdudaError::OperationFailed(
         "GitHub token not configured".to_string(),
     ))
 }
@@ -289,8 +289,8 @@ async fn github_app_installation_token() -> Result<Option<String>> {
     let cfg = deserialize_app_config(&raw)?;
 
     let jwt = github_app::generate_jwt(cfg.app_id, &cfg.private_key_pem)
-        .map_err(GitnadoError::OperationFailed)?;
-    // Already a `GitnadoError`, so a gate refusal stays `NetworkBlocked`
+        .map_err(GitdudaError::OperationFailed)?;
+    // Already a `GitdudaError`, so a gate refusal stays `NetworkBlocked`
     // rather than being flattened into a generic failure.
     let token = github_app::get_installation_token(&jwt, cfg.installation_id).await?;
 
@@ -340,13 +340,13 @@ pub async fn check_github_connection(token: Option<String>) -> Result<GitHubConn
         .send()
         .await
         .map_err(|e| {
-            GitnadoError::OperationFailed(format!("Failed to connect to GitHub: {}", e))
+            GitdudaError::OperationFailed(format!("Failed to connect to GitHub: {}", e))
         })?;
 
     if !response.status().is_success() {
         let status = response.status();
         let error_body = response.text().await.unwrap_or_default();
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "GitHub API error ({}): {}",
             status, error_body
         )));
@@ -363,7 +363,7 @@ pub async fn check_github_connection(token: Option<String>) -> Result<GitHubConn
     let user: GitHubUser = response
         .json()
         .await
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to parse user: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to parse user: {}", e)))?;
 
     Ok(GitHubConnectionStatus {
         connected: true,
@@ -384,7 +384,7 @@ pub async fn detect_github_repo(
 ) -> Result<Option<DetectedGitHubRepo>> {
     crate::utils::blocking_git(move || {
         let repo = git2::Repository::open(&path)
-            .map_err(|e| GitnadoError::RepositoryNotFound(e.to_string()))?;
+            .map_err(|e| GitdudaError::RepositoryNotFound(e.to_string()))?;
 
         // Check all remotes for GitHub URLs
         for candidate in repo.remotes()?.iter().flatten().flatten() {
@@ -531,12 +531,12 @@ fn parse_github_repository_page(
     let entries: Vec<ApiRepoListEntry> = if from_app {
         serde_json::from_str::<ApiInstallationRepos>(body)
             .map_err(|e| {
-                GitnadoError::OperationFailed(format!("Failed to parse repositories: {}", e))
+                GitdudaError::OperationFailed(format!("Failed to parse repositories: {}", e))
             })?
             .repositories
     } else {
         serde_json::from_str(body).map_err(|e| {
-            GitnadoError::OperationFailed(format!("Failed to parse repositories: {}", e))
+            GitdudaError::OperationFailed(format!("Failed to parse repositories: {}", e))
         })?
     };
 
@@ -581,7 +581,7 @@ fn parse_github_repository_page(
 /// "reconnect this account" for `AUTH_REQUIRED` rather than showing a raw API
 /// string. Everything else (403 rate limits included, whose body explains
 /// itself) keeps the module's usual message shape.
-fn map_repository_list_error(status: reqwest::StatusCode, body: &str) -> GitnadoError {
+fn map_repository_list_error(status: reqwest::StatusCode, body: &str) -> GitdudaError {
     provider_http::map_repository_list_api_error("GitHub", status, body, false)
 }
 
@@ -630,7 +630,7 @@ pub async fn list_github_repositories(
     }
 
     let response = request.send().await.map_err(|e| {
-        GitnadoError::OperationFailed(format!("Failed to fetch repositories: {}", e))
+        GitdudaError::OperationFailed(format!("Failed to fetch repositories: {}", e))
     })?;
 
     if !response.status().is_success() {
@@ -640,7 +640,7 @@ pub async fn list_github_repositories(
     }
 
     let body = response.text().await.map_err(|e| {
-        GitnadoError::OperationFailed(format!("Failed to read repositories: {}", e))
+        GitdudaError::OperationFailed(format!("Failed to read repositories: {}", e))
     })?;
 
     parse_github_repository_page(&body, from_app, per_page, page)
@@ -679,12 +679,12 @@ pub async fn list_pull_requests(
         .header("X-GitHub-Api-Version", "2022-11-28")
         .send()
         .await
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to fetch PRs: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to fetch PRs: {}", e)))?;
 
     if !response.status().is_success() {
         let status = response.status();
         let body = response.text().await.unwrap_or_default();
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "GitHub API error {}: {}",
             status, body
         )));
@@ -728,7 +728,7 @@ pub async fn list_pull_requests(
     let prs: Vec<ApiPR> = response
         .json()
         .await
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to parse PRs: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to parse PRs: {}", e)))?;
 
     Ok(prs
         .into_iter()
@@ -781,12 +781,12 @@ pub async fn get_pull_request(
         .header("X-GitHub-Api-Version", "2022-11-28")
         .send()
         .await
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to fetch PR: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to fetch PR: {}", e)))?;
 
     if !response.status().is_success() {
         let status = response.status();
         let body = response.text().await.unwrap_or_default();
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "GitHub API error {}: {}",
             status, body
         )));
@@ -847,7 +847,7 @@ pub async fn get_pull_request(
     let pr: ApiPRDetail = response
         .json()
         .await
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to parse PR: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to parse PR: {}", e)))?;
 
     Ok(PullRequestDetails {
         number: pr.number,
@@ -956,12 +956,12 @@ pub async fn create_pull_request(
         .json(&body)
         .send()
         .await
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to create PR: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to create PR: {}", e)))?;
 
     if !response.status().is_success() {
         let status = response.status();
         let body = response.text().await.unwrap_or_default();
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "GitHub API error {}: {}",
             status, body
         )));
@@ -1000,7 +1000,7 @@ pub async fn create_pull_request(
     let pr: ApiPR = response
         .json()
         .await
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to parse PR: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to parse PR: {}", e)))?;
 
     Ok(PullRequestSummary {
         number: pr.number,
@@ -1050,12 +1050,12 @@ pub async fn get_pull_request_reviews(
         .header("X-GitHub-Api-Version", "2022-11-28")
         .send()
         .await
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to fetch reviews: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to fetch reviews: {}", e)))?;
 
     if !response.status().is_success() {
         let status = response.status();
         let body = response.text().await.unwrap_or_default();
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "GitHub API error {}: {}",
             status, body
         )));
@@ -1083,7 +1083,7 @@ pub async fn get_pull_request_reviews(
     let reviews: Vec<ApiReview> = response
         .json()
         .await
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to parse reviews: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to parse reviews: {}", e)))?;
 
     Ok(reviews
         .into_iter()
@@ -1138,7 +1138,7 @@ fn map_api_github_pr_comment(item: ApiGitHubPrCommentItem) -> GitHubPrComment {
 
 fn parse_github_pr_comment_item(json: &str) -> Result<GitHubPrComment> {
     let item: ApiGitHubPrCommentItem = serde_json::from_str(json).map_err(|e| {
-        GitnadoError::OperationFailed(format!("Failed to parse GitHub PR comment: {}", e))
+        GitdudaError::OperationFailed(format!("Failed to parse GitHub PR comment: {}", e))
     })?;
     Ok(map_api_github_pr_comment(item))
 }
@@ -1149,11 +1149,11 @@ fn parse_github_pr_comments(
 ) -> Result<Vec<GitHubPrComment>> {
     let issue_items: Vec<ApiGitHubPrCommentItem> = serde_json::from_str(issue_comments_json)
         .map_err(|e| {
-            GitnadoError::OperationFailed(format!("Failed to parse PR issue comments: {}", e))
+            GitdudaError::OperationFailed(format!("Failed to parse PR issue comments: {}", e))
         })?;
     let review_items: Vec<ApiGitHubPrCommentItem> = serde_json::from_str(review_comments_json)
         .map_err(|e| {
-            GitnadoError::OperationFailed(format!("Failed to parse PR review comments: {}", e))
+            GitdudaError::OperationFailed(format!("Failed to parse PR review comments: {}", e))
         })?;
 
     let mut comments: Vec<GitHubPrComment> = issue_items
@@ -1225,20 +1225,20 @@ pub async fn get_github_pr_comments(
         .send()
         .await
         .map_err(|e| {
-            GitnadoError::OperationFailed(format!("Failed to fetch PR comments: {}", e))
+            GitdudaError::OperationFailed(format!("Failed to fetch PR comments: {}", e))
         })?;
 
     if !issue_response.status().is_success() {
         let status = issue_response.status();
         let body = issue_response.text().await.unwrap_or_default();
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "GitHub API error {}: {}",
             status, body
         )));
     }
 
     let issue_json = issue_response.text().await.map_err(|e| {
-        GitnadoError::OperationFailed(format!("Failed to read PR issue comments: {}", e))
+        GitdudaError::OperationFailed(format!("Failed to read PR issue comments: {}", e))
     })?;
 
     let review_response = client
@@ -1254,20 +1254,20 @@ pub async fn get_github_pr_comments(
         .send()
         .await
         .map_err(|e| {
-            GitnadoError::OperationFailed(format!("Failed to fetch PR review comments: {}", e))
+            GitdudaError::OperationFailed(format!("Failed to fetch PR review comments: {}", e))
         })?;
 
     if !review_response.status().is_success() {
         let status = review_response.status();
         let body = review_response.text().await.unwrap_or_default();
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "GitHub API error {}: {}",
             status, body
         )));
     }
 
     let review_json = review_response.text().await.map_err(|e| {
-        GitnadoError::OperationFailed(format!("Failed to read PR review comments: {}", e))
+        GitdudaError::OperationFailed(format!("Failed to read PR review comments: {}", e))
     })?;
 
     parse_github_pr_comments(&issue_json, &review_json)
@@ -1312,7 +1312,7 @@ pub async fn add_github_pr_comment(
                 .send()
                 .await
                 .map_err(|e| {
-                    GitnadoError::OperationFailed(format!(
+                    GitdudaError::OperationFailed(format!(
                         "Failed to fetch PR head SHA for inline comment: {}",
                         e
                     ))
@@ -1321,7 +1321,7 @@ pub async fn add_github_pr_comment(
             if !pr_resp.status().is_success() {
                 let status = pr_resp.status();
                 let err_body = pr_resp.text().await.unwrap_or_default();
-                return Err(GitnadoError::OperationFailed(format!(
+                return Err(GitdudaError::OperationFailed(format!(
                     "GitHub API error {}: {}",
                     status, err_body
                 )));
@@ -1336,7 +1336,7 @@ pub async fn add_github_pr_comment(
                 head: PrHeadRef,
             }
             let pr_head: PrHeadResponse = pr_resp.json().await.map_err(|e| {
-                GitnadoError::OperationFailed(format!("Failed to parse PR head SHA: {}", e))
+                GitdudaError::OperationFailed(format!("Failed to parse PR head SHA: {}", e))
             })?;
             Some(pr_head.head.sha)
         }
@@ -1372,19 +1372,19 @@ pub async fn add_github_pr_comment(
         .json(&payload)
         .send()
         .await
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to post PR comment: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to post PR comment: {}", e)))?;
 
     if !response.status().is_success() {
         let status = response.status();
         let err_body = response.text().await.unwrap_or_default();
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "GitHub API error {}: {}",
             status, err_body
         )));
     }
 
     let response_json = response.text().await.map_err(|e| {
-        GitnadoError::OperationFailed(format!("Failed to read PR comment response: {}", e))
+        GitdudaError::OperationFailed(format!("Failed to read PR comment response: {}", e))
     })?;
 
     parse_github_pr_comment_item(&response_json)
@@ -1425,7 +1425,7 @@ pub async fn get_workflow_runs(
     }
 
     let response = request.send().await.map_err(|e| {
-        GitnadoError::OperationFailed(format!("Failed to fetch workflow runs: {}", e))
+        GitdudaError::OperationFailed(format!("Failed to fetch workflow runs: {}", e))
     })?;
     let response = provider_http::check_provider_response(response, "GitHub").await?;
 
@@ -1451,7 +1451,7 @@ pub async fn get_workflow_runs(
     }
 
     let runs: ApiWorkflowRuns = response.json().await.map_err(|e| {
-        GitnadoError::OperationFailed(format!("Failed to parse workflow runs: {}", e))
+        GitdudaError::OperationFailed(format!("Failed to parse workflow runs: {}", e))
     })?;
 
     Ok(runs
@@ -1496,12 +1496,12 @@ pub async fn get_check_runs(
         .header("X-GitHub-Api-Version", "2022-11-28")
         .send()
         .await
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to fetch check runs: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to fetch check runs: {}", e)))?;
 
     if !response.status().is_success() {
         let status = response.status();
         let body = response.text().await.unwrap_or_default();
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "GitHub API error {}: {}",
             status, body
         )));
@@ -1526,7 +1526,7 @@ pub async fn get_check_runs(
     let runs: ApiCheckRuns = response
         .json()
         .await
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to parse check runs: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to parse check runs: {}", e)))?;
 
     Ok(runs
         .check_runs
@@ -1566,13 +1566,13 @@ pub async fn get_commit_status(
         .send()
         .await
         .map_err(|e| {
-            GitnadoError::OperationFailed(format!("Failed to fetch commit status: {}", e))
+            GitdudaError::OperationFailed(format!("Failed to fetch commit status: {}", e))
         })?;
 
     if !response.status().is_success() {
         let status = response.status();
         let body = response.text().await.unwrap_or_default();
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "GitHub API error {}: {}",
             status, body
         )));
@@ -1586,7 +1586,7 @@ pub async fn get_commit_status(
     let status: ApiStatus = response
         .json()
         .await
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to parse status: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to parse status: {}", e)))?;
 
     Ok(status.state)
 }
@@ -1733,12 +1733,12 @@ pub async fn list_issues(
         let response = request
             .send()
             .await
-            .map_err(|e| GitnadoError::OperationFailed(format!("Failed to fetch issues: {}", e)))?;
+            .map_err(|e| GitdudaError::OperationFailed(format!("Failed to fetch issues: {}", e)))?;
 
         if !response.status().is_success() {
             let status = response.status();
             let body = response.text().await.unwrap_or_default();
-            return Err(GitnadoError::OperationFailed(format!(
+            return Err(GitdudaError::OperationFailed(format!(
                 "GitHub API error {}: {}",
                 status, body
             )));
@@ -1747,7 +1747,7 @@ pub async fn list_issues(
         let issues: Vec<ApiIssue> = response
             .json()
             .await
-            .map_err(|e| GitnadoError::OperationFailed(format!("Failed to parse issues: {}", e)))?;
+            .map_err(|e| GitdudaError::OperationFailed(format!("Failed to parse issues: {}", e)))?;
 
         fetches += 1;
         // The raw page length decides whether GitHub has more; the filtered
@@ -1834,12 +1834,12 @@ pub async fn get_issue(
         .header("X-GitHub-Api-Version", "2022-11-28")
         .send()
         .await
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to fetch issue: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to fetch issue: {}", e)))?;
 
     if !response.status().is_success() {
         let status = response.status();
         let body = response.text().await.unwrap_or_default();
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "GitHub API error {}: {}",
             status, body
         )));
@@ -1881,7 +1881,7 @@ pub async fn get_issue(
     let issue: ApiIssue = response
         .json()
         .await
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to parse issue: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to parse issue: {}", e)))?;
 
     Ok(IssueSummary {
         number: issue.number,
@@ -1965,12 +1965,12 @@ pub async fn create_issue(
         .json(&body)
         .send()
         .await
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to create issue: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to create issue: {}", e)))?;
 
     if !response.status().is_success() {
         let status = response.status();
         let body = response.text().await.unwrap_or_default();
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "GitHub API error {}: {}",
             status, body
         )));
@@ -2012,7 +2012,7 @@ pub async fn create_issue(
     let issue: ApiIssue = response
         .json()
         .await
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to parse issue: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to parse issue: {}", e)))?;
 
     Ok(IssueSummary {
         number: issue.number,
@@ -2084,12 +2084,12 @@ pub async fn update_issue_state(
         .json(&UpdateBody { state })
         .send()
         .await
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to update issue: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to update issue: {}", e)))?;
 
     if !response.status().is_success() {
         let status = response.status();
         let body = response.text().await.unwrap_or_default();
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "GitHub API error {}: {}",
             status, body
         )));
@@ -2131,7 +2131,7 @@ pub async fn update_issue_state(
     let issue: ApiIssue = response
         .json()
         .await
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to parse issue: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to parse issue: {}", e)))?;
 
     Ok(IssueSummary {
         number: issue.number,
@@ -2200,12 +2200,12 @@ pub async fn get_issue_comments(
         .header("X-GitHub-Api-Version", "2022-11-28")
         .send()
         .await
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to fetch comments: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to fetch comments: {}", e)))?;
 
     if !response.status().is_success() {
         let status = response.status();
         let body = response.text().await.unwrap_or_default();
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "GitHub API error {}: {}",
             status, body
         )));
@@ -2233,7 +2233,7 @@ pub async fn get_issue_comments(
     let comments: Vec<ApiComment> = response
         .json()
         .await
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to parse comments: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to parse comments: {}", e)))?;
 
     Ok(comments
         .into_iter()
@@ -2283,12 +2283,12 @@ pub async fn add_issue_comment(
         .json(&CommentBody { body })
         .send()
         .await
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to add comment: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to add comment: {}", e)))?;
 
     if !response.status().is_success() {
         let status = response.status();
         let body = response.text().await.unwrap_or_default();
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "GitHub API error {}: {}",
             status, body
         )));
@@ -2316,7 +2316,7 @@ pub async fn add_issue_comment(
     let comment: ApiComment = response
         .json()
         .await
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to parse comment: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to parse comment: {}", e)))?;
 
     Ok(IssueComment {
         id: comment.id,
@@ -2376,12 +2376,12 @@ pub async fn get_repo_labels(
             .header("X-GitHub-Api-Version", "2022-11-28")
             .send()
             .await
-            .map_err(|e| GitnadoError::OperationFailed(format!("Failed to fetch labels: {}", e)))?;
+            .map_err(|e| GitdudaError::OperationFailed(format!("Failed to fetch labels: {}", e)))?;
 
         if !response.status().is_success() {
             let status = response.status();
             let body = response.text().await.unwrap_or_default();
-            return Err(GitnadoError::OperationFailed(format!(
+            return Err(GitdudaError::OperationFailed(format!(
                 "GitHub API error {}: {}",
                 status, body
             )));
@@ -2390,7 +2390,7 @@ pub async fn get_repo_labels(
         let raw: Vec<ApiLabel> = response
             .json()
             .await
-            .map_err(|e| GitnadoError::OperationFailed(format!("Failed to parse labels: {}", e)))?;
+            .map_err(|e| GitdudaError::OperationFailed(format!("Failed to parse labels: {}", e)))?;
 
         fetches += 1;
         let raw_len = raw.len();
@@ -2489,12 +2489,12 @@ pub async fn list_releases(
         .header("X-GitHub-Api-Version", "2022-11-28")
         .send()
         .await
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to fetch releases: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to fetch releases: {}", e)))?;
 
     if !response.status().is_success() {
         let status = response.status();
         let body = response.text().await.unwrap_or_default();
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "GitHub API error {}: {}",
             status, body
         )));
@@ -2527,7 +2527,7 @@ pub async fn list_releases(
     let releases: Vec<ApiRelease> = response
         .json()
         .await
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to parse releases: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to parse releases: {}", e)))?;
 
     Ok(releases
         .into_iter()
@@ -2575,12 +2575,12 @@ pub async fn get_release_by_tag(
         .header("X-GitHub-Api-Version", "2022-11-28")
         .send()
         .await
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to fetch release: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to fetch release: {}", e)))?;
 
     if !response.status().is_success() {
         let status = response.status();
         let body = response.text().await.unwrap_or_default();
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "GitHub API error {}: {}",
             status, body
         )));
@@ -2613,7 +2613,7 @@ pub async fn get_release_by_tag(
     let release: ApiRelease = response
         .json()
         .await
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to parse release: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to parse release: {}", e)))?;
 
     Ok(ReleaseSummary {
         id: release.id,
@@ -2658,13 +2658,13 @@ pub async fn get_latest_release(
         .send()
         .await
         .map_err(|e| {
-            GitnadoError::OperationFailed(format!("Failed to fetch latest release: {}", e))
+            GitdudaError::OperationFailed(format!("Failed to fetch latest release: {}", e))
         })?;
 
     if !response.status().is_success() {
         let status = response.status();
         let body = response.text().await.unwrap_or_default();
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "GitHub API error {}: {}",
             status, body
         )));
@@ -2695,7 +2695,7 @@ pub async fn get_latest_release(
     }
 
     let release: ApiRelease = response.json().await.map_err(|e| {
-        GitnadoError::OperationFailed(format!("Failed to parse latest release: {}", e))
+        GitdudaError::OperationFailed(format!("Failed to parse latest release: {}", e))
     })?;
 
     Ok(ReleaseSummary {
@@ -2769,12 +2769,12 @@ pub async fn create_release(
         .json(&body)
         .send()
         .await
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to create release: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to create release: {}", e)))?;
 
     if !response.status().is_success() {
         let status = response.status();
         let body = response.text().await.unwrap_or_default();
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "GitHub API error {}: {}",
             status, body
         )));
@@ -2807,7 +2807,7 @@ pub async fn create_release(
     let release: ApiRelease = response
         .json()
         .await
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to parse release: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to parse release: {}", e)))?;
 
     Ok(ReleaseSummary {
         id: release.id,
@@ -2852,12 +2852,12 @@ pub async fn delete_release(
         .header("X-GitHub-Api-Version", "2022-11-28")
         .send()
         .await
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to delete release: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to delete release: {}", e)))?;
 
     if !response.status().is_success() {
         let status = response.status();
         let body = response.text().await.unwrap_or_default();
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "GitHub API error {}: {}",
             status, body
         )));
@@ -2939,7 +2939,7 @@ pub async fn check_github_user_exists(
                 .send()
                 .await
                 .map_err(|e| {
-                    GitnadoError::OperationFailed(format!("Failed to check GitHub user: {}", e))
+                    GitdudaError::OperationFailed(format!("Failed to check GitHub user: {}", e))
                 })?;
 
             if response.status().as_u16() == 404 {
@@ -2950,7 +2950,7 @@ pub async fn check_github_user_exists(
             }
             if response.status().is_success() {
                 let user: ApiSimpleUser = response.json().await.map_err(|e| {
-                    GitnadoError::OperationFailed(format!("Failed to parse GitHub user: {}", e))
+                    GitdudaError::OperationFailed(format!("Failed to parse GitHub user: {}", e))
                 })?;
                 return Ok(ProviderUserStatus {
                     status: "active".to_string(),
@@ -2976,7 +2976,7 @@ pub async fn check_github_user_exists(
                 .send()
                 .await
                 .map_err(|e| {
-                    GitnadoError::OperationFailed(format!("Failed to check GitHub user: {}", e))
+                    GitdudaError::OperationFailed(format!("Failed to check GitHub user: {}", e))
                 })?;
 
             if response.status().is_success() {
@@ -3010,7 +3010,7 @@ pub async fn check_github_user_exists(
             .send()
             .await
             .map_err(|e| {
-                GitnadoError::OperationFailed(format!("Failed to search GitHub users: {}", e))
+                GitdudaError::OperationFailed(format!("Failed to search GitHub users: {}", e))
             })?;
 
         if !response.status().is_success() {
@@ -3021,7 +3021,7 @@ pub async fn check_github_user_exists(
         }
 
         let search: ApiUserSearchResponse = response.json().await.map_err(|e| {
-            GitnadoError::OperationFailed(format!("Failed to parse user search: {}", e))
+            GitdudaError::OperationFailed(format!("Failed to parse user search: {}", e))
         })?;
 
         if search.total_count > 0 {
@@ -3085,11 +3085,11 @@ pub async fn update_pull_request(
         .json(&build_update_pull_request_body(&input))
         .send()
         .await
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to update PR: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to update PR: {}", e)))?;
     if !response.status().is_success() {
         let status = response.status();
         let body = response.text().await.unwrap_or_default();
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "GitHub API error {}: {}",
             status, body
         )));
@@ -3479,12 +3479,12 @@ mod tests {
     const REPO_PAGE_JSON: &str = r#"[
         {
             "id": 1,
-            "name": "gitnado",
-            "full_name": "octocat/gitnado",
+            "name": "gitduda",
+            "full_name": "octocat/gitduda",
             "private": true,
             "description": "A git client",
-            "clone_url": "https://github.com/octocat/gitnado.git",
-            "html_url": "https://github.com/octocat/gitnado",
+            "clone_url": "https://github.com/octocat/gitduda.git",
+            "html_url": "https://github.com/octocat/gitduda",
             "default_branch": "main",
             "pushed_at": "2024-05-01T10:00:00Z",
             "owner": { "login": "octocat" }
@@ -3511,12 +3511,12 @@ mod tests {
         assert_eq!(page.repositories.len(), 2);
         let first = &page.repositories[0];
         assert_eq!(first.id, "1");
-        assert_eq!(first.name, "gitnado");
+        assert_eq!(first.name, "gitduda");
         assert_eq!(first.owner, "octocat");
-        assert_eq!(first.full_name, "octocat/gitnado");
+        assert_eq!(first.full_name, "octocat/gitduda");
         assert_eq!(first.description.as_deref(), Some("A git client"));
         assert!(first.is_private);
-        assert_eq!(first.clone_url, "https://github.com/octocat/gitnado.git");
+        assert_eq!(first.clone_url, "https://github.com/octocat/gitduda.git");
         assert_eq!(first.default_branch.as_deref(), Some("main"));
         assert_eq!(
             first.last_pushed_at.as_deref(),
@@ -3585,13 +3585,13 @@ mod tests {
         // A dead credential is reported as AUTH_REQUIRED so the picker can
         // offer to reconnect the account instead of showing an API string.
         let err = map_repository_list_error(reqwest::StatusCode::UNAUTHORIZED, "Bad credentials");
-        assert!(matches!(err, GitnadoError::AuthenticationRequired));
+        assert!(matches!(err, GitdudaError::AuthenticationRequired));
 
         // Everything else keeps its message — a 403 rate limit explains itself.
         let other =
             map_repository_list_error(reqwest::StatusCode::FORBIDDEN, "API rate limit exceeded");
         assert!(other.to_string().contains("API rate limit exceeded"));
-        assert!(matches!(other, GitnadoError::OperationFailed(_)));
+        assert!(matches!(other, GitdudaError::OperationFailed(_)));
     }
 
     #[tokio::test]
@@ -3714,7 +3714,7 @@ mod tests {
         )
         .await
         .expect_err("offline mode should block get_github_pr_comments");
-        assert!(matches!(get_err, GitnadoError::NetworkBlocked(_)));
+        assert!(matches!(get_err, GitdudaError::NetworkBlocked(_)));
 
         let post_err = add_github_pr_comment(
             "octocat".to_string(),
@@ -3728,7 +3728,7 @@ mod tests {
         )
         .await
         .expect_err("offline mode should block add_github_pr_comment");
-        assert!(matches!(post_err, GitnadoError::NetworkBlocked(_)));
+        assert!(matches!(post_err, GitdudaError::NetworkBlocked(_)));
     }
 }
 
@@ -3738,7 +3738,7 @@ mod tests {
 
 /// Keyring key used to store the GitHub App configuration JSON.
 ///
-/// A single key is used (no per-app-id sharding) because Gitnado supports
+/// A single key is used (no per-app-id sharding) because Gitduda supports
 /// at most one GitHub App installation at a time.  The stored value is a JSON
 /// object containing `appId`, `installationId`, and `privateKeyPem`.
 const GITHUB_APP_KEYRING_KEY: &str = "github_app_config";
@@ -3758,14 +3758,14 @@ struct StoredGithubAppConfig {
 /// Serialise `StoredGithubAppConfig` to a JSON string for keyring storage.
 fn serialize_app_config(cfg: &StoredGithubAppConfig) -> Result<String> {
     serde_json::to_string(cfg).map_err(|e| {
-        GitnadoError::OperationFailed(format!("Failed to serialize GitHub App config: {}", e))
+        GitdudaError::OperationFailed(format!("Failed to serialize GitHub App config: {}", e))
     })
 }
 
 /// Deserialise `StoredGithubAppConfig` from a JSON string retrieved from the keyring.
 fn deserialize_app_config(json: &str) -> Result<StoredGithubAppConfig> {
     serde_json::from_str(json).map_err(|e| {
-        GitnadoError::OperationFailed(format!("Failed to deserialize GitHub App config: {}", e))
+        GitdudaError::OperationFailed(format!("Failed to deserialize GitHub App config: {}", e))
     })
 }
 
@@ -3786,7 +3786,7 @@ pub async fn configure_github_app(
 
     // Generate JWT to validate the key
     let jwt = github_app::generate_jwt(app_id, &private_key_pem)
-        .map_err(GitnadoError::OperationFailed)?;
+        .map_err(GitdudaError::OperationFailed)?;
 
     // Get an installation token to verify it works. `get_installation_token`
     // goes through the module's guarded client, so this no longer reaches
@@ -3806,10 +3806,10 @@ pub async fn configure_github_app(
         .header("X-GitHub-Api-Version", "2022-11-28")
         .send()
         .await
-        .map_err(|e| GitnadoError::OperationFailed(format!("Connection test failed: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Connection test failed: {}", e)))?;
 
     if !response.status().is_success() {
-        return Err(GitnadoError::OperationFailed(
+        return Err(GitdudaError::OperationFailed(
             "Installation token verification failed".to_string(),
         ));
     }
@@ -3887,7 +3887,7 @@ pub async fn list_github_app_installations(
     use crate::services::github_app;
 
     let jwt = github_app::generate_jwt(app_id, &private_key_pem)
-        .map_err(GitnadoError::OperationFailed)?;
+        .map_err(GitdudaError::OperationFailed)?;
 
     github_app::list_installations(&jwt).await
 }

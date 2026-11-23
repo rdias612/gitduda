@@ -113,7 +113,7 @@ async function renderCommitPanel(stagedCount = 1): Promise<GnCommitPanel> {
 describe('gn-commit-panel', () => {
   beforeEach(() => {
     invokeHistory.length = 0;
-    localStorage.removeItem('gitnado-commit-history');
+    localStorage.removeItem('gitduda-commit-history');
     setupDefaultMocks();
     setupStore();
   });
@@ -630,7 +630,7 @@ describe('gn-commit-panel', () => {
   // ── Commit history ─────────────────────────────────────────────────────
   describe('commit history', () => {
     it('loads history from localStorage', async () => {
-      localStorage.setItem('gitnado-commit-history', JSON.stringify(['msg1', 'msg2']));
+      localStorage.setItem('gitduda-commit-history', JSON.stringify(['msg1', 'msg2']));
       const el = await renderCommitPanel();
 
       const internal = el as unknown as { commitHistory: string[] };
@@ -645,7 +645,7 @@ describe('gn-commit-panel', () => {
 
       saveToHistory('feat: new feature');
 
-      const stored = JSON.parse(localStorage.getItem('gitnado-commit-history')!);
+      const stored = JSON.parse(localStorage.getItem('gitduda-commit-history')!);
       expect(stored).to.include('feat: new feature');
     });
 
@@ -659,7 +659,7 @@ describe('gn-commit-panel', () => {
       saveToHistory('message B');
       saveToHistory('message A'); // duplicate
 
-      const stored = JSON.parse(localStorage.getItem('gitnado-commit-history')!);
+      const stored = JSON.parse(localStorage.getItem('gitduda-commit-history')!);
       const countA = stored.filter((m: string) => m === 'message A').length;
       expect(countA).to.equal(1);
       expect(stored[0]).to.equal('message A');
@@ -675,7 +675,7 @@ describe('gn-commit-panel', () => {
         saveToHistory(`commit ${i}`);
       }
 
-      const stored = JSON.parse(localStorage.getItem('gitnado-commit-history')!);
+      const stored = JSON.parse(localStorage.getItem('gitduda-commit-history')!);
       expect(stored.length).to.be.at.most(20);
     });
 
@@ -688,7 +688,7 @@ describe('gn-commit-panel', () => {
       saveToHistory('');
       saveToHistory('   ');
 
-      const stored = localStorage.getItem('gitnado-commit-history');
+      const stored = localStorage.getItem('gitduda-commit-history');
       expect(stored).to.be.null;
     });
 
@@ -706,7 +706,7 @@ describe('gn-commit-panel', () => {
     });
 
     it('clears history', async () => {
-      localStorage.setItem('gitnado-commit-history', JSON.stringify(['msg1']));
+      localStorage.setItem('gitduda-commit-history', JSON.stringify(['msg1']));
       const el = await renderCommitPanel();
 
       const handleClearHistory = (el as unknown as {
@@ -717,7 +717,7 @@ describe('gn-commit-panel', () => {
 
       const internal = el as unknown as { commitHistory: string[] };
       expect(internal.commitHistory).to.deep.equal([]);
-      expect(localStorage.getItem('gitnado-commit-history')).to.be.null;
+      expect(localStorage.getItem('gitduda-commit-history')).to.be.null;
     });
   });
 

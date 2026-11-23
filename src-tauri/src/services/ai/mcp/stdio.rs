@@ -1,7 +1,7 @@
 //! stdio transport for MCP clients that cannot speak HTTP (roadmap 4.2, #612).
 //!
-//! `gitnado --mcp-stdio` reads newline-delimited JSON-RPC messages on stdin,
-//! forwards each to the running Gitnado MCP server over HTTP, and writes the
+//! `gitduda --mcp-stdio` reads newline-delimited JSON-RPC messages on stdin,
+//! forwards each to the running Gitduda MCP server over HTTP, and writes the
 //! responses to stdout, one per line. Notifications (answered with 202) produce
 //! no output. The bridge only ever talks to a loopback address.
 //!
@@ -72,7 +72,7 @@ pub async fn bridge<R: BufRead, W: Write>(
                 let status = resp.status();
                 let body = resp.text().await.unwrap_or_default();
                 if body.trim().is_empty() {
-                    Some(error_line(id, -32603, &format!("Gitnado answered HTTP {status} with no body")))
+                    Some(error_line(id, -32603, &format!("Gitduda answered HTTP {status} with no body")))
                 } else {
                     // Error bodies are JSON-RPC errors already; make sure the
                     // client's id is carried so it can match the reply.
@@ -83,14 +83,14 @@ pub async fn bridge<R: BufRead, W: Write>(
                             }
                             Some(v.to_string())
                         }
-                        Err(_) => Some(error_line(id, -32603, "Gitnado returned an invalid response")),
+                        Err(_) => Some(error_line(id, -32603, "Gitduda returned an invalid response")),
                     }
                 }
             }
             Err(e) => Some(error_line(
                 id,
                 -32603,
-                &format!("Cannot reach Gitnado's MCP server at {url}: is Gitnado running with the MCP server started? ({e})"),
+                &format!("Cannot reach Gitduda's MCP server at {url}: is Gitduda running with the MCP server started? ({e})"),
             )),
         };
         if let Some(reply) = reply {
@@ -101,12 +101,12 @@ pub async fn bridge<R: BufRead, W: Write>(
     Ok(())
 }
 
-/// Entry point for `gitnado --mcp-stdio`. Returns the process exit code.
+/// Entry point for `gitduda --mcp-stdio`. Returns the process exit code.
 pub fn run_from_env() -> i32 {
     let token = match std::env::var("GITNADO_MCP_TOKEN") {
         Ok(t) if !t.trim().is_empty() => t,
         _ => {
-            eprintln!("gitnado --mcp-stdio: set GITNADO_MCP_TOKEN to a client token from Gitnado (Settings > MCP Server)");
+            eprintln!("gitduda --mcp-stdio: set GITNADO_MCP_TOKEN to a client token from Gitduda (Settings > MCP Server)");
             return 2;
         }
     };
@@ -117,7 +117,7 @@ pub fn run_from_env() -> i32 {
     {
         Ok(rt) => rt,
         Err(e) => {
-            eprintln!("gitnado --mcp-stdio: {e}");
+            eprintln!("gitduda --mcp-stdio: {e}");
             return 1;
         }
     };
@@ -126,7 +126,7 @@ pub fn run_from_env() -> i32 {
     match runtime.block_on(bridge(stdin.lock(), stdout.lock(), &url, token.trim())) {
         Ok(()) => 0,
         Err(e) => {
-            eprintln!("gitnado --mcp-stdio: {e}");
+            eprintln!("gitduda --mcp-stdio: {e}");
             1
         }
     }

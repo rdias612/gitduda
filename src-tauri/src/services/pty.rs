@@ -1,7 +1,7 @@
 //! Embedded pseudo-terminal sessions.
 //!
 //! Backs the in-app terminal panel (roadmap 4.6) and, later, agent sessions
-//! launched from Gitnado (roadmap 4.1). Each session is a shell (or an explicit
+//! launched from Gitduda (roadmap 4.1). Each session is a shell (or an explicit
 //! program) running on a native PTY in a repository or worktree directory.
 //!
 //! Output is streamed through a [`PtySink`] rather than straight to Tauri so
@@ -22,7 +22,7 @@ use std::sync::{Arc, Mutex};
 use portable_pty::{native_pty_system, ChildKiller, CommandBuilder, MasterPty, PtySize};
 use serde::{Deserialize, Serialize};
 
-use crate::error::{GitnadoError, Result};
+use crate::error::{GitdudaError, Result};
 
 /// Event name for streamed terminal output.
 pub const PTY_OUTPUT_EVENT: &str = "pty-output";
@@ -130,8 +130,8 @@ fn now_secs() -> i64 {
         .unwrap_or(0)
 }
 
-fn op_failed(context: &str, err: impl std::fmt::Display) -> GitnadoError {
-    GitnadoError::OperationFailed(format!("{context}: {err}"))
+fn op_failed(context: &str, err: impl std::fmt::Display) -> GitdudaError {
+    GitdudaError::OperationFailed(format!("{context}: {err}"))
 }
 
 /// Decode a chunk of PTY output as UTF-8, carrying an incomplete trailing
@@ -176,7 +176,7 @@ impl PtyRegistry {
     pub fn spawn(&self, opts: PtySpawnOptions, sink: Arc<dyn PtySink>) -> Result<PtySessionInfo> {
         let cwd = Path::new(&opts.cwd);
         if !cwd.is_dir() {
-            return Err(GitnadoError::InvalidPath(opts.cwd));
+            return Err(GitdudaError::InvalidPath(opts.cwd));
         }
 
         let size = PtySize {
@@ -193,7 +193,7 @@ impl PtyRegistry {
                 cmd
             }
             Some(_) => {
-                return Err(GitnadoError::OperationFailed(
+                return Err(GitdudaError::OperationFailed(
                     "Terminal command must not be empty".to_string(),
                 ))
             }
@@ -206,7 +206,7 @@ impl PtyRegistry {
                     && !key.starts_with(|c: char| c.is_ascii_digit())
                     && key.chars().all(|c| c.is_ascii_alphanumeric() || c == '_');
                 if !valid {
-                    return Err(GitnadoError::OperationFailed(format!(
+                    return Err(GitdudaError::OperationFailed(format!(
                         "Invalid environment variable name: {key}"
                     )));
                 }
@@ -215,7 +215,7 @@ impl PtyRegistry {
         }
         cmd.env("TERM", "xterm-256color");
         cmd.env("COLORTERM", "truecolor");
-        cmd.env("TERM_PROGRAM", "gitnado");
+        cmd.env("TERM_PROGRAM", "gitduda");
 
         let program = match opts.command.as_deref() {
             Some([program, ..]) => program.clone(),
@@ -369,8 +369,8 @@ impl PtyRegistry {
     }
 }
 
-fn not_found(id: u32) -> GitnadoError {
-    GitnadoError::OperationFailed(format!("Terminal session {id} is not running"))
+fn not_found(id: u32) -> GitdudaError {
+    GitdudaError::OperationFailed(format!("Terminal session {id} is not running"))
 }
 
 #[cfg(all(test, unix))]
@@ -522,7 +522,7 @@ mod tests {
         };
         assert!(matches!(
             registry.spawn(missing, s.clone()),
-            Err(GitnadoError::InvalidPath(_))
+            Err(GitdudaError::InvalidPath(_))
         ));
 
         let dir = tempfile::TempDir::new().unwrap();

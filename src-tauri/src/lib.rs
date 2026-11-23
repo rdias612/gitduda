@@ -1,4 +1,4 @@
-//! Gitnado - Git GUI Client
+//! Gitduda - Git GUI Client
 //!
 //! A fully-featured, open-source, cross-platform Git GUI client
 //! built with Tauri 2.0 and Rust.
@@ -30,7 +30,7 @@ use services::{
 
 /// Initialize the application
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
-/// `gitnado --mcp-stdio`: bridge stdio JSON-RPC to the running MCP server.
+/// `gitduda --mcp-stdio`: bridge stdio JSON-RPC to the running MCP server.
 pub fn run_mcp_stdio_bridge() -> i32 {
     services::ai::mcp::stdio::run_from_env()
 }
@@ -88,7 +88,7 @@ pub fn run() {
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "gitduda=debug,gitnado_lib=debug,git2=warn".into()),
+                .unwrap_or_else(|_| "gitduda=debug,gitduda_lib=debug,git2=warn".into()),
         )
         .with(tracing_subscriber::fmt::layer())
         .init();

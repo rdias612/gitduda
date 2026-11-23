@@ -73,7 +73,7 @@ function install(): void {
         return state.files ?? [];
       case 'get_agent_hooks_status':
         if (state.hooksError) throw new Error(state.hooksError);
-        return state.hooks ?? { installed: false, partial: false, settingsPath: '/repo/a/.claude/settings.local.json', scriptPath: '/repo/a/.git/gitnado/agent-checkpoint.sh' };
+        return state.hooks ?? { installed: false, partial: false, settingsPath: '/repo/a/.claude/settings.local.json', scriptPath: '/repo/a/.git/gitduda/agent-checkpoint.sh' };
       case 'install_agent_hooks':
       case 'uninstall_agent_hooks':
         if (state.installResult instanceof Error) throw state.installResult;

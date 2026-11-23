@@ -2,14 +2,14 @@
 //!
 //! Detects terminal coding agents — Claude Code, Codex CLI, Copilot CLI,
 //! Gemini CLI, Aider and friends — whose working directory is inside an open
-//! repository or any of its worktrees, so Gitnado can show what each one is
+//! repository or any of its worktrees, so Gitduda can show what each one is
 //! doing.
 //!
 //! Detection is purely local: one snapshot of the process table (name, command
 //! line, working directory, start time). Nothing is sent anywhere.
 //!
 //! Turn state comes from the agent hooks bridge when it is installed in that
-//! worktree (`<gitdir>/gitnado/turn-*` exists while a turn runs). Without the
+//! worktree (`<gitdir>/gitduda/turn-*` exists while a turn runs). Without the
 //! bridge a live process is reported as `running`, because nothing else can
 //! tell "thinking" from "waiting for you".
 
@@ -139,7 +139,7 @@ fn worktree_for<'a>(cwd: &Path, worktrees: &'a [WorktreeInfo]) -> Option<&'a Wor
 }
 
 fn state_for(worktree: &WorktreeInfo) -> AgentState {
-    let dir = worktree.git_dir.join("gitnado");
+    let dir = worktree.git_dir.join("gitduda");
     let turn_running = std::fs::read_dir(&dir)
         .map(|entries| {
             entries
@@ -501,10 +501,10 @@ mod tests {
             is_main: true,
         };
         assert_eq!(state_for(&w), AgentState::Running);
-        std::fs::create_dir_all(w.git_dir.join("gitnado")).unwrap();
-        std::fs::write(w.git_dir.join("gitnado/agent-checkpoint.sh"), "#!/bin/sh").unwrap();
+        std::fs::create_dir_all(w.git_dir.join("gitduda")).unwrap();
+        std::fs::write(w.git_dir.join("gitduda/agent-checkpoint.sh"), "#!/bin/sh").unwrap();
         assert_eq!(state_for(&w), AgentState::Waiting);
-        std::fs::write(w.git_dir.join("gitnado/turn-abc"), "deadbeef").unwrap();
+        std::fs::write(w.git_dir.join("gitduda/turn-abc"), "deadbeef").unwrap();
         assert_eq!(state_for(&w), AgentState::Working);
     }
 

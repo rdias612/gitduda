@@ -76,7 +76,7 @@ function pressKey(el: GnCommandPalette, key: string): void {
 describe('gn-command-palette index alignment', () => {
   beforeEach(() => {
     executed.length = 0;
-    localStorage.removeItem('gitnado-recent-commands');
+    localStorage.removeItem('gitduda-recent-commands');
   });
 
   it('runs the command shown on the highlighted row past a category boundary', async () => {

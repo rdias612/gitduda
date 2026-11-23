@@ -214,13 +214,13 @@ const NETWORK_COMMANDS = new Set([
  * readers, latent only because nothing calls them yet.
  */
 const LOCAL_COMMANDS = new Set([
-  // Working-tree checkpoints: snapshots under refs/gitnado/, purely local.
+  // Working-tree checkpoints: snapshots under refs/gitduda/, purely local.
   'create_checkpoint', 'list_checkpoints', 'get_checkpoint_files',
   'restore_checkpoint', 'delete_checkpoint',
   // Agent hooks bridge: writes .claude/settings.local.json and a git-dir script.
   'get_agent_hooks_status', 'install_agent_hooks', 'uninstall_agent_hooks',
   'get_agent_attribution',
-  // The MCP server Gitnado hosts on loopback, and the list of external MCP
+  // The MCP server Gitduda hosts on loopback, and the list of external MCP
   // servers (saving one stores a token in the keyring; nothing is contacted).
   'start_mcp_server', 'stop_mcp_server', 'get_mcp_status', 'get_mcp_config',
   'set_mcp_config', 'regenerate_mcp_token', 'list_external_mcp_servers',

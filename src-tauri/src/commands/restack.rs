@@ -27,7 +27,7 @@ use tauri::command;
 
 use crate::commands::merge::{join_output, stopped_commit_summary};
 use crate::commands::stack::{set_parent_in, stacks_in, StackBranch};
-use crate::error::{GitnadoError, Result};
+use crate::error::{GitdudaError, Result};
 use crate::utils::create_command;
 
 #[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
@@ -81,10 +81,10 @@ struct GhostRun {
 
 fn branch_tip(repo: &Repository, name: &str) -> Result<Oid> {
     repo.find_branch(name, BranchType::Local)
-        .map_err(|_| GitnadoError::BranchNotFound(name.to_string()))?
+        .map_err(|_| GitdudaError::BranchNotFound(name.to_string()))?
         .get()
         .target()
-        .ok_or_else(|| GitnadoError::BranchNotFound(name.to_string()))
+        .ok_or_else(|| GitdudaError::BranchNotFound(name.to_string()))
 }
 
 /// Whether everything `branch` changes is already in `parent`: an ancestor
@@ -134,7 +134,7 @@ fn git(dir: &Path, args: &[&str]) -> Result<std::process::Output> {
         .arg(dir)
         .args(args)
         .output()
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to run git: {e}")))
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to run git: {e}")))
 }
 
 /// A replay's outcome: the new tip, or the conflicting files and the commit
@@ -151,7 +151,7 @@ struct GhostWorktree {
 impl GhostWorktree {
     fn new(repo_path: &Path, at: Oid) -> Result<Self> {
         let dir = tempfile::tempdir().map_err(|e| {
-            GitnadoError::OperationFailed(format!("Failed to create temp dir: {e}"))
+            GitdudaError::OperationFailed(format!("Failed to create temp dir: {e}"))
         })?;
         let path = dir.path().join("ghost");
         let at = at.to_string();
@@ -160,7 +160,7 @@ impl GhostWorktree {
             &["worktree", "add", "--detach", &path.to_string_lossy(), &at],
         )?;
         if !out.status.success() {
-            return Err(GitnadoError::OperationFailed(format!(
+            return Err(GitdudaError::OperationFailed(format!(
                 "Failed to create a scratch worktree: {}",
                 String::from_utf8_lossy(&out.stderr).trim()
             )));
@@ -179,7 +179,7 @@ impl GhostWorktree {
             &["checkout", "--detach", "--quiet", &tip.to_string()],
         )?;
         if !out.status.success() {
-            return Err(GitnadoError::OperationFailed(format!(
+            return Err(GitdudaError::OperationFailed(format!(
                 "Failed to prepare the scratch worktree: {}",
                 String::from_utf8_lossy(&out.stderr).trim()
             )));
@@ -193,7 +193,7 @@ impl GhostWorktree {
             let sha = String::from_utf8_lossy(&head.stdout).trim().to_string();
             return Oid::from_str(&sha)
                 .map(Ok)
-                .map_err(|e| GitnadoError::OperationFailed(format!("Bad rebase result: {e}")));
+                .map_err(|e| GitdudaError::OperationFailed(format!("Bad rebase result: {e}")));
         }
         let combined = join_output(
             &String::from_utf8_lossy(&out.stdout),
@@ -221,7 +221,7 @@ impl GhostWorktree {
             .or_else(|| stopped_commit_summary(&combined));
         let _ = git(&self.path, &["rebase", "--abort"]);
         if files.is_empty() {
-            return Err(GitnadoError::OperationFailed(format!(
+            return Err(GitdudaError::OperationFailed(format!(
                 "Could not replay the branch: {}",
                 combined.trim()
             )));
@@ -256,9 +256,9 @@ fn ghost_restack(repo: &Repository, repo_path: &Path, base: &str) -> Result<Ghos
     let stack = stacks_in(repo)?
         .into_iter()
         .find(|s| s.base == base)
-        .ok_or_else(|| GitnadoError::OperationFailed(format!("No stack is based on {base}")))?;
+        .ok_or_else(|| GitdudaError::OperationFailed(format!("No stack is based on {base}")))?;
     if let Some(orphan) = stack.branches.iter().find(|b| b.parent_missing) {
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "{}'s parent {} no longer exists; stack it on an existing branch first",
             orphan.name, orphan.parent
         )));
@@ -402,7 +402,7 @@ pub fn preview_in(repo_path: &Path, base: &str) -> Result<RestackPlan> {
 pub fn restack_in(repo_path: &Path, base: &str) -> Result<RestackPlan> {
     let repo = Repository::open(repo_path)?;
     if repo.state() != git2::RepositoryState::Clean {
-        return Err(GitnadoError::OperationFailed(
+        return Err(GitdudaError::OperationFailed(
             "Finish or abort the operation in progress before restacking".to_string(),
         ));
     }
@@ -415,7 +415,7 @@ pub fn restack_in(repo_path: &Path, base: &str) -> Result<RestackPlan> {
             .find(|s| s.status == RestackStatus::Conflict)
             .map(|s| format!("{} conflicts in {}", s.branch, s.conflict_files.join(", ")))
             .unwrap_or_default();
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "Restack would stop on a conflict ({conflict}); nothing was changed"
         )));
     }
@@ -439,14 +439,14 @@ pub fn restack_in(repo_path: &Path, base: &str) -> Result<RestackPlan> {
         } else if let Some(wt) = checked_out.get(name) {
             let wt_path = Path::new(wt).canonicalize().unwrap_or_else(|_| wt.into());
             if Some(&wt_path) != main_root.as_ref() {
-                return Err(GitnadoError::OperationFailed(format!(
+                return Err(GitdudaError::OperationFailed(format!(
                     "{name} is checked out in another worktree ({wt}); switch that worktree away from it first"
                 )));
             }
         }
     }
     if moves_head && has_tracked_changes(&repo)? {
-        return Err(GitnadoError::OperationFailed(
+        return Err(GitdudaError::OperationFailed(
             "The current branch is part of the stack and has uncommitted changes; commit or stash them first"
                 .to_string(),
         ));
@@ -459,10 +459,10 @@ pub fn restack_in(repo_path: &Path, base: &str) -> Result<RestackPlan> {
             *new,
             true,
             *old,
-            &format!("gitnado: restack {name} onto its parent"),
+            &format!("gitduda: restack {name} onto its parent"),
         )
         .map_err(|e| {
-            GitnadoError::OperationFailed(format!(
+            GitdudaError::OperationFailed(format!(
                 "{name} changed while restacking: {}",
                 e.message()
             ))

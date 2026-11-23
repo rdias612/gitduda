@@ -48,7 +48,7 @@ interface MockOptions {
 
 function setupMocks(options: MockOptions = {}): void {
   const {
-    githubRepo = { owner: 'octo', repo: 'gitnado', remoteName: 'origin' },
+    githubRepo = { owner: 'octo', repo: 'gitduda', remoteName: 'origin' },
     token = 'gh-token',
     pullRequests = [],
     listError,
@@ -87,7 +87,7 @@ function makePr(overrides: Record<string, unknown> = {}): Record<string, unknown
     baseRef: 'main',
     draft: false,
     mergeable: true,
-    htmlUrl: 'https://github.com/octo/gitnado/pull/42',
+    htmlUrl: 'https://github.com/octo/gitduda/pull/42',
     additions: 10,
     deletions: 2,
     changedFiles: 1,
@@ -550,7 +550,7 @@ describe('gn-pull-request-list', () => {
 
       // openExternalUrl hands the URL to the Tauri shell plugin - the same
       // route the graph's PR badges take.
-      expect(openedUrls()).to.contain('https://github.com/octo/gitnado/pull/42');
+      expect(openedUrls()).to.contain('https://github.com/octo/gitduda/pull/42');
     });
 
     it('opens the pull request on Enter', async () => {
@@ -561,7 +561,7 @@ describe('gn-pull-request-list', () => {
       item.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
       await browserOpened();
 
-      expect(openedUrls()).to.contain('https://github.com/octo/gitnado/pull/42');
+      expect(openedUrls()).to.contain('https://github.com/octo/gitduda/pull/42');
     });
 
     it('opens the pull request on Space', async () => {
@@ -572,7 +572,7 @@ describe('gn-pull-request-list', () => {
       item.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }));
       await browserOpened();
 
-      expect(openedUrls()).to.contain('https://github.com/octo/gitnado/pull/42');
+      expect(openedUrls()).to.contain('https://github.com/octo/gitduda/pull/42');
     });
   });
 
@@ -586,7 +586,7 @@ describe('gn-pull-request-list', () => {
       // A real control, not a static list item dressed up with a click
       // handler: assistive tech has to announce something activatable.
       expect(row.tagName).to.equal('A');
-      expect(row.getAttribute('href')).to.equal('https://github.com/octo/gitnado/pull/42');
+      expect(row.getAttribute('href')).to.equal('https://github.com/octo/gitduda/pull/42');
       expect(row.getAttribute('aria-label')).to.equal(
         'Add the pull request sidebar, #42, opens in browser',
       );
@@ -608,7 +608,7 @@ describe('gn-pull-request-list', () => {
       await browserOpened();
 
       expect(click.defaultPrevented).to.equal(true);
-      expect(openedUrls()).to.contain('https://github.com/octo/gitnado/pull/42');
+      expect(openedUrls()).to.contain('https://github.com/octo/gitduda/pull/42');
     });
 
     it('cancels Enter so the anchor cannot also open the pull request', async () => {

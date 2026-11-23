@@ -20,7 +20,7 @@ const mockInvoke: MockInvoke = async (command, args) => {
       clients = [];
       return null;
     case 'get_mcp_stdio_command':
-      return { program: '/opt/gitnado', args: ['--mcp-stdio'] };
+      return { program: '/opt/gitduda', args: ['--mcp-stdio'] };
     case 'plugin:dialog|message':
       return confirm ? 'Ok' : 'Cancel';
     case 'plugin:notification|is_permission_granted':
@@ -93,7 +93,7 @@ describe('gn-mcp-clients', () => {
 
     (el.shadowRoot!.querySelector('.tab[data-kind="stdio"]') as HTMLElement).click();
     await el.updateComplete;
-    expect($(el, '.snippet')!.textContent).to.contain('/opt/gitnado');
+    expect($(el, '.snippet')!.textContent).to.contain('/opt/gitduda');
     expect($(el, '.snippet')!.textContent).to.contain('GITNADO_MCP_TOKEN');
 
     expect(el.shadowRoot!.querySelectorAll('.client')).to.have.length(1);

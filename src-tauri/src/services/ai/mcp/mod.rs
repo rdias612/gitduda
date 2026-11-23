@@ -1,6 +1,6 @@
 //! Model Context Protocol (MCP) server
 //!
-//! Allows external tools to query Gitnado's Git repository context
+//! Allows external tools to query Gitduda's Git repository context
 //! via the MCP protocol over HTTP/SSE.
 
 pub mod clients;

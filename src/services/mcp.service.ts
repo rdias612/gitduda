@@ -159,7 +159,7 @@ export interface CreatedMcpClient {
   token: string;
 }
 
-/** `gitnado --mcp-stdio`: how to launch the stdio bridge. */
+/** `gitduda --mcp-stdio`: how to launch the stdio bridge. */
 export interface McpStdioCommand {
   program: string;
   args: string[];
@@ -181,12 +181,12 @@ export async function getMcpStdioCommand(): Promise<CommandResult<McpStdioComman
   return invokeCommand<McpStdioCommand>('get_mcp_stdio_command');
 }
 
-/** How Gitnado reaches an external MCP server (MCP client mode, #613). */
+/** How Gitduda reaches an external MCP server (MCP client mode, #613). */
 export type ExternalMcpTransport =
   | { type: 'http'; url: string }
   | { type: 'stdio'; command: string; args: string[] };
 
-/** An MCP server Gitnado's AI features may call for context. */
+/** An MCP server Gitduda's AI features may call for context. */
 export interface ExternalMcpServer {
   /** Empty for a server not saved yet. */
   id: string;

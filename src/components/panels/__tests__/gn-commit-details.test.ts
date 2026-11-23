@@ -402,7 +402,7 @@ describe('gn-commit-details', () => {
       // A real re-render with `changedProperties.has('repositoryPath')` false:
       // the guard must key off a repo CHANGE, not off any update cycle, or a
       // routine refresh yanks the menu out from under the user's click.
-      el.githubOwner = 'hegsie';
+      el.githubOwner = 'rdias612';
       await flush(el);
 
       expect(menuCount(el), 'an unrelated re-render keeps the menu').to.equal(1);

@@ -3,7 +3,7 @@
 //! Provides integration with Atlassian JIRA for issue tracking, transitions,
 //! and branch creation from issues.
 
-use crate::error::{GitnadoError, Result};
+use crate::error::{GitdudaError, Result};
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
@@ -70,31 +70,31 @@ fn build_jira_api_url(base_url: &str, path: &str) -> String {
     format!("{}/rest/api/3/{}", base, path)
 }
 
-/// Load JIRA config from the repository's .git/gitnado/jira.json
+/// Load JIRA config from the repository's .git/gitduda/jira.json
 /// Repo-level config lives beside the git dir. Resolved via `commondir` rather
 /// than joining ".git" onto the working tree: in a linked worktree `<wt>/.git`
 /// is a pointer FILE, so the join produced a path that could never be created
 /// or read. `commondir` also keeps one config shared across every worktree of
 /// the same repository, which is what repo-level settings should do.
-fn gitnado_config_dir(repo_path: &str) -> Result<std::path::PathBuf> {
+fn gitduda_config_dir(repo_path: &str) -> Result<std::path::PathBuf> {
     let repo = git2::Repository::open(Path::new(repo_path))?;
     Ok(crate::utils::app_paths::repo_dir(repo.commondir()))
 }
 
 fn load_jira_config(repo_path: &str) -> Result<JiraConfig> {
-    let config_path = gitnado_config_dir(repo_path)?.join("jira.json");
+    let config_path = gitduda_config_dir(repo_path)?.join("jira.json");
 
     if !config_path.exists() {
-        return Err(GitnadoError::OperationFailed(
+        return Err(GitdudaError::OperationFailed(
             "JIRA not configured. Save a JIRA configuration first.".to_string(),
         ));
     }
 
     let content = std::fs::read_to_string(&config_path)
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to read JIRA config: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to read JIRA config: {}", e)))?;
 
     serde_json::from_str(&content)
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to parse JIRA config: {}", e)))
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to parse JIRA config: {}", e)))
 }
 
 /// Generate a branch-safe name from an issue key and summary
@@ -179,25 +179,25 @@ pub async fn save_jira_config(path: String, config: JiraConfig) -> Result<()> {
     debug!("Saving JIRA config for: {}", path);
 
     crate::utils::blocking_git(move || {
-        let gitnado_dir = gitnado_config_dir(&path)?;
+        let gitduda_dir = gitduda_config_dir(&path)?;
 
-        // Create the gitnado directory if it doesn't exist
-        if !gitnado_dir.exists() {
-            std::fs::create_dir_all(&gitnado_dir).map_err(|e| {
-                GitnadoError::OperationFailed(format!(
-                    "Failed to create gitnado config directory: {}",
+        // Create the gitduda directory if it doesn't exist
+        if !gitduda_dir.exists() {
+            std::fs::create_dir_all(&gitduda_dir).map_err(|e| {
+                GitdudaError::OperationFailed(format!(
+                    "Failed to create gitduda config directory: {}",
                     e
                 ))
             })?;
         }
 
-        let config_path = gitnado_dir.join("jira.json");
+        let config_path = gitduda_dir.join("jira.json");
         let content = serde_json::to_string_pretty(&config).map_err(|e| {
-            GitnadoError::OperationFailed(format!("Failed to serialize JIRA config: {}", e))
+            GitdudaError::OperationFailed(format!("Failed to serialize JIRA config: {}", e))
         })?;
 
         std::fs::write(&config_path, content).map_err(|e| {
-            GitnadoError::OperationFailed(format!("Failed to write JIRA config: {}", e))
+            GitdudaError::OperationFailed(format!("Failed to write JIRA config: {}", e))
         })?;
 
         info!("JIRA config saved to {:?}", config_path);
@@ -212,10 +212,10 @@ pub async fn delete_jira_config(path: String) -> Result<()> {
     debug!("Deleting JIRA config for: {}", path);
 
     crate::utils::blocking_git(move || {
-        let config_path = gitnado_config_dir(&path)?.join("jira.json");
+        let config_path = gitduda_config_dir(&path)?.join("jira.json");
         if config_path.exists() {
             std::fs::remove_file(&config_path).map_err(|e| {
-                GitnadoError::OperationFailed(format!("Failed to delete JIRA config: {}", e))
+                GitdudaError::OperationFailed(format!("Failed to delete JIRA config: {}", e))
             })?;
         }
 
@@ -235,7 +235,7 @@ pub async fn test_jira_connection(
         Some(c) => c,
         None => {
             let repo_path = path.ok_or_else(|| {
-                GitnadoError::OperationFailed(
+                GitdudaError::OperationFailed(
                     "Either config or repository path is required".to_string(),
                 )
             })?;
@@ -247,7 +247,7 @@ pub async fn test_jira_connection(
         || config.email.trim().is_empty()
         || config.api_token.trim().is_empty()
     {
-        return Err(GitnadoError::OperationFailed(
+        return Err(GitdudaError::OperationFailed(
             "JIRA base URL, email, and API token are required".to_string(),
         ));
     }
@@ -265,13 +265,13 @@ pub async fn test_jira_connection(
         .await
         .map_err(|e| {
             error!("JIRA connection test failed: {}", e);
-            GitnadoError::OperationFailed(format!("Failed to connect to JIRA: {}", e))
+            GitdudaError::OperationFailed(format!("Failed to connect to JIRA: {}", e))
         })?;
 
     if !response.status().is_success() {
         let status = response.status();
         let body = response.text().await.unwrap_or_default();
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "JIRA connection failed ({}): {}",
             status, body
         )));
@@ -340,13 +340,13 @@ pub async fn get_jira_issues(
         .await
         .map_err(|e| {
             error!("JIRA API request failed: {}", e);
-            GitnadoError::OperationFailed(format!("Failed to fetch JIRA issues: {}", e))
+            GitdudaError::OperationFailed(format!("Failed to fetch JIRA issues: {}", e))
         })?;
 
     if !response.status().is_success() {
         let status = response.status();
         let body = response.text().await.unwrap_or_default();
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "JIRA API error {}: {}",
             status, body
         )));
@@ -394,7 +394,7 @@ pub async fn get_jira_issues(
     }
 
     let data: SearchResponse = response.json().await.map_err(|e| {
-        GitnadoError::OperationFailed(format!("Failed to parse JIRA response: {}", e))
+        GitdudaError::OperationFailed(format!("Failed to parse JIRA response: {}", e))
     })?;
 
     let base_url = config.base_url.trim_end_matches('/');
@@ -441,13 +441,13 @@ pub async fn get_jira_issue(path: String, issue_key: String) -> Result<JiraIssue
         .await
         .map_err(|e| {
             error!("JIRA API request failed: {}", e);
-            GitnadoError::OperationFailed(format!("Failed to fetch JIRA issue: {}", e))
+            GitdudaError::OperationFailed(format!("Failed to fetch JIRA issue: {}", e))
         })?;
 
     if !response.status().is_success() {
         let status = response.status();
         let body = response.text().await.unwrap_or_default();
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "JIRA API error {}: {}",
             status, body
         )));
@@ -492,7 +492,7 @@ pub async fn get_jira_issue(path: String, issue_key: String) -> Result<JiraIssue
     let issue: ApiIssue = response
         .json()
         .await
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to parse JIRA issue: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to parse JIRA issue: {}", e)))?;
 
     let base_url = config.base_url.trim_end_matches('/');
 
@@ -531,13 +531,13 @@ pub async fn get_jira_transitions(path: String, issue_key: String) -> Result<Vec
         .await
         .map_err(|e| {
             error!("JIRA API request failed: {}", e);
-            GitnadoError::OperationFailed(format!("Failed to fetch JIRA transitions: {}", e))
+            GitdudaError::OperationFailed(format!("Failed to fetch JIRA transitions: {}", e))
         })?;
 
     if !response.status().is_success() {
         let status = response.status();
         let body = response.text().await.unwrap_or_default();
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "JIRA API error {}: {}",
             status, body
         )));
@@ -555,7 +555,7 @@ pub async fn get_jira_transitions(path: String, issue_key: String) -> Result<Vec
     }
 
     let data: TransitionsResponse = response.json().await.map_err(|e| {
-        GitnadoError::OperationFailed(format!("Failed to parse JIRA transitions: {}", e))
+        GitdudaError::OperationFailed(format!("Failed to parse JIRA transitions: {}", e))
     })?;
 
     Ok(data
@@ -616,14 +616,14 @@ pub async fn transition_jira_issue(
         .await
         .map_err(|e| {
             error!("JIRA API request failed: {}", e);
-            GitnadoError::OperationFailed(format!("Failed to transition JIRA issue: {}", e))
+            GitdudaError::OperationFailed(format!("Failed to transition JIRA issue: {}", e))
         })?;
 
     // JIRA returns 204 No Content on successful transition
     if !response.status().is_success() {
         let status = response.status();
         let body = response.text().await.unwrap_or_default();
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "JIRA API error {}: {}",
             status, body
         )));
@@ -664,12 +664,12 @@ pub async fn create_branch_from_jira(
         .header("Content-Type", "application/json")
         .send()
         .await
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to fetch JIRA issue: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to fetch JIRA issue: {}", e)))?;
 
     if !response.status().is_success() {
         let status = response.status();
         let body = response.text().await.unwrap_or_default();
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "JIRA API error {}: {}",
             status, body
         )));
@@ -689,7 +689,7 @@ pub async fn create_branch_from_jira(
     let issue: ApiIssue = response
         .json()
         .await
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to parse JIRA issue: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to parse JIRA issue: {}", e)))?;
 
     let branch_name =
         generate_branch_name(&issue.key, &issue.fields.summary, branch_type.as_deref());
@@ -697,19 +697,19 @@ pub async fn create_branch_from_jira(
     // Create the branch using git2 on the blocking pool
     let branch_name = crate::utils::blocking_git(move || {
         let repo = git2::Repository::open(&path).map_err(|e| {
-            GitnadoError::OperationFailed(format!("Failed to open repository: {}", e))
+            GitdudaError::OperationFailed(format!("Failed to open repository: {}", e))
         })?;
 
         let head = repo
             .head()
-            .map_err(|e| GitnadoError::OperationFailed(format!("Failed to get HEAD: {}", e)))?;
+            .map_err(|e| GitdudaError::OperationFailed(format!("Failed to get HEAD: {}", e)))?;
 
         let commit = head.peel_to_commit().map_err(|e| {
-            GitnadoError::OperationFailed(format!("Failed to get HEAD commit: {}", e))
+            GitdudaError::OperationFailed(format!("Failed to get HEAD commit: {}", e))
         })?;
 
         repo.branch(&branch_name, &commit, false).map_err(|e| {
-            GitnadoError::OperationFailed(format!(
+            GitdudaError::OperationFailed(format!(
                 "Failed to create branch '{}': {}",
                 branch_name, e
             ))
@@ -938,8 +938,8 @@ mod tests {
 
     #[test]
     fn test_save_and_load_config() {
-        // A REAL repository: gitnado_config_dir resolves the config location
-        // through git2::Repository::open, so a hand-made `.git/gitnado`
+        // A REAL repository: gitduda_config_dir resolves the config location
+        // through git2::Repository::open, so a hand-made `.git/gitduda`
         // directory with no HEAD, objects or refs is not a repository and the
         // open fails. The test asserted a round trip it never performed.
         let repo = TestRepo::with_initial_commit();

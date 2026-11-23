@@ -2,7 +2,7 @@
 //!
 //! A branch can be declared as stacked on another ("parent") branch. The
 //! relationship is stored in the repository's own config —
-//! `branch.<name>.gitnado-parent = <parent>` — so it needs no extra files,
+//! `branch.<name>.gitduda-parent = <parent>` — so it needs no extra files,
 //! moves with `git branch -m` like the rest of a branch's config section, and
 //! is removed with the branch.
 //!
@@ -17,9 +17,9 @@ use git2::{BranchType, Repository};
 use serde::Serialize;
 use tauri::command;
 
-use crate::error::{GitnadoError, Result};
+use crate::error::{GitdudaError, Result};
 
-const PARENT_KEY: &str = "gitnado-parent";
+const PARENT_KEY: &str = "gitduda-parent";
 
 fn parent_key(branch: &str) -> String {
     format!("branch.{branch}.{PARENT_KEY}")
@@ -61,7 +61,7 @@ fn local_branch_exists(repo: &Repository, name: &str) -> bool {
 fn read_parents(repo: &Repository) -> Result<BTreeMap<String, String>> {
     let config = repo.config()?;
     let mut parents = BTreeMap::new();
-    let mut entries = config.entries(Some(r"^branch\..*\.gitnado-parent$"))?;
+    let mut entries = config.entries(Some(r"^branch\..*\.gitduda-parent$"))?;
     while let Some(entry) = entries.next() {
         let entry = entry?;
         let (Ok(name), Ok(value)) = (entry.name(), entry.value()) else {
@@ -82,13 +82,13 @@ fn read_parents(repo: &Repository) -> Result<BTreeMap<String, String>> {
 
 pub fn set_parent_in(repo: &Repository, branch: &str, parent: &str) -> Result<()> {
     if branch == parent {
-        return Err(GitnadoError::OperationFailed(
+        return Err(GitdudaError::OperationFailed(
             "A branch cannot be stacked on itself".to_string(),
         ));
     }
     for name in [branch, parent] {
         if !local_branch_exists(repo, name) {
-            return Err(GitnadoError::BranchNotFound(name.to_string()));
+            return Err(GitdudaError::BranchNotFound(name.to_string()));
         }
     }
     // Refuse a cycle: walking up from the new parent must never reach `branch`.
@@ -97,7 +97,7 @@ pub fn set_parent_in(repo: &Repository, branch: &str, parent: &str) -> Result<()
     let mut cursor = Some(parent.to_string());
     while let Some(current) = cursor {
         if current == branch {
-            return Err(GitnadoError::OperationFailed(format!(
+            return Err(GitdudaError::OperationFailed(format!(
                 "{parent} is already stacked on {branch}; stacking {branch} on it would make a loop"
             )));
         }

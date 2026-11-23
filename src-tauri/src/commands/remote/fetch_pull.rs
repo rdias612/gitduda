@@ -7,7 +7,7 @@ use super::{
     await_remote_task, ensure_pullable, fetch_late_event, guard_remote_op, late_failure,
     network_deadline, network_timeout, operation_monitor, transfer_failure,
 };
-use crate::error::{GitnadoError, Result};
+use crate::error::{GitdudaError, Result};
 use crate::models::{FetchAllResult, RemoteFetchResult, RemoteFetchStatus, RemoteOperationResult};
 use crate::services::cancellation::CancellationRegistry;
 use crate::services::credentials_service;
@@ -60,7 +60,7 @@ pub async fn fetch(
     let repo = git2::Repository::open(Path::new(&path))?;
     let remote_name_owned = resolve_fetch_remote(&repo, remote);
     repo.find_remote(&remote_name_owned)
-        .map_err(|_| GitnadoError::RemoteNotFound(remote_name_owned.clone()))?;
+        .map_err(|_| GitdudaError::RemoteNotFound(remote_name_owned.clone()))?;
     drop(repo);
 
     let repo_path = path.clone();
@@ -163,7 +163,7 @@ pub async fn get_fetch_remote(path: String, remote: Option<String>) -> Result<St
     let repo = git2::Repository::open(Path::new(&path))?;
     let remote_name = resolve_fetch_remote(&repo, remote);
     repo.find_remote(&remote_name)
-        .map_err(|_| GitnadoError::RemoteNotFound(remote_name.clone()))?;
+        .map_err(|_| GitdudaError::RemoteNotFound(remote_name.clone()))?;
     Ok(remote_name)
 }
 
@@ -205,7 +205,7 @@ pub(super) fn fast_forward_to(
         Ok(()) => {}
         Err(e) if e.code() == git2::ErrorCode::Conflict => {
             let files = conflict_paths.borrow().join(", ");
-            return Err(GitnadoError::OperationFailed(if files.is_empty() {
+            return Err(GitdudaError::OperationFailed(if files.is_empty() {
                 "Your local changes would be overwritten by merge. \
                  Commit or stash them before you pull."
                     .to_string()
@@ -283,7 +283,7 @@ pub(crate) fn resolve_pull_branch(
     }
     let head = repo.head()?;
     if !head.is_branch() {
-        return Err(GitnadoError::OperationFailed(
+        return Err(GitdudaError::OperationFailed(
             "You are not currently on a branch. Check out a branch before \
              pulling, or say which branch to pull."
                 .to_string(),
@@ -291,7 +291,7 @@ pub(crate) fn resolve_pull_branch(
     }
     let refname = head
         .name()
-        .map_err(|_| GitnadoError::InvalidReference)?
+        .map_err(|_| GitdudaError::InvalidReference)?
         .to_string();
     Ok((head.shorthand().unwrap_or("main").to_string(), refname))
 }
@@ -329,7 +329,7 @@ pub async fn get_pull_remote(
     let (_, head_refname) = resolve_pull_branch(&repo, branch.as_deref())?;
     let remote_name = resolve_pull_remote(&repo, remote, &head_refname);
     repo.find_remote(&remote_name)
-        .map_err(|_| GitnadoError::RemoteNotFound(remote_name.clone()))?;
+        .map_err(|_| GitdudaError::RemoteNotFound(remote_name.clone()))?;
     Ok(remote_name)
 }
 
@@ -407,7 +407,7 @@ pub(crate) fn merge_fetched_commit(
 
     let merge_commit_result = (|| -> Result<()> {
         if repo.index()?.has_conflicts() {
-            return Err(GitnadoError::MergeConflict);
+            return Err(GitdudaError::MergeConflict);
         }
         // The same two hooks merge() runs. `git pull` is fetch + merge, and
         // githooks(5) has git merge fire pre-merge-commit and commit-msg — so
@@ -517,8 +517,8 @@ pub(crate) fn pull_branch(
         monitor.with_message(format!("Pulling from {}", effective_remote)),
     )
     .map_err(|e| match e {
-        GitnadoError::OperationTimeout(_) => {
-            GitnadoError::OperationTimeout("Pull operation timed out".to_string())
+        GitdudaError::OperationTimeout(_) => {
+            GitdudaError::OperationTimeout("Pull operation timed out".to_string())
         }
         other => other,
     })?;
@@ -528,7 +528,7 @@ pub(crate) fn pull_branch(
     // Reported as a plain cancellation, not a "cancelled after change": the
     // repository is in exactly the state a fetch would have left it in.
     if monitor.is_cancelled() {
-        return Err(GitnadoError::OperationCancelled);
+        return Err(GitdudaError::OperationCancelled);
     }
 
     // Do NOT start the merge or rebase once the caller has already been told
@@ -543,7 +543,7 @@ pub(crate) fn pull_branch(
     // OperationTimeout as an outcome the caller was already told about, which
     // would leave those writes with no late event and no refresh anywhere.
     if crate::utils::deadline_passed(deadline) {
-        return Err(GitnadoError::OperationTimeoutAfterChange(
+        return Err(GitdudaError::OperationTimeoutAfterChange(
             "Pull operation timed out".to_string(),
         ));
     }
@@ -557,12 +557,12 @@ pub(crate) fn pull_branch(
                 .and_then(|c| c.get_string(&format!("branch.{}.merge", branch_name)).ok())
                 .is_some();
             if has_configured_upstream {
-                return Err(GitnadoError::OperationFailed(format!(
+                return Err(GitdudaError::OperationFailed(format!(
                     "Upstream branch '{}' no longer exists on remote '{}' (it may have been deleted after being merged). Switch to an active branch or unset the upstream branch.",
                     remote_ref, effective_remote
                 )));
             } else {
-                return Err(GitnadoError::OperationFailed(format!(
+                return Err(GitdudaError::OperationFailed(format!(
                     "Remote branch '{}' was not found on remote '{}'. Push the branch with --set-upstream first.",
                     remote_ref, effective_remote
                 )));
@@ -593,7 +593,7 @@ pub(crate) fn pull_branch(
             while let Some(op) = rebase_obj.next() {
                 let op = op?;
                 if repo.index()?.has_conflicts() {
-                    return Err(GitnadoError::RebaseConflict);
+                    return Err(GitdudaError::RebaseConflict);
                 }
                 let signature = repo.signature()?;
                 if crate::commands::merge::commit_or_skip_empty(
@@ -614,13 +614,13 @@ pub(crate) fn pull_branch(
             Ok(())
         })();
         match rebase_result {
-            Err(GitnadoError::RebaseConflict) => {
+            Err(GitdudaError::RebaseConflict) => {
                 // Paused, not finished: this call reports a conflict, never a
                 // count, so the commits already dropped here would go
                 // unreported. Hand them to the continue_rebase that finishes
                 // this rebase, which adds its own and reports the total.
                 crate::commands::merge::append_skipped(&repo, skipped_count);
-                return Err(GitnadoError::RebaseConflict);
+                return Err(GitdudaError::RebaseConflict);
             }
             Err(e) => {
                 let _ = rebase_obj.abort();
@@ -798,14 +798,14 @@ pub(crate) fn fetch_internal(
     // The in-transfer check lives in the git2 callback, which is the only
     // abort point libgit2 offers.
     if monitor.is_cancelled() {
-        return Err(GitnadoError::OperationCancelled);
+        return Err(GitdudaError::OperationCancelled);
     }
 
     let repo = git2::Repository::open(Path::new(path))?;
 
     let mut git_remote = repo
         .find_remote(remote_name)
-        .map_err(|_| GitnadoError::RemoteNotFound(remote_name.to_string()))?;
+        .map_err(|_| GitdudaError::RemoteNotFound(remote_name.to_string()))?;
 
     let (mut fetch_opts, abort) = credentials_service::get_fetch_options_with_monitor(
         token, deadline,
@@ -906,7 +906,7 @@ pub async fn fetch_all_remotes(
             Ok((results, total_fetched, total_failed))
         })
         .await
-        .map_err(|e| GitnadoError::Custom(format!("Fetch task failed: {}", e)))??;
+        .map_err(|e| GitdudaError::Custom(format!("Fetch task failed: {}", e)))??;
 
     let overall_success = total_failed == 0;
 
@@ -947,7 +947,7 @@ pub(super) fn fetch_single_remote(
 
     let mut git_remote = repo
         .find_remote(remote_name)
-        .map_err(|_| GitnadoError::RemoteNotFound(remote_name.to_string()))?;
+        .map_err(|_| GitdudaError::RemoteNotFound(remote_name.to_string()))?;
 
     // Collect refspecs
     let mut refspecs: Vec<String> = git_remote

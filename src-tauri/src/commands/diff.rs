@@ -421,7 +421,7 @@ pub async fn get_file_diff(
         } else {
             String::new()
         };
-        Err(crate::error::GitnadoError::OperationFailed(format!(
+        Err(crate::error::GitdudaError::OperationFailed(format!(
             "File '{}' not found in diff. Staged: {}. Found {} files: [{}{}]",
             normalized_file_path,
             is_staged,
@@ -436,7 +436,7 @@ pub async fn get_file_diff(
 /// Generate a diff for a new/untracked file (entire content as additions)
 fn generate_new_file_diff(full_path: &Path, file_path: &str) -> Result<DiffFile> {
     let content = std::fs::read_to_string(full_path).map_err(|e| {
-        crate::error::GitnadoError::OperationFailed(format!("Failed to read file: {}", e))
+        crate::error::GitdudaError::OperationFailed(format!("Failed to read file: {}", e))
     })?;
 
     let lines: Vec<DiffLine> = content
@@ -973,7 +973,7 @@ pub async fn get_commit_file_diff(
         filtered
             .map(|f| maybe_truncate_diff(f, max_lines))
             .ok_or_else(|| {
-                crate::error::GitnadoError::OperationFailed("File not found in commit".to_string())
+                crate::error::GitdudaError::OperationFailed("File not found in commit".to_string())
             })
     })
     .await

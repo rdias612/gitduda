@@ -3,7 +3,7 @@
 use std::path::Path;
 use tauri::command;
 
-use crate::error::{GitnadoError, Result};
+use crate::error::{GitdudaError, Result};
 use crate::models::FileStatus;
 
 /// A commit in the comparison result
@@ -73,7 +73,7 @@ pub async fn compare_branches(
         // Find merge base
         let merge_base_oid = repo
             .merge_base(base_oid, compare_oid)
-            .map_err(|_| GitnadoError::OperationFailed("No common ancestor found".to_string()))?;
+            .map_err(|_| GitdudaError::OperationFailed("No common ancestor found".to_string()))?;
 
         // Calculate ahead/behind counts
         let (ahead, behind) = repo.graph_ahead_behind(compare_oid, base_oid)?;

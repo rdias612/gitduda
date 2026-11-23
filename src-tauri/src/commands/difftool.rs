@@ -6,7 +6,7 @@
 use std::path::Path;
 use tauri::command;
 
-use crate::error::{GitnadoError, Result};
+use crate::error::{GitdudaError, Result};
 use crate::utils::create_command;
 
 /// Diff tool configuration
@@ -56,7 +56,7 @@ fn run_git_config(repo_path: Option<&Path>, args: &[&str]) -> Result<String> {
 
     let output = cmd
         .output()
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to run git config: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to run git config: {}", e)))?;
 
     let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
     let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
@@ -68,7 +68,7 @@ fn run_git_config(repo_path: Option<&Path>, args: &[&str]) -> Result<String> {
         if output.status.code() == Some(1) && stderr.is_empty() && stdout.is_empty() {
             Ok(String::new())
         } else {
-            Err(GitnadoError::OperationFailed(if stderr.is_empty() {
+            Err(GitdudaError::OperationFailed(if stderr.is_empty() {
                 stdout
             } else {
                 stderr
@@ -288,7 +288,7 @@ pub async fn launch_diff_tool(
 
     let output = cmd
         .output()
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to launch diff tool: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to launch diff tool: {}", e)))?;
 
     let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
     let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();

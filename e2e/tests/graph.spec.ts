@@ -1578,7 +1578,7 @@ test.describe('Graph with more lanes than fit', () => {
     expect(after.handles.refsEnd).toBe(before.handles.refsEnd + 60);
     expect(after.handles.statsStart).toBeLessThan(after.canvasWidth);
 
-    const saved = await page.evaluate(() => localStorage.getItem('gitnado-graph-columns'));
+    const saved = await page.evaluate(() => localStorage.getItem('gitduda-graph-columns'));
     expect(JSON.parse(saved!).graph).toBe(before.width + 60);
   });
 });

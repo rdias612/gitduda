@@ -12,7 +12,7 @@ pub use history_rewrite::*;
 use std::path::Path;
 use tauri::command;
 
-use crate::error::{GitnadoError, Result};
+use crate::error::{GitdudaError, Result};
 
 /// Name of the sidecar file tracking the commits still to be applied during a
 /// multi-commit cherry-pick sequence (used so `continue` can resume the range).
@@ -200,7 +200,7 @@ pub async fn get_rebase_todo(path: String) -> Result<RebaseTodo> {
             | git2::RepositoryState::RebaseInteractive
             | git2::RepositoryState::RebaseMerge
     ) {
-        return Err(GitnadoError::OperationFailed(
+        return Err(GitdudaError::OperationFailed(
             "No rebase in progress".to_string(),
         ));
     }
@@ -216,7 +216,7 @@ pub async fn get_rebase_todo(path: String) -> Result<RebaseTodo> {
     } else if rebase_apply_dir.exists() {
         rebase_apply_dir
     } else {
-        return Err(GitnadoError::OperationFailed(
+        return Err(GitdudaError::OperationFailed(
             "Cannot find rebase directory".to_string(),
         ));
     };
@@ -251,7 +251,7 @@ pub async fn update_rebase_todo(path: String, entries: Vec<RebaseTodoEntry>) -> 
             | git2::RepositoryState::RebaseInteractive
             | git2::RepositoryState::RebaseMerge
     ) {
-        return Err(GitnadoError::OperationFailed(
+        return Err(GitdudaError::OperationFailed(
             "No rebase in progress".to_string(),
         ));
     }
@@ -267,7 +267,7 @@ pub async fn update_rebase_todo(path: String, entries: Vec<RebaseTodoEntry>) -> 
     } else if rebase_apply_dir.exists() {
         rebase_apply_dir
     } else {
-        return Err(GitnadoError::OperationFailed(
+        return Err(GitdudaError::OperationFailed(
             "Cannot find rebase directory".to_string(),
         ));
     };
@@ -293,14 +293,14 @@ pub async fn skip_rebase_commit(path: String) -> Result<()> {
         .current_dir(&path)
         .args(["rebase", "--skip"])
         .output()
-        .map_err(|e| GitnadoError::OperationFailed(e.to_string()))?;
+        .map_err(|e| GitdudaError::OperationFailed(e.to_string()))?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         if stderr.contains("CONFLICT") || stderr.contains("conflict") {
-            return Err(GitnadoError::RebaseConflict);
+            return Err(GitdudaError::RebaseConflict);
         }
-        return Err(GitnadoError::OperationFailed(stderr.to_string()));
+        return Err(GitdudaError::OperationFailed(stderr.to_string()));
     }
 
     Ok(())
@@ -323,10 +323,10 @@ pub async fn reset(path: String, target_ref: String, mode: String) -> Result<()>
     // Find the target commit
     let obj = repo
         .revparse_single(&target_ref)
-        .map_err(|_| GitnadoError::CommitNotFound(target_ref.clone()))?;
+        .map_err(|_| GitdudaError::CommitNotFound(target_ref.clone()))?;
     let commit = obj
         .peel_to_commit()
-        .map_err(|_| GitnadoError::CommitNotFound(target_ref.clone()))?;
+        .map_err(|_| GitdudaError::CommitNotFound(target_ref.clone()))?;
 
     // Determine reset type
     let reset_type = match mode.as_str() {
@@ -334,7 +334,7 @@ pub async fn reset(path: String, target_ref: String, mode: String) -> Result<()>
         "mixed" => git2::ResetType::Mixed,
         "hard" => git2::ResetType::Hard,
         _ => {
-            return Err(GitnadoError::OperationFailed(format!(
+            return Err(GitdudaError::OperationFailed(format!(
                 "Invalid reset mode: {}. Use 'soft', 'mixed', or 'hard'",
                 mode
             )));

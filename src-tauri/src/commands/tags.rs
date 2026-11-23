@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::path::Path;
 use tauri::command;
 
-use crate::error::{GitnadoError, Result};
+use crate::error::{GitdudaError, Result};
 use crate::models::{Signature, Tag};
 use crate::services::credentials_service;
 
@@ -63,10 +63,10 @@ fn create_signed_tag_cli(
         .current_dir(path)
         .args(&args)
         .output()
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to run git tag: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to run git tag: {}", e)))?;
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "Failed to create signed tag: {}",
             stderr.trim()
         )));
@@ -134,9 +134,9 @@ pub async fn get_tag_details(path: String, name: String) -> Result<TagDetails> {
         let refname = format!("refs/tags/{}", name);
         let reference = repo
             .find_reference(&refname)
-            .map_err(|_| GitnadoError::TagNotFound(name.clone()))?;
+            .map_err(|_| GitdudaError::TagNotFound(name.clone()))?;
 
-        let ref_oid = reference.target().ok_or(GitnadoError::InvalidReference)?;
+        let ref_oid = reference.target().ok_or(GitdudaError::InvalidReference)?;
 
         // Try to get tag details if it's an annotated tag
         let details = if let Ok(tag) = repo.find_tag(ref_oid) {
@@ -259,7 +259,7 @@ pub async fn push_tag(
         crate::commands::lfs::guard_lfs_upload(&path, Some(&remote_name))?;
         let mut remote_obj = repo
             .find_remote(&remote_name)
-            .map_err(|_| GitnadoError::RemoteNotFound(remote_name.clone()))?;
+            .map_err(|_| GitdudaError::RemoteNotFound(remote_name.clone()))?;
 
         let mut push_opts = credentials_service::get_push_options(token);
 
@@ -293,7 +293,7 @@ pub async fn delete_remote_tag(
         crate::services::security::guard_push_remote(&path, Some(remote_name))?;
         let mut remote_obj = repo
             .find_remote(remote_name)
-            .map_err(|_| GitnadoError::RemoteNotFound(remote_name.to_string()))?;
+            .map_err(|_| GitdudaError::RemoteNotFound(remote_name.to_string()))?;
 
         let mut push_opts = credentials_service::get_push_options(token.clone());
 
@@ -343,13 +343,13 @@ pub async fn edit_tag_message(path: String, name: String, message: String) -> Re
         let refname = format!("refs/tags/{}", name);
         let reference = repo
             .find_reference(&refname)
-            .map_err(|_| GitnadoError::TagNotFound(name.clone()))?;
+            .map_err(|_| GitdudaError::TagNotFound(name.clone()))?;
 
-        let ref_oid = reference.target().ok_or(GitnadoError::InvalidReference)?;
+        let ref_oid = reference.target().ok_or(GitdudaError::InvalidReference)?;
 
         // Get tag details - we need the target commit
         let tag = repo.find_tag(ref_oid).map_err(|_| {
-            GitnadoError::OperationFailed("Cannot edit a lightweight tag".to_string())
+            GitdudaError::OperationFailed("Cannot edit a lightweight tag".to_string())
         })?;
 
         let target_oid = tag.target_id();
@@ -394,7 +394,7 @@ mod tests {
 
     fn blocked_message<T: std::fmt::Debug>(result: Result<T>) -> String {
         match result {
-            Err(GitnadoError::NetworkBlocked(message)) => message,
+            Err(GitdudaError::NetworkBlocked(message)) => message,
             other => panic!("expected a NetworkBlocked refusal, got {:?}", other),
         }
     }
@@ -504,7 +504,7 @@ mod tests {
             .await,
         ] {
             assert!(
-                !matches!(result, Err(GitnadoError::NetworkBlocked(_))),
+                !matches!(result, Err(GitdudaError::NetworkBlocked(_))),
                 "an allowlisted push url must pass the gate: {:?}",
                 result
             );

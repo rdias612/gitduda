@@ -40,7 +40,7 @@ pub async fn pty_spawn(
     let sink: Arc<dyn PtySink> = Arc::new(TauriPtySink(app_handle));
     tokio::task::spawn_blocking(move || registry.spawn(options, sink))
         .await
-        .map_err(|e| crate::error::GitnadoError::OperationFailed(e.to_string()))?
+        .map_err(|e| crate::error::GitdudaError::OperationFailed(e.to_string()))?
 }
 
 /// Send input to a terminal session.

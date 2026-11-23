@@ -1,4 +1,4 @@
-//! Service layer for Gitnado
+//! Service layer for Gitduda
 //!
 //! This module contains services that provide higher-level abstractions
 //! over the raw git operations.

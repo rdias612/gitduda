@@ -10,7 +10,7 @@
 //!    glob ("agents may `commit` on `agent/*`"). The branch is the one the
 //!    write lands on: the current branch for stage/commit/stash, the new or
 //!    target branch for create_branch/create_worktree/checkout.
-//! 3. Otherwise Gitnado shows the request with a preview and waits for the
+//! 3. Otherwise Gitduda shows the request with a preview and waits for the
 //!    user. No answer within the timeout is a denial, as is having no UI to
 //!    ask (e.g. headless tests).
 //!
@@ -719,7 +719,7 @@ pub fn execute(prepared: &PreparedWrite) -> Result<Value, String> {
 }
 
 fn repo_prop() -> Value {
-    json!({ "type": "string", "description": "Absolute path of the repository (must be open in Gitnado)" })
+    json!({ "type": "string", "description": "Absolute path of the repository (must be open in Gitduda)" })
 }
 
 /// Write tools as advertised by `tools/list` while enabled.
@@ -727,7 +727,7 @@ pub fn write_tool_list() -> Vec<McpTool> {
     let tool = |name: &str, description: &str, properties: Value, required: Vec<&str>| McpTool {
         name: name.to_string(),
         description: format!(
-            "{description} Requires approval in Gitnado unless a saved policy allows it."
+            "{description} Requires approval in Gitduda unless a saved policy allows it."
         ),
         input_schema: json!({ "type": "object", "properties": properties, "required": required }),
     };

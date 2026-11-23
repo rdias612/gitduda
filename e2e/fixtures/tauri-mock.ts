@@ -728,7 +728,7 @@ export function createMockHandler(mocks: typeof defaultMockData) {
       case 'list_checkpoints':
         return [];
       case 'get_agent_hooks_status':
-        return { installed: false, partial: false, settingsPath: '/tmp/test-repo/.claude/settings.local.json', scriptPath: '/tmp/test-repo/.git/gitnado/agent-checkpoint.sh' };
+        return { installed: false, partial: false, settingsPath: '/tmp/test-repo/.claude/settings.local.json', scriptPath: '/tmp/test-repo/.git/gitduda/agent-checkpoint.sh' };
       case 'get_agent_attribution':
         return null;
 
@@ -1341,7 +1341,7 @@ export async function setupTauriMocks(
           case 'list_checkpoints':
             return [];
           case 'get_agent_hooks_status':
-            return { installed: false, partial: false, settingsPath: '/tmp/test-repo/.claude/settings.local.json', scriptPath: '/tmp/test-repo/.git/gitnado/agent-checkpoint.sh' };
+            return { installed: false, partial: false, settingsPath: '/tmp/test-repo/.claude/settings.local.json', scriptPath: '/tmp/test-repo/.git/gitduda/agent-checkpoint.sh' };
           case 'get_agent_attribution':
             return null;
 

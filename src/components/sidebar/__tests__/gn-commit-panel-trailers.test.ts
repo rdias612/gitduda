@@ -160,7 +160,7 @@ describe('gn-commit-panel trailers', () => {
     invokeHistory.length = 0;
     identity = IDENTITY;
     history = [commitOf('Last commit message', 'Some body text')];
-    localStorage.removeItem('gitnado-commit-history');
+    localStorage.removeItem('gitduda-commit-history');
     settingsStore.getState().setAlwaysSignOff(false);
     setupDefaultMocks();
     setupStore();

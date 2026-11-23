@@ -359,7 +359,7 @@ export const repositoryStore = createStore<RepositoryState>()(
       },
     }),
     {
-      name: 'gitnado-repositories',
+      name: 'gitduda-repositories',
       partialize: (state) => ({
         recentRepositories: state.recentRepositories,
         persistedOpenRepos: state.persistedOpenRepos,

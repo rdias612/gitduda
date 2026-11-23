@@ -270,7 +270,7 @@ export class GnSearchBar extends LitElement {
     `,
   ];
 
-  private static readonly PRESETS_STORAGE_KEY = 'gitnado-search-filter-presets';
+  private static readonly PRESETS_STORAGE_KEY = 'gitduda-search-filter-presets';
   private static readonly PRESETS_MAX = 10;
 
   @property({ type: Boolean }) expanded = false;

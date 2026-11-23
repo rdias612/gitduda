@@ -1,7 +1,7 @@
 # Package Manager Distribution
 
-Gitnado is delivered through package managers in addition to the direct
-downloads on the [Releases](https://github.com/hegsie/gitnado/releases) page.
+Gitduda is delivered through package managers in addition to the direct
+downloads on the [Releases](https://github.com/rdias612/gitdudareleases) page.
 The [`publish-packages.yml`](../.github/workflows/publish-packages.yml)
 workflow runs automatically whenever a release is published (moved out of
 draft) and pushes the new version to each channel. It can also be re-run
@@ -11,9 +11,9 @@ manually from the Actions tab (workflow dispatch) with a release tag such as
 | Channel | Platform | Automation | One-time setup required |
 |---------|----------|------------|-------------------------|
 | winget | Windows | PR against `microsoft/winget-pkgs` via Komac | `WINGET_TOKEN` secret, fork of winget-pkgs |
-| Homebrew | macOS (Apple Silicon) | Push to `hegsie/homebrew-gitnado` tap | Tap repository, `HOMEBREW_TAP_TOKEN` secret |
-| Scoop | Windows | Commit to `packaging/scoop/gitnado.json` on `main` | None |
-| AUR | Arch Linux | Community-maintained (`gitnado-bin`) | — |
+| Homebrew | macOS (Apple Silicon) | Push to `rdias612/homebrew-gitduda` tap | Tap repository, `HOMEBREW_TAP_TOKEN` secret |
+| Scoop | Windows | Commit to `packaging/scoop/gitduda.json` on `main` | None |
+| AUR | Arch Linux | Community-maintained (`gitduda-bin`) | — |
 
 Jobs whose secret is missing are skipped, not failed, so the workflow works
 before every channel is set up.
@@ -23,12 +23,12 @@ before every channel is set up.
 The `winget` job opens a PR against
 [microsoft/winget-pkgs](https://github.com/microsoft/winget-pkgs) with the
 `.exe` (NSIS) and `.msi` installers for every release, using manifests rendered
-from the templates in this repository. Package identifier: `hegsie.Gitnado`.
+from the templates in this repository. Package identifier: `rdias612.Gitduda`.
 
 One-time setup:
 
 1. Fork [microsoft/winget-pkgs](https://github.com/microsoft/winget-pkgs) under
-   the `hegsie` account (Komac pushes manifest branches to this fork).
+   the `rdias612` account (Komac pushes manifest branches to this fork).
 2. Create a **classic** personal access token with the `public_repo` and
    `workflow` scopes and add it as the `WINGET_TOKEN` repository secret.
    `workflow` is needed because syncing the fork merges upstream commits that
@@ -37,7 +37,7 @@ One-time setup:
    or update workflow ... without `workflow` scope" (the v1.0.0 release hit
    this).
 3. Nothing else. For each release the job first checks whether
-   `manifests/h/hegsie/Gitnado/<version>` is already in winget-pkgs and skips
+   `manifests/h/rdias612/gitduda<version>` is already in winget-pkgs and skips
    with a notice if it is, so re-running an already-merged release does not
    open a duplicate PR. Otherwise it renders the three manifests from the templates in [`packaging/winget/`](../packaging/winget/)
    with [`.github/scripts/winget-manifests.mjs`](../.github/scripts/winget-manifests.mjs)
@@ -57,11 +57,11 @@ One-time setup:
    winget-pkgs automatically (winget-releaser's `max-versions-to-keep` did
    that); remove them with `komac remove` if the list grows long.
 
-Users install with `winget install hegsie.Gitnado`.
+Users install with `winget install rdias612.Gitduda`.
 
 New-package PRs go through winget-pkgs moderation and typically take a few
 days. The installer manifest declares `Microsoft.VCRedist.2015+.x64` and
-`Microsoft.EdgeWebView2Runtime` as package dependencies: `gitnado.exe`
+`Microsoft.EdgeWebView2Runtime` as package dependencies: `gitduda.exe`
 imports `MSVCP140.dll`, which only ships with the VC++ redistributable, so
 without it the app exits with `STATUS_DLL_NOT_FOUND` on a clean Windows
 install (this is what the winget validation sandbox hit on the first
@@ -76,38 +76,38 @@ together when winget-pkgs moves to a newer schema.
 If the Komac step ever fails, render the manifests locally with the same
 script and submit them by hand: `node .github/scripts/winget-manifests.mjs
 --version <v> --exe <exe> --msi <msi> --msi-analysis <komac analyze output>
---release-date <YYYY-MM-DD> --out winget`, then `komac submit winget/manifests/h/hegsie/Gitnado/<v>`
+--release-date <YYYY-MM-DD> --out winget`, then `komac submit winget/manifests/h/rdias612/gitduda<v>`
 (or `wingetcreate submit` on Windows). The templates pin the NSIS
-`ProductCode` (`Gitnado`, the uninstall registry key Tauri writes) and the
+`ProductCode` (`Gitduda`, the uninstall registry key Tauri writes) and the
 WiX `UpgradeCode` from `tauri.conf.json`; update them together if either
 changes.
 
 ## Homebrew
 
 The `homebrew` job downloads the release DMG, computes its SHA-256, renders
-[`packaging/homebrew/gitnado.rb.template`](../packaging/homebrew/gitnado.rb.template)
-and pushes the result to `Casks/gitnado.rb` in the
-`hegsie/homebrew-gitnado` tap. Only Apple Silicon is published because CI
+[`packaging/homebrew/gitduda.rb.template`](../packaging/homebrew/gitduda.rb.template)
+and pushes the result to `Casks/gitduda.rb` in the
+`rdias612/homebrew-gitduda` tap. Only Apple Silicon is published because CI
 builds `aarch64-apple-darwin` only; the cask declares `depends_on arch: :arm64`.
 
 One-time setup:
 
-1. Create a public repository named `homebrew-gitnado` under the `hegsie`
+1. Create a public repository named `homebrew-gitduda` under the `rdias612`
    account (an empty repository with a README is enough; the workflow creates
-   `Casks/gitnado.rb`).
+   `Casks/gitduda.rb`).
 2. Create a personal access token with write access to that repository
    (fine-grained with Contents read/write, or classic with `repo`) and add it
-   as the `HOMEBREW_TAP_TOKEN` repository secret in the Gitnado repository.
+   as the `HOMEBREW_TAP_TOKEN` repository secret in the Gitduda repository.
 
-Users install with `brew install --cask hegsie/gitnado/gitnado`.
+Users install with `brew install --cask rdias612/gitduda/gitduda`.
 
 ## Scoop
 
-[`packaging/scoop/gitnado.json`](../packaging/scoop/gitnado.json) is a
+[`packaging/scoop/gitduda.json`](../packaging/scoop/gitduda.json) is a
 Scoop manifest that installs the MSI by extraction (`extract_dir:
-"PFiles/Gitnado"`), the same pattern the Scoop Extras bucket uses for other
+"PFiles/Gitduda"`), the same pattern the Scoop Extras bucket uses for other
 Tauri apps. The `scoop` job updates its version, URL, and hash on each release
-and commits to `main` with `[skip ci]`. Until the first Gitnado release runs
+and commits to `main` with `[skip ci]`. Until the first Gitduda release runs
 that job the manifest points at the upcoming version and carries no `hash`
 (Scoop installs with a warning); the workflow fills it in. No secret is needed — the default
 `GITHUB_TOKEN` has `contents: write`. If branch protection on `main` blocks
@@ -117,7 +117,7 @@ PAT.
 Users install with:
 
 ```powershell
-scoop install https://raw.githubusercontent.com/hegsie/gitnado/main/packaging/scoop/gitnado.json
+scoop install https://raw.githubusercontent.com/rdias612/gitdudamain/packaging/scoop/gitduda.json
 ```
 
 Because Scoop extracts the MSI rather than running it, the WebView2 runtime
@@ -141,9 +141,9 @@ release ever needs different binaries, cut a new version instead.
 The manifests and workflow depend on the Tauri bundle asset names staying
 stable:
 
-- `Gitnado_<version>_x64-setup.exe` (NSIS)
-- `Gitnado_<version>_x64_en-US.msi` (WiX)
-- `Gitnado_<version>_aarch64.dmg` (macOS)
+- `Gitduda_<version>_x64-setup.exe` (NSIS)
+- `Gitduda_<version>_x64_en-US.msi` (WiX)
+- `Gitduda_<version>_aarch64.dmg` (macOS)
 
 If `productName`, bundle targets, or the Windows installer language in
 `src-tauri/tauri.conf.json` change, update `publish-packages.yml`, the Scoop

@@ -6,7 +6,7 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::error::{GitnadoError, Result};
+use crate::error::{GitdudaError, Result};
 
 /// Directory name under the platform config/data roots and inside a git dir.
 pub const APP_DIR_NAME: &str = "gitduda";
@@ -29,7 +29,7 @@ pub fn repo_dir(git_dir: &Path) -> PathBuf {
 /// The user-level config directory (`<config root>/gitduda`), created if missing.
 pub fn config_dir() -> Result<PathBuf> {
     let root = dirs::config_dir().ok_or_else(|| {
-        GitnadoError::OperationFailed("Could not find config directory".to_string())
+        GitdudaError::OperationFailed("Could not find config directory".to_string())
     })?;
     ensure_app_subdir(&root, "config")
 }
@@ -37,7 +37,7 @@ pub fn config_dir() -> Result<PathBuf> {
 /// The user-level data directory (`<data root>/gitduda`), created if missing.
 pub fn data_dir() -> Result<PathBuf> {
     let root = dirs::data_dir().ok_or_else(|| {
-        GitnadoError::OperationFailed("Could not find data directory".to_string())
+        GitdudaError::OperationFailed("Could not find data directory".to_string())
     })?;
     ensure_app_subdir(&root, "app")
 }
@@ -45,7 +45,7 @@ pub fn data_dir() -> Result<PathBuf> {
 fn ensure_app_subdir(root: &Path, what: &str) -> Result<PathBuf> {
     let dir = app_subdir(root);
     std::fs::create_dir_all(&dir).map_err(|e| {
-        GitnadoError::OperationFailed(format!("Failed to create {} directory: {}", what, e))
+        GitdudaError::OperationFailed(format!("Failed to create {} directory: {}", what, e))
     })?;
     Ok(dir)
 }

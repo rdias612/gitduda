@@ -1,19 +1,19 @@
-//! Refs Gitnado keeps for itself.
+//! Refs Gitduda keeps for itself.
 //!
-//! Agent checkpoints (and future bookkeeping) live under `refs/gitnado/` so
+//! Agent checkpoints (and future bookkeeping) live under `refs/gitduda/` so
 //! git's garbage collector keeps their objects alive. They are not branches,
 //! tags or anything the user created, so every place that enumerates "all
 //! refs" for display or history walking must skip them — otherwise each
 //! checkpoint would appear as a dangling commit in the graph and as a ref
 //! label in the sidebar.
 
-/// Namespace for Gitnado's internal refs.
-pub const INTERNAL_REF_PREFIX: &str = "refs/gitnado/";
-/// Gitnado's notes refs. `git notes` refuses to write outside refs/notes/,
+/// Namespace for Gitduda's internal refs.
+pub const INTERNAL_REF_PREFIX: &str = "refs/gitduda/";
+/// Gitduda's notes refs. `git notes` refuses to write outside refs/notes/,
 /// so these cannot live under [`INTERNAL_REF_PREFIX`].
-pub const INTERNAL_NOTES_PREFIX: &str = "refs/notes/gitnado/";
+pub const INTERNAL_NOTES_PREFIX: &str = "refs/notes/gitduda/";
 
-/// True for refs Gitnado owns and never shows the user.
+/// True for refs Gitduda owns and never shows the user.
 pub fn is_internal_ref(name: &str) -> bool {
     name.starts_with(INTERNAL_REF_PREFIX) || name.starts_with(INTERNAL_NOTES_PREFIX)
 }
@@ -44,10 +44,10 @@ mod tests {
 
     #[test]
     fn recognises_internal_refs() {
-        assert!(is_internal_ref("refs/gitnado/checkpoints/1"));
-        assert!(is_internal_ref("refs/notes/gitnado/agents"));
+        assert!(is_internal_ref("refs/gitduda/checkpoints/1"));
+        assert!(is_internal_ref("refs/notes/gitduda/agents"));
         assert!(!is_internal_ref("refs/notes/commits"));
-        assert!(!is_internal_ref("refs/heads/gitnado/feature"));
+        assert!(!is_internal_ref("refs/heads/gitduda/feature"));
         assert!(!is_internal_ref("refs/heads/main"));
     }
 
@@ -61,7 +61,7 @@ mod tests {
         let hidden = repo
             .commit(None, &sig, &sig, "hidden", &tree, &[&head])
             .unwrap();
-        repo.reference("refs/gitnado/checkpoints/x", hidden, true, "test")
+        repo.reference("refs/gitduda/checkpoints/x", hidden, true, "test")
             .unwrap();
 
         let mut walk = repo.revwalk().unwrap();

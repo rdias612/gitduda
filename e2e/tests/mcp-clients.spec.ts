@@ -15,7 +15,7 @@ const base = {
   get_mcp_status: { running: true, port: 3001, url: 'http://127.0.0.1:3001', lastError: null },
   get_mcp_config: { enabled: true, port: 3001, allowedOrigins: [], authToken: 'tok' },
   get_mcp_write_settings: { enabled: false, policies: [] },
-  get_mcp_stdio_command: { program: '/opt/Gitnado/gitnado', args: ['--mcp-stdio'] },
+  get_mcp_stdio_command: { program: '/opt/Gitduda/gitduda', args: ['--mcp-stdio'] },
   get_pending_mcp_consents: [],
 };
 
@@ -53,7 +53,7 @@ test.describe('MCP client tokens', () => {
     await clients(page).locator('.tab[data-kind="cursor"]').click();
     await expect(clients(page).locator('.snippet')).toContainText('"Authorization": "Bearer gnc_e2e_token"');
     await clients(page).locator('.tab[data-kind="stdio"]').click();
-    await expect(clients(page).locator('.snippet')).toContainText('/opt/Gitnado/gitnado');
+    await expect(clients(page).locator('.snippet')).toContainText('/opt/Gitduda/gitduda');
 
     await clients(page).locator('.done-btn').click();
     await expect(clients(page).locator('.new-token')).toHaveCount(0);

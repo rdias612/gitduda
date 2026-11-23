@@ -1,12 +1,12 @@
-# Gitnado Roadmap
+# Gitduda Roadmap
 
-This document outlines the strategic vision and planned features for Gitnado. For current features, see [README.md](README.md).
+This document outlines the strategic vision and planned features for Gitduda. For current features, see [README.md](README.md).
 
 ## Vision
 
-Gitnado is transitioning from a "Git GUI with AI" to a **Local-First AI Development Hub**, and next to the place where developers supervise, review and ship work done by both humans and AI coding agents. The goal is to move beyond simple commit message generation and leverage Gitnado's unique position inside the user's filesystem and Git history.
+Gitduda is transitioning from a "Git GUI with AI" to a **Local-First AI Development Hub**, and next to the place where developers supervise, review and ship work done by both humans and AI coding agents. The goal is to move beyond simple commit message generation and leverage Gitduda's unique position inside the user's filesystem and Git history.
 
-Unlike commercial alternatives, Gitnado:
+Unlike commercial alternatives, Gitduda:
 
 - **Runs entirely offline** with no telemetry, account requirements, or cloud dependencies
 - **Respects your privacy** by keeping all data local
@@ -167,7 +167,7 @@ Our north star: *A privacy-first, AI-native Git workstation where intelligence r
 
 ### 3. Long-term: Polish & Hardening
 
-**Goal:** Make Gitnado robust, accessible, and trusted for professional use.
+**Goal:** Make Gitduda robust, accessible, and trusted for professional use.
 
 #### Accessibility
 
@@ -189,42 +189,42 @@ Our north star: *A privacy-first, AI-native Git workstation where intelligence r
 
 ### 4. Next: The Agent-Era Git Workstation (2027) 🚧
 
-**Goal:** Close the gaps opened by the latest wave of Git clients and make Gitnado the best place to *supervise* code written by both humans and AI agents, without giving up local-first, no-account, no-telemetry defaults.
+**Goal:** Close the gaps opened by the latest wave of Git clients and make Gitduda the best place to *supervise* code written by both humans and AI agents, without giving up local-first, no-account, no-telemetry defaults.
 
-**Test:** "Can I run three coding agents in parallel, review and reshape what they produced, and ship it as a clean stack of PRs, without leaving Gitnado or sending code anywhere I didn't choose?"
+**Test:** "Can I run three coding agents in parallel, review and reshape what they produced, and ship it as a clean stack of PRs, without leaving Gitduda or sending code anywhere I didn't choose?"
 
 #### Where the market moved (2025–2026)
 
-| Client | What they shipped recently | Gitnado today |
+| Client | What they shipped recently | Gitduda today |
 |--------|----------------------------|---------------|
 | GitKraken Desktop 12.x | Agent Mode and an Agent Sessions panel tracking Claude Code / Copilot CLI / Codex across worktrees; AI Commit Composer ("compose / recompose commits with AI"); Launchpad PR and issue dashboard; MCP server | Worktrees, read-only MCP host, AI split suggestions for staged changes. No agent supervision, no history recompose, no cross-provider inbox |
 | Tower | Stacked branches with one-click restack and stack merge; better "fully merged" detection for squash and rebase merges; archived and pinned branches | Merged and stale detection. No stacks |
 | GitButler | Parallel (virtual) branches, stacked branches, an Agents tab with one branch per agent, Claude Code hooks, operations-log undo | Undo/redo history plus semantic undo. No parallel branches, no agent hooks |
 | GitHub Desktop / JetBrains | Copilot commit messages; AI conflict resolution in the IDE | Already matched, and runs locally |
 
-Gitnado's advantage stays the same: everything above runs **locally, with no account, and with any model you choose**. The work below is about doing those things better, not copying them.
+Gitduda's advantage stays the same: everything above runs **locally, with no account, and with any model you choose**. The work below is about doing those things better, not copying them.
 
 #### 4.1 Agent Supervision ("Mission Control")
 
 - ✅ **Agent Sessions panel:** detect Claude Code, Codex CLI, Copilot CLI, Gemini CLI, Aider and other terminal agents running against an open repo or any of its worktrees. Show each session's state (working / waiting for input / done / errored), branch, changed files and elapsed time.
 - ✅ **One-click "Start agent on a task":** create a worktree and branch (optionally from a Jira, GitHub, GitLab or Azure DevOps issue), then launch the chosen agent CLI in the embedded terminal (see 4.6) with the issue as context.
 - ✅ **Live change feed:** a per-session diff stream with "accept hunk", "revert hunk" and "send feedback to agent" actions, so reviewing agent output is as easy as reviewing a staged diff.
-- ✅ **Agent checkpoints:** snapshot the working tree (hidden refs under `refs/gitnado/checkpoints/*`) before and after each agent turn. Any turn can be rolled back from the Checkpoints dialog without touching the reflog by hand. Automatic per-turn capture comes from the agent hooks bridge below.
+- ✅ **Agent checkpoints:** snapshot the working tree (hidden refs under `refs/gitduda/checkpoints/*`) before and after each agent turn. Any turn can be rolled back from the Checkpoints dialog without touching the reflog by hand. Automatic per-turn capture comes from the agent hooks bridge below.
 - ✅ **Agent hooks bridge:** an optional hook installer (e.g. Claude Code `PreToolUse` / `Stop` hooks) that tags commits and checkpoints with the session ID so you can see which agent wrote which code.
 - ✅ **Guardrails:** run the existing "Vibe Check" secret and risk scan automatically when an agent finishes. Block or warn before agent output is pushed. Paranoid mode applies to agents too. _(Block-or-warn before push is shipped: a local secret scan of the outgoing commits on agent branches, set in Settings → Agent Guardrails.)_
 
-#### 4.2 MCP 2.0: Gitnado as the Agent's Git Brain
+#### 4.2 MCP 2.0: Gitduda as the Agent's Git Brain
 
 - ✅ **Write tools behind a consent gate:** `stage`, `commit`, `create_branch`, `create_worktree`, `stash`, `checkout`. Every write is either previewed in the UI and approved, or allowed by a per-repo policy ("agents may commit on `agent/*` branches only").
-- ✅ **Higher-level read tools:** `semantic_search_history`, `explain_commit`, `predict_rebase_conflicts`, `get_conflicts`, `get_pr_comments`. These expose Gitnado's existing AI and analysis features to any MCP client.
+- ✅ **Higher-level read tools:** `semantic_search_history`, `explain_commit`, `predict_rebase_conflicts`, `get_conflicts`, `get_pr_comments`. These expose Gitduda's existing AI and analysis features to any MCP client.
 - ✅ **Transport and setup:** stdio and Streamable HTTP transports, a per-client token list with revoke, and one-click "Add to Claude Code / Cursor / VS Code" config snippets.
-- ✅ **MCP client mode:** let Gitnado's own AI features call user-configured MCP servers (issue trackers, docs, internal tools) for richer commit, PR and review context.
+- ✅ **MCP client mode:** let Gitduda's own AI features call user-configured MCP servers (issue trackers, docs, internal tools) for richer commit, PR and review context.
 
 #### 4.3 Stacked Branches & Stacked PRs
 
 - **First-class stacks:** declare a branch as stacked on another, see the stack as a single lane in the graph and branch list, and navigate up and down the stack. _(Declaring stacks, the branch-list Stacks section with restack status, and palette navigation are shipped; the single graph lane is still to do.)_
 - ✅ **Restack:** one-click restack of the entire stack after the base moves, using Ghost Rebase to predict conflicts before running it. Also handles a lower branch being squash-merged.
-- **Stacked PRs:** create and update one PR/MR per stack level on GitHub, GitLab, Bitbucket and Azure DevOps with correct base branches and an auto-maintained stack table in each description. Merge from the bottom and retarget the rest automatically. _(Create/update per level with correct bases and the stack table, and retargeting after the bottom merges, are shipped on all four providers via **Sync PRs**; merging from inside Gitnado is still to do.)_
+- **Stacked PRs:** create and update one PR/MR per stack level on GitHub, GitLab, Bitbucket and Azure DevOps with correct base branches and an auto-maintained stack table in each description. Merge from the bottom and retarget the rest automatically. _(Create/update per level with correct bases and the stack table, and retargeting after the bottom merges, are shipped on all four providers via **Sync PRs**; merging from inside Gitduda is still to do.)_
 - ✅ **Better merged detection:** detect squash-merged and rebase-merged branches (patch-id / tree comparison) for branch cleanup and stack pruning.
 
 #### 4.4 AI History Editing
@@ -239,7 +239,7 @@ Gitnado's advantage stays the same: everything above runs **locally, with no acc
 
 - ✅ **Local AI PR review:** run a full review of any PR/MR branch (yours or a teammate's) using a local or BYO model (`review_branch_diff`, `<gn-ai-review-panel>`). Show findings and optionally post them as review comments through the existing provider integrations.
 - ✅ **Review comment resolution:** turn a PR review comment into a suggested unified diff patch (`suggest_comment_resolution_patch`, `apply_comment_resolution_patch`) and apply the fix to the working tree.
-- **Unified Launchpad:** a single inbox of PRs to review, PRs with failing CI, assigned issues and mentions across GitHub, GitLab, Bitbucket, Azure DevOps and Jira, with snooze and pin. Fetched directly from providers, with no Gitnado cloud involved.
+- **Unified Launchpad:** a single inbox of PRs to review, PRs with failing CI, assigned issues and mentions across GitHub, GitLab, Bitbucket, Azure DevOps and Jira, with snooze and pin. Fetched directly from providers, with no Gitduda cloud involved.
 - ✅ **CI awareness ("Explain this CI failure"):** summarize failing check and pipeline logs with AI and offer an actionable root cause + fix (`explain_ci_failure`, `<gn-ai-review-panel>`).
 - **Shareable patches without a cloud:** share a working-tree change as a signed patch file, bundle or provider gist/snippet, as an offline-friendly alternative to cloud patch services.
 
@@ -263,7 +263,7 @@ Gitnado's advantage stays the same: everything above runs **locally, with no acc
 #### Guiding principles for Phase 4
 
 1. **Agents are guests:** every agent write is reviewable, attributable and undoable.
-2. **Local by default, BYO everything:** no Gitnado account, no Gitnado cloud, any model, any agent.
+2. **Local by default, BYO everything:** no Gitduda account, no Gitduda cloud, any model, any agent.
 3. **AI is optional:** every AI-assisted flow has a fully working non-AI path.
 
 ---
@@ -323,7 +323,7 @@ Gitnado's advantage stays the same: everything above runs **locally, with no acc
 
 - ✅ **Package manager delivery** — winget, Homebrew cask (Apple Silicon tap), and Scoop manifest published automatically on each release; community-maintained AUR package. Future candidates: Chocolatey, Flathub, Snapcraft
 
-- ✅ **Rename to Gitnado (0.9.0)** — new name, icon and identifiers
+- ✅ **Rename to Gitduda (0.9.0)** — new name, icon and identifiers
 
 ---
 
@@ -341,7 +341,7 @@ Gitnado's advantage stays the same: everything above runs **locally, with no acc
 
 *Establishing the hardware-accelerated foundation.*
 
-- ✅ **Adaptive Model Switching** — Gitnado detects system VRAM/GPU and selects the optimal model:
+- ✅ **Adaptive Model Switching** — Gitduda detects system VRAM/GPU and selects the optimal model:
   - **Ultra-light (8GB RAM):** Uses **Gemma 3 1B** (distilled) or **Llama 3.2 1B**
   - **Standard (16GB+ RAM):** Uses **Gemma 3 4B** or **Phi-4-mini** (3.8B)
   - **Pro (32GB+ RAM):** Uses **Qwen 2.5 Coder 14B** (Q4_K_M)
@@ -349,7 +349,7 @@ Gitnado's advantage stays the same: everything above runs **locally, with no acc
 
 - ✅ **GPU-Accelerated Local Inference & Token Streaming** — Rust-native GGUF inference via `llama-cpp-2` with hardware acceleration: Metal + Accelerate on macOS, NVIDIA CUDA, AMD ROCm & Vulkan on Linux/Windows, unified memory & NPU awareness, dynamic VRAM layer offloading, CPU fallback, and real-time token-by-token streaming (`ai-stream-token` events) for commit message generation. Supports llama, gemma, phi, mistral, and qwen architectures.
 
-- ✅ **The "Context Proxy" (MCP)** — Local-first implementation of the **Model Context Protocol**. Gitnado serves as an MCP host with HTTP/JSON-RPC server, exposing 7 Git tools (`get_commit_history`, `get_branches`, `get_status`, `get_diff`, `get_file_blame`, `search_commits`, `get_open_repositories`) for external tools to query.
+- ✅ **The "Context Proxy" (MCP)** — Local-first implementation of the **Model Context Protocol**. Gitduda serves as an MCP host with HTTP/JSON-RPC server, exposing 7 Git tools (`get_commit_history`, `get_branches`, `get_status`, `get_diff`, `get_file_blame`, `search_commits`, `get_open_repositories`) for external tools to query.
 
 - ✅ **Local Model Management & Custom GGUF Import** — Download models from HuggingFace with SHA-256 verification, progress tracking, cancellation support, or import arbitrary local `.gguf` files from disk (`import_custom_model`). Load/unload/delete models. Settings UI with system capabilities display and model browser.
 
@@ -398,7 +398,7 @@ Gitnado's advantage stays the same: everything above runs **locally, with no acc
 
 #### The Competitive Killer
 
-By Q2 2027, Gitnado's primary advantage is that **it costs $0 in API credits** and **is 100% air-gapped**. While GitKraken users are paying $15/month for cloud-based AI that sees their private code, Gitnado users are getting the same intelligence powered by their own GPU.
+By Q2 2027, Gitduda's primary advantage is that **it costs $0 in API credits** and **is 100% air-gapped**. While GitKraken users are paying $15/month for cloud-based AI that sees their private code, Gitduda users are getting the same intelligence powered by their own GPU.
 
 ---
 
@@ -410,7 +410,7 @@ By Q2 2027, Gitnado's primary advantage is that **it costs $0 in API credits** a
 - ✅ **Azure DevOps** — Microsoft Entra ID OAuth (work/school accounts) + org-scoped PAT authentication, PRs/work items/pipelines. Global PATs deprecated March 2026, fully removed December 2026.
 
 - ✅ **GitHub App Installation** — users configure their own GitHub App (App ID, private key, installation ID). RS256 JWT authentication with automatic installation token refresh (1-hour tokens, cached with 5-min buffer). Fine-grained, org-level permissions that don't expire.
-- ✅ **Git Credential Manager Detection** — auto-detects GCM, osxkeychain, and configured credential helpers. Delegates credential resolution when available, falls back to Gitnado's built-in keyring storage.
+- ✅ **Git Credential Manager Detection** — auto-detects GCM, osxkeychain, and configured credential helpers. Delegates credential resolution when available, falls back to Gitduda's built-in keyring storage.
 
 - ✅ **Enterprise SSO (OIDC)** — OpenID Connect support for corporate identity providers (Okta, Azure AD, Auth0, Keycloak, etc.). OIDC discovery via `.well-known/openid-configuration`, PKCE-protected authorization code flow, JWT ID token decoding for user identity extraction. Configurable issuer URL, client ID, and scopes.
 
@@ -460,7 +460,7 @@ Have ideas or feedback on these plans? We welcome community input!
 3. **Submit a PR** if you want to help implement a feature
 4. **Join discussions** in GitHub Discussions for broader topics
 
-Remember: Gitnado's core value proposition is **privacy-first, offline-capable, high-performance Git GUI**. Features should align with these principles.
+Remember: Gitduda's core value proposition is **privacy-first, offline-capable, high-performance Git GUI**. Features should align with these principles.
 
 ---
 

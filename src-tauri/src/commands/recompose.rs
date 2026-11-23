@@ -11,7 +11,7 @@
 //! touched and nothing can conflict. In working-tree mode the commits take the
 //! files' on-disk content and the index is brought in line afterwards.
 //!
-//! Undo: the branch's previous tip is recorded in `<gitdir>/gitnado/
+//! Undo: the branch's previous tip is recorded in `<gitdir>/gitduda/
 //! recompose.json` (and stays reachable through the branch's reflog), and
 //! `undo_recompose` moves the branch back as long as nothing was committed on
 //! top since.
@@ -23,7 +23,7 @@ use git2::{build::TreeUpdateBuilder, Delta, DiffOptions, FileMode, Oid, Reposito
 use serde::{Deserialize, Serialize};
 use tauri::command;
 
-use crate::error::{GitnadoError, Result};
+use crate::error::{GitdudaError, Result};
 
 /// Commits beyond this many are refused: recompose is for a branch's work,
 /// not for rewriting long histories.
@@ -82,7 +82,7 @@ pub struct RecomposeRecord {
 }
 
 fn record_path(repo: &Repository) -> PathBuf {
-    repo.path().join("gitnado").join("recompose.json")
+    repo.path().join("gitduda").join("recompose.json")
 }
 
 pub fn last_record(repo: &Repository) -> Option<RecomposeRecord> {
@@ -101,20 +101,20 @@ fn write_record(repo: &Repository, record: &RecomposeRecord) -> Result<()> {
 
 fn current_branch(repo: &Repository) -> Result<(String, Oid)> {
     let head = repo.head().map_err(|_| {
-        GitnadoError::OperationFailed("The repository has no commits yet".to_string())
+        GitdudaError::OperationFailed("The repository has no commits yet".to_string())
     })?;
     if !head.is_branch() {
-        return Err(GitnadoError::OperationFailed(
+        return Err(GitdudaError::OperationFailed(
             "HEAD is detached; check out a branch to recompose its commits".to_string(),
         ));
     }
     let name = head
         .shorthand()
-        .map_err(|_| GitnadoError::OperationFailed("Unreadable branch name".to_string()))?
+        .map_err(|_| GitdudaError::OperationFailed("Unreadable branch name".to_string()))?
         .to_string();
     let oid = head
         .target()
-        .ok_or_else(|| GitnadoError::OperationFailed("HEAD has no target".to_string()))?;
+        .ok_or_else(|| GitdudaError::OperationFailed("HEAD has no target".to_string()))?;
     Ok((name, oid))
 }
 
@@ -161,7 +161,7 @@ fn range_commits(repo: &Repository, base: Oid, head: Oid) -> Result<Vec<Recompos
         let oid = oid?;
         let commit = repo.find_commit(oid)?;
         if commit.parent_count() > 1 {
-            return Err(GitnadoError::OperationFailed(format!(
+            return Err(GitdudaError::OperationFailed(format!(
                 "{} is a merge commit; recompose works on a straight run of commits",
                 &oid.to_string()[..7]
             )));
@@ -174,7 +174,7 @@ fn range_commits(repo: &Repository, base: Oid, head: Oid) -> Result<Vec<Recompos
             files: diff_files(&diff).into_iter().map(|f| f.path).collect(),
         });
         if commits.len() > MAX_RANGE_COMMITS {
-            return Err(GitnadoError::OperationFailed(format!(
+            return Err(GitdudaError::OperationFailed(format!(
                 "More than {MAX_RANGE_COMMITS} commits; choose a closer base"
             )));
         }
@@ -191,15 +191,15 @@ pub fn source_in(repo: &Repository, base: Option<&str>) -> Result<RecomposeSourc
             let base_oid = repo
                 .revparse_single(base)
                 .and_then(|o| o.peel_to_commit())
-                .map_err(|_| GitnadoError::OperationFailed(format!("Unknown base {base}")))?
+                .map_err(|_| GitdudaError::OperationFailed(format!("Unknown base {base}")))?
                 .id();
             if base_oid == head {
-                return Err(GitnadoError::OperationFailed(
+                return Err(GitdudaError::OperationFailed(
                     "The base is the branch tip: there are no commits to recompose".to_string(),
                 ));
             }
             if !repo.graph_descendant_of(head, base_oid)? {
-                return Err(GitnadoError::OperationFailed(format!(
+                return Err(GitdudaError::OperationFailed(format!(
                     "{base} is not an ancestor of {branch}"
                 )));
             }
@@ -238,7 +238,7 @@ pub fn source_in(repo: &Repository, base: Option<&str>) -> Result<RecomposeSourc
 /// range mode every changed file assigned (the series must end on the tip).
 fn validate(source: &RecomposeSource, groups: &[RecomposeGroup]) -> Result<()> {
     if groups.is_empty() {
-        return Err(GitnadoError::OperationFailed(
+        return Err(GitdudaError::OperationFailed(
             "Add at least one commit".to_string(),
         ));
     }
@@ -246,25 +246,25 @@ fn validate(source: &RecomposeSource, groups: &[RecomposeGroup]) -> Result<()> {
     let mut seen = BTreeSet::new();
     for (i, group) in groups.iter().enumerate() {
         if group.message.trim().is_empty() {
-            return Err(GitnadoError::OperationFailed(format!(
+            return Err(GitdudaError::OperationFailed(format!(
                 "Commit {} has no message",
                 i + 1
             )));
         }
         if group.files.is_empty() {
-            return Err(GitnadoError::OperationFailed(format!(
+            return Err(GitdudaError::OperationFailed(format!(
                 "Commit {} has no files",
                 i + 1
             )));
         }
         for file in &group.files {
             if !changed.contains(file.as_str()) {
-                return Err(GitnadoError::OperationFailed(format!(
+                return Err(GitdudaError::OperationFailed(format!(
                     "{file} has no changes to commit"
                 )));
             }
             if !seen.insert(file.as_str()) {
-                return Err(GitnadoError::OperationFailed(format!(
+                return Err(GitdudaError::OperationFailed(format!(
                     "{file} is in more than one commit"
                 )));
             }
@@ -273,7 +273,7 @@ fn validate(source: &RecomposeSource, groups: &[RecomposeGroup]) -> Result<()> {
     if source.mode == "range" {
         let missing: Vec<&str> = changed.difference(&seen).copied().collect();
         if !missing.is_empty() {
-            return Err(GitnadoError::OperationFailed(format!(
+            return Err(GitdudaError::OperationFailed(format!(
                 "Every changed file must be in a commit; not yet assigned: {}",
                 missing.join(", ")
             )));
@@ -297,7 +297,7 @@ fn final_entry(
     }
     let workdir = repo
         .workdir()
-        .ok_or_else(|| GitnadoError::OperationFailed("Bare repository".to_string()))?;
+        .ok_or_else(|| GitdudaError::OperationFailed("Bare repository".to_string()))?;
     let full = workdir.join(path);
     let meta = match std::fs::symlink_metadata(&full) {
         Ok(m) => m,
@@ -338,7 +338,7 @@ pub fn apply_in(
     groups: &[RecomposeGroup],
 ) -> Result<RecomposeRecord> {
     if repo.state() != git2::RepositoryState::Clean {
-        return Err(GitnadoError::OperationFailed(
+        return Err(GitdudaError::OperationFailed(
             "Finish or abort the operation in progress first".to_string(),
         ));
     }
@@ -383,7 +383,7 @@ pub fn apply_in(
     if let Some(tip) = &tip_tree {
         // Belt and braces: the series must end exactly where the branch was.
         if parent.tree_id() != tip.id() {
-            return Err(GitnadoError::OperationFailed(
+            return Err(GitdudaError::OperationFailed(
                 "The new commits do not add up to the branch tip; nothing was changed".to_string(),
             ));
         }
@@ -395,10 +395,10 @@ pub fn apply_in(
         parent.id(),
         true,
         head,
-        "gitnado: recompose commits",
+        "gitduda: recompose commits",
     )
     .map_err(|e| {
-        GitnadoError::OperationFailed(format!(
+        GitdudaError::OperationFailed(format!(
             "{} moved while recomposing: {}",
             source.branch,
             e.message()
@@ -428,7 +428,7 @@ pub fn apply_in(
 
 pub fn undo_in(repo: &Repository) -> Result<RecomposeRecord> {
     let record = last_record(repo).ok_or_else(|| {
-        GitnadoError::OperationFailed("There is no recompose to undo".to_string())
+        GitdudaError::OperationFailed("There is no recompose to undo".to_string())
     })?;
     let refname = format!("refs/heads/{}", record.branch);
     let after = Oid::from_str(&record.after)?;
@@ -437,15 +437,15 @@ pub fn undo_in(repo: &Repository) -> Result<RecomposeRecord> {
         .find_reference(&refname)
         .ok()
         .and_then(|r| r.target())
-        .ok_or_else(|| GitnadoError::BranchNotFound(record.branch.clone()))?;
+        .ok_or_else(|| GitdudaError::BranchNotFound(record.branch.clone()))?;
     if current != after {
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "{} has changed since it was recomposed; undo is no longer available",
             record.branch
         )));
     }
     repo.find_commit(before)?;
-    repo.reference_matching(&refname, before, true, after, "gitnado: undo recompose")?;
+    repo.reference_matching(&refname, before, true, after, "gitduda: undo recompose")?;
     if record.mode == "worktree" {
         // Back to uncommitted changes: the files on disk never moved, so a
         // mixed reset of the index to the old tip restores the starting point.

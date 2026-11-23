@@ -30,7 +30,7 @@ import type { GnGraphCanvas } from '../gn-graph-canvas.ts';
 import { clearGraphCacheForTests } from '../gn-graph-canvas.ts';
 
 const REPO_PATH = '/test/wide-repo';
-const COLUMN_STORAGE_KEY = 'gitnado-graph-columns';
+const COLUMN_STORAGE_KEY = 'gitduda-graph-columns';
 const BRANCH_COUNT = 80;
 
 type Internals = {

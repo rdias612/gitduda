@@ -22,7 +22,7 @@ pub(crate) use rebase_ops::{append_skipped, commit_or_skip_empty, ensure_libgit2
 use std::path::Path;
 use tauri::command;
 
-use crate::error::{GitnadoError, Result};
+use crate::error::{GitdudaError, Result};
 use crate::utils::create_command;
 
 /// Merge a branch into HEAD
@@ -46,14 +46,14 @@ pub async fn merge(
         match repo.state() {
             git2::RepositoryState::Clean => {}
             git2::RepositoryState::Merge => {
-                return Err(GitnadoError::OperationFailed(
+                return Err(GitdudaError::OperationFailed(
                     "You have not concluded your merge (MERGE_HEAD exists). \
                  Resolve the conflicts and commit, or abort the merge, before merging again."
                         .to_string(),
                 ));
             }
             state => {
-                return Err(GitnadoError::OperationFailed(format!(
+                return Err(GitdudaError::OperationFailed(format!(
                     "Cannot merge: another operation is in progress ({:?}). \
                  Complete or abort it first.",
                     state
@@ -83,7 +83,7 @@ pub async fn merge(
             let refname = head
                 .name()
                 .ok()
-                .ok_or_else(|| GitnadoError::InvalidReference)?;
+                .ok_or_else(|| GitdudaError::InvalidReference)?;
 
             // Collect the conflicting paths so the error can name them, like
             // git's "Your local changes to the following files ..." message.
@@ -103,7 +103,7 @@ pub async fn merge(
                 Ok(()) => {}
                 Err(e) if e.code() == git2::ErrorCode::Conflict => {
                     let files = conflict_paths.borrow().join(", ");
-                    return Err(GitnadoError::OperationFailed(if files.is_empty() {
+                    return Err(GitdudaError::OperationFailed(if files.is_empty() {
                         "Your local changes would be overwritten by merge. \
                      Commit or stash them before you merge."
                             .to_string()
@@ -134,7 +134,7 @@ pub async fn merge(
             // conflict-resolution flow that needs MERGE_HEAD intact (and
             // `abort_merge` to undo), so return before any cleanup.
             if repo.index()?.has_conflicts() {
-                return Err(GitnadoError::MergeConflict);
+                return Err(GitdudaError::MergeConflict);
             }
 
             // git runs pre-merge-commit before creating the automatic merge commit,
@@ -478,7 +478,7 @@ pub async fn abort_merge(path: String) -> Result<()> {
 
     // git: "fatal: There is no merge to abort (MERGE_HEAD missing)."
     if repo.state() != git2::RepositoryState::Merge {
-        return Err(GitnadoError::OperationFailed(
+        return Err(GitdudaError::OperationFailed(
             "There is no merge to abort (MERGE_HEAD missing).".to_string(),
         ));
     }
@@ -538,7 +538,7 @@ pub async fn commit_merge(
     let mut repo = git2::Repository::open(Path::new(&path))?;
 
     if repo.state() != git2::RepositoryState::Merge {
-        return Err(GitnadoError::OperationFailed(
+        return Err(GitdudaError::OperationFailed(
             "No merge in progress".to_string(),
         ));
     }
@@ -550,14 +550,14 @@ pub async fn commit_merge(
         true
     })?;
     if merge_oids.is_empty() {
-        return Err(GitnadoError::OperationFailed(
+        return Err(GitdudaError::OperationFailed(
             "MERGE_HEAD not found".to_string(),
         ));
     }
     let repo = repo;
 
     if repo.index()?.has_conflicts() {
-        return Err(GitnadoError::MergeConflict);
+        return Err(GitdudaError::MergeConflict);
     }
 
     // Default to git's own MERGE_MSG (what `git commit` would use mid-merge).
@@ -665,7 +665,7 @@ async fn commit_merge_signed(path: &str, message: &str, is_squash: bool) -> Resu
         .current_dir(path)
         .args(["commit", "-S", "-m", message])
         .output()
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to run git commit: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to run git commit: {}", e)))?;
 
     if !output.status.success() {
         // Restore the merge metadata we cleared so the user can retry or abort.
@@ -677,7 +677,7 @@ async fn commit_merge_signed(path: &str, message: &str, is_squash: bool) -> Resu
             }
         }
         let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "Git commit failed: {}",
             stderr
         )));
@@ -734,14 +734,14 @@ pub async fn preview_rebase(
     // Reject ref values that could be parsed as a flag, e.g.
     // `--exec=/tmp/payload` would run an arbitrary command via `git rebase`.
     if onto.starts_with('-') {
-        return Err(GitnadoError::OperationFailed(
+        return Err(GitdudaError::OperationFailed(
             "Rebase target must not start with '-'".into(),
         ));
     }
 
     // Create a temp directory for the ghost worktree
     let temp_dir = tempfile::tempdir()
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to create temp dir: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to create temp dir: {}", e)))?;
     let temp_path = temp_dir.path().to_string_lossy().to_string();
 
     // Add a detached worktree at HEAD
@@ -754,10 +754,10 @@ pub async fn preview_rebase(
         .arg(&temp_path)
         .arg("HEAD")
         .output()
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to create worktree: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to create worktree: {}", e)))?;
 
     if !add_output.status.success() {
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "Failed to create worktree: {}",
             String::from_utf8_lossy(&add_output.stderr)
         )));
@@ -772,7 +772,7 @@ pub async fn preview_rebase(
         .arg("--")
         .arg(&onto)
         .output()
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to run ghost rebase: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to run ghost rebase: {}", e)))?;
 
     let mut conflicts = Vec::new();
     // A failure that is NOT a conflict — a dirty worktree, an unknown ref. The
@@ -853,7 +853,7 @@ pub async fn preview_rebase(
     // Reported only after the worktree is removed, so a failed preview does not
     // strand a worktree registration in the user's repository.
     if let Some(message) = preview_failure {
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "Could not preview the rebase: {}",
             message
         )));

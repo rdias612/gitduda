@@ -2,7 +2,7 @@
 //!
 //! A checkpoint is a snapshot of the working tree — tracked changes AND
 //! untracked, non-ignored files — stored as a commit under
-//! `refs/gitnado/checkpoints/<id>`. Taking one never touches the index, HEAD
+//! `refs/gitduda/checkpoints/<id>`. Taking one never touches the index, HEAD
 //! or the reflog, so it is safe to take before and after every agent turn.
 //! The ref keeps the objects alive; the graph and ref lists skip the
 //! namespace (see `utils::internal_refs`).
@@ -20,9 +20,9 @@ use git2::{build::CheckoutBuilder, IndexAddOption, Oid, Repository, Signature};
 use serde::Serialize;
 use tauri::command;
 
-use crate::error::{GitnadoError, Result};
+use crate::error::{GitdudaError, Result};
 
-pub const CHECKPOINT_REF_PREFIX: &str = "refs/gitnado/checkpoints/";
+pub const CHECKPOINT_REF_PREFIX: &str = "refs/gitduda/checkpoints/";
 const MAX_LABEL_LEN: usize = 200;
 /// Trailer naming the commit that holds the index (staged state) snapshot.
 const INDEX_TRAILER: &str = "Index";
@@ -74,7 +74,7 @@ fn validate_id(id: &str) -> Result<()> {
     if ok {
         Ok(())
     } else {
-        Err(GitnadoError::OperationFailed(format!(
+        Err(GitdudaError::OperationFailed(format!(
             "Invalid checkpoint id: {id}"
         )))
     }
@@ -87,7 +87,7 @@ fn ref_name(id: &str) -> String {
 fn signature(repo: &Repository) -> Result<Signature<'static>> {
     Ok(repo
         .signature()
-        .or_else(|_| Signature::now("Gitnado", "gitnado@localhost"))?
+        .or_else(|_| Signature::now("Gitduda", "gitduda@localhost"))?
         .to_owned())
 }
 
@@ -104,7 +104,7 @@ fn trailer<'a>(message: &'a str, key: &str) -> Option<&'a str> {
 /// on-disk index.
 fn snapshot_tree(repo: &Repository) -> Result<Oid> {
     if repo.is_bare() {
-        return Err(GitnadoError::OperationFailed(
+        return Err(GitdudaError::OperationFailed(
             "Checkpoints need a working tree".to_string(),
         ));
     }
@@ -146,7 +146,7 @@ fn snapshot_index(repo: &Repository, head: Option<&git2::Commit<'_>>) -> Result<
         None,
         &sig,
         &sig,
-        "gitnado checkpoint index",
+        "gitduda checkpoint index",
         &tree,
         &parents,
     )?))
@@ -210,7 +210,7 @@ fn find_checkpoint<'r>(repo: &'r Repository, id: &str) -> Result<git2::Commit<'r
     validate_id(id)?;
     let reference = repo
         .find_reference(&ref_name(id))
-        .map_err(|_| GitnadoError::OperationFailed(format!("Checkpoint {id} not found")))?;
+        .map_err(|_| GitdudaError::OperationFailed(format!("Checkpoint {id} not found")))?;
     Ok(reference.peel_to_commit()?)
 }
 
@@ -237,7 +237,7 @@ pub fn create_checkpoint_in(
 ) -> Result<Checkpoint> {
     if let Some(session) = session_id {
         validate_id(session)
-            .map_err(|_| GitnadoError::OperationFailed(format!("Invalid session id: {session}")))?;
+            .map_err(|_| GitdudaError::OperationFailed(format!("Invalid session id: {session}")))?;
     }
     let head_commit = repo.head().ok().and_then(|h| h.peel_to_commit().ok());
     // Before snapshot_tree, which stages everything into the shared in-memory
@@ -279,7 +279,7 @@ pub fn create_checkpoint_in(
     let oid = repo.commit(None, &sig, &sig, &message, &tree, &parents)?;
 
     let id = new_id(repo);
-    repo.reference(&ref_name(&id), oid, false, "gitnado: checkpoint")?;
+    repo.reference(&ref_name(&id), oid, false, "gitduda: checkpoint")?;
     let commit = repo.find_commit(oid)?;
     checkpoint_from_commit(repo, &id, &commit)
 }
@@ -310,7 +310,7 @@ pub fn list_checkpoints_in(repo: &Repository) -> Result<Vec<Checkpoint>> {
 pub fn restore_checkpoint_in(repo: &Repository, id: &str) -> Result<RestoreCheckpointResult> {
     let target = find_checkpoint(repo, id)?;
     if repo.index()?.has_conflicts() {
-        return Err(GitnadoError::OperationFailed(
+        return Err(GitdudaError::OperationFailed(
             "Resolve merge conflicts before restoring a checkpoint".to_string(),
         ));
     }
@@ -393,7 +393,7 @@ pub async fn delete_checkpoint(path: String, id: String) -> Result<()> {
         validate_id(&id)?;
         let mut reference = repo
             .find_reference(&ref_name(&id))
-            .map_err(|_| GitnadoError::OperationFailed(format!("Checkpoint {id} not found")))?;
+            .map_err(|_| GitdudaError::OperationFailed(format!("Checkpoint {id} not found")))?;
         reference.delete()?;
         Ok(())
     })
@@ -493,7 +493,7 @@ mod tests {
             .unwrap();
         let json = serde_json::to_string(&refs).unwrap();
         assert!(
-            !json.contains("refs/gitnado"),
+            !json.contains("refs/gitduda"),
             "checkpoint leaked into refs: {json}"
         );
     }

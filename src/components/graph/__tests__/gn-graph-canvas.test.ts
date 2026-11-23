@@ -188,10 +188,10 @@ describe('gn-graph-canvas', () => {
     setupDefaultMocks();
     // Clear persisted graph settings so tests don't leak into each other
     try {
-      localStorage.removeItem(`gitnado-hidden-branches-${REPO_PATH}`);
-      localStorage.removeItem('gitnado-graph-zoom');
-      localStorage.removeItem('gitnado-graph-optional-columns');
-      localStorage.removeItem('gitnado-graph-minimap');
+      localStorage.removeItem(`gitduda-hidden-branches-${REPO_PATH}`);
+      localStorage.removeItem('gitduda-graph-zoom');
+      localStorage.removeItem('gitduda-graph-optional-columns');
+      localStorage.removeItem('gitduda-graph-minimap');
     } catch {
       // Ignore
     }
@@ -954,7 +954,7 @@ describe('gn-graph-canvas', () => {
   describe('optional columns', () => {
     beforeEach(() => {
       try {
-        localStorage.removeItem('gitnado-graph-optional-columns');
+        localStorage.removeItem('gitduda-graph-optional-columns');
       } catch {
         // Ignore
       }
@@ -999,13 +999,13 @@ describe('gn-graph-canvas', () => {
       expect(config.showAuthorColumn).to.be.true;
       expect(config.showDateColumn).to.be.false;
 
-      const saved = JSON.parse(localStorage.getItem('gitnado-graph-optional-columns')!);
+      const saved = JSON.parse(localStorage.getItem('gitduda-graph-optional-columns')!);
       expect(saved).to.deep.equal({ author: true, date: false });
     });
 
     it('restores persisted column visibility on connect', async () => {
       localStorage.setItem(
-        'gitnado-graph-optional-columns',
+        'gitduda-graph-optional-columns',
         JSON.stringify({ author: true, date: true })
       );
       const el = await renderCanvas();
@@ -1143,7 +1143,7 @@ describe('gn-graph-canvas', () => {
   describe('zoom', () => {
     beforeEach(() => {
       try {
-        localStorage.removeItem('gitnado-graph-zoom');
+        localStorage.removeItem('gitduda-graph-zoom');
       } catch {
         // Ignore
       }
@@ -1157,7 +1157,7 @@ describe('gn-graph-canvas', () => {
       el.setZoom(1.5);
       expect(el.getZoom()).to.equal(1.5);
       expect(internals.ROW_HEIGHT).to.equal(Math.round(baseRowHeight * 1.5));
-      expect(localStorage.getItem('gitnado-graph-zoom')).to.equal('1.5');
+      expect(localStorage.getItem('gitduda-graph-zoom')).to.equal('1.5');
     });
 
     it('clamps zoom to the allowed range', async () => {
@@ -1204,7 +1204,7 @@ describe('gn-graph-canvas', () => {
     });
 
     it('restores the persisted zoom level on connect', async () => {
-      localStorage.setItem('gitnado-graph-zoom', '1.3');
+      localStorage.setItem('gitduda-graph-zoom', '1.3');
       const el = await renderCanvas();
       expect(el.getZoom()).to.equal(1.3);
     });
@@ -1633,17 +1633,17 @@ describe('gn-graph-canvas', () => {
       await el.updateComplete;
       await new Promise((r) => setTimeout(r, 20));
       expect(el.shadowRoot!.querySelector('.minimap-canvas')).to.be.null;
-      expect(localStorage.getItem('gitnado-graph-minimap')).to.equal('false');
+      expect(localStorage.getItem('gitduda-graph-minimap')).to.equal('false');
 
       mapBtn!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
       await el.updateComplete;
       await new Promise((r) => setTimeout(r, 20));
       expect(el.shadowRoot!.querySelector('.minimap-canvas')).to.not.be.null;
-      expect(localStorage.getItem('gitnado-graph-minimap')).to.equal('true');
+      expect(localStorage.getItem('gitduda-graph-minimap')).to.equal('true');
     });
 
     it('restores the persisted minimap preference on connect', async () => {
-      localStorage.setItem('gitnado-graph-minimap', 'false');
+      localStorage.setItem('gitduda-graph-minimap', 'false');
       const el = await renderCanvas();
 
       expect(el.shadowRoot!.querySelector('.minimap-canvas')).to.be.null;
@@ -2944,8 +2944,8 @@ describe('gn-graph-canvas SVG export node sizing', () => {
     clearHistory();
     setupDefaultMocks();
     try {
-      localStorage.removeItem('gitnado-graph-zoom');
-      localStorage.removeItem('gitnado-graph-optional-columns');
+      localStorage.removeItem('gitduda-graph-zoom');
+      localStorage.removeItem('gitduda-graph-optional-columns');
     } catch {
       // Ignore
     }

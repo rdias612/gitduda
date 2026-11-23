@@ -8,14 +8,14 @@
 //!   `after`. Both hooks are matcher-free turn boundaries; `PostToolUse` on
 //!   Edit/Write would miss files changed by shell commands.
 //! - The script lives in the repository's git dir, so it is never committed,
-//!   and talks to git directly — checkpoints are taken even while Gitnado is
+//!   and talks to git directly — checkpoints are taken even while Gitduda is
 //!   closed.
 //! - It can never block the agent: every path exits 0 and prints nothing
 //!   (stdout from a UserPromptSubmit hook would be injected into the prompt).
 //! - Hooks go into `.claude/settings.local.json` (personal, not shared). Other
 //!   hooks in that file are preserved, and the file is git-ignored through
 //!   `.git/info/exclude` when nothing already ignores it.
-//! - The script is installed once, then runs without Gitnado. So that a fix to
+//! - The script is installed once, then runs without Gitduda. So that a fix to
 //!   it reaches existing installs, opening the repository (or the Checkpoints
 //!   dialog) replaces a script that is byte-for-byte a previous release —
 //!   never one the user has edited, and never one that is not installed.
@@ -28,21 +28,21 @@ use serde_json::{json, Map, Value};
 use sha2::{Digest, Sha256};
 use tauri::command;
 
-use crate::error::{GitnadoError, Result};
+use crate::error::{GitdudaError, Result};
 
 /// Name of the managed script; also the marker identifying our hook entries.
 const SCRIPT_NAME: &str = "agent-checkpoint.sh";
-const SCRIPT_DIR: &str = "gitnado";
+const SCRIPT_DIR: &str = "gitduda";
 const SETTINGS_REL: &str = ".claude/settings.local.json";
 /// Notes ref holding agent attribution. `git notes` only writes under
-/// refs/notes/, so it lives in refs/notes/gitnado/, which
+/// refs/notes/, so it lives in refs/notes/gitduda/, which
 /// `utils::internal_refs` hides from the graph and the notes-ref picker.
-pub const AGENT_NOTES_REF: &str = "refs/notes/gitnado/agents";
+pub const AGENT_NOTES_REF: &str = "refs/notes/gitduda/agents";
 const HOOK_EVENTS: [(&str, &str); 2] = [("UserPromptSubmit", "before"), ("Stop", "after")];
 
 const SCRIPT: &str = r#"#!/bin/sh
-# Managed by Gitnado: takes a working-tree checkpoint around each agent turn
-# and attributes the agent's commits to its session. Remove it from Gitnado
+# Managed by Gitduda: takes a working-tree checkpoint around each agent turn
+# and attributes the agent's commits to its session. Remove it from Gitduda
 # (Checkpoints > Claude Code hooks) rather than editing it.
 #
 # Never blocks the agent: every path exits 0 and nothing is printed.
@@ -56,19 +56,19 @@ gitdir=$(git rev-parse --absolute-git-dir 2>/dev/null) || exit 0
 git rev-parse --is-inside-work-tree >/dev/null 2>&1 || exit 0
 
 if ! git var GIT_COMMITTER_IDENT >/dev/null 2>&1; then
-  GIT_AUTHOR_NAME=Gitnado GIT_AUTHOR_EMAIL=gitnado@localhost
-  GIT_COMMITTER_NAME=Gitnado GIT_COMMITTER_EMAIL=gitnado@localhost
+  GIT_AUTHOR_NAME=Gitduda GIT_AUTHOR_EMAIL=gitduda@localhost
+  GIT_COMMITTER_NAME=Gitduda GIT_COMMITTER_EMAIL=gitduda@localhost
   export GIT_AUTHOR_NAME GIT_AUTHOR_EMAIL GIT_COMMITTER_NAME GIT_COMMITTER_EMAIL
 fi
 
 head=$(git rev-parse -q --verify HEAD 2>/dev/null)
 branch=$(git symbolic-ref -q --short HEAD 2>/dev/null)
-statedir="$gitdir/gitnado"
+statedir="$gitdir/gitduda"
 state="$statedir/turn-$sid"
 
 # Snapshot the working tree through a throwaway index: the real index is
 # never touched.
-tmp="$gitdir/gitnado-checkpoint-index.$$"
+tmp="$gitdir/gitduda-checkpoint-index.$$"
 trap 'rm -f "$tmp"' EXIT
 if [ -f "$gitdir/index" ]; then cp "$gitdir/index" "$tmp" 2>/dev/null || exit 0; fi
 # What is staged, read from the copy before `add -A` (write-tree on the real
@@ -85,7 +85,7 @@ if GIT_INDEX_FILE="$tmp" git add -A >/dev/null 2>&1; then
 fi
 
 if [ -n "$tree" ]; then
-  last=$(git for-each-ref --sort=-refname --count=1 --format='%(objectname)' refs/gitnado/checkpoints/ 2>/dev/null)
+  last=$(git for-each-ref --sort=-refname --count=1 --format='%(objectname)' refs/gitduda/checkpoints/ 2>/dev/null)
   last_tree=""
   last_index_tree=""
   if [ -n "$last" ]; then
@@ -105,9 +105,9 @@ if [ -n "$tree" ]; then
     index_commit=""
     if [ -n "$index_tree" ]; then
       if [ -n "$head" ]; then
-        index_commit=$(printf 'gitnado checkpoint index\n' | git commit-tree "$index_tree" -p "$head" 2>/dev/null)
+        index_commit=$(printf 'gitduda checkpoint index\n' | git commit-tree "$index_tree" -p "$head" 2>/dev/null)
       else
-        index_commit=$(printf 'gitnado checkpoint index\n' | git commit-tree "$index_tree" 2>/dev/null)
+        index_commit=$(printf 'gitduda checkpoint index\n' | git commit-tree "$index_tree" 2>/dev/null)
       fi
     fi
     [ -n "$index_commit" ] && msg=$(printf '%s\nIndex: %s' "$msg" "$index_commit")
@@ -122,7 +122,7 @@ if [ -n "$tree" ]; then
       esac
       stamp="${stamp}000"
       last_ref=$(git for-each-ref --sort=-refname --count=1 \
-        --format='%(refname:strip=3)' refs/gitnado/checkpoints/ 2>/dev/null)
+        --format='%(refname:strip=3)' refs/gitduda/checkpoints/ 2>/dev/null)
       last_stamp=${last_ref%%-*}
       case "$last_stamp" in
         ''|*[!0-9]*) last_stamp=0 ;;
@@ -130,7 +130,7 @@ if [ -n "$tree" ]; then
       if [ "$last_stamp" -ge "$stamp" ]; then
         stamp=$((last_stamp + 1))
       fi
-      git update-ref "refs/gitnado/checkpoints/$stamp-$$" "$commit" >/dev/null 2>&1
+      git update-ref "refs/gitduda/checkpoints/$stamp-$$" "$commit" >/dev/null 2>&1
     fi
   fi
 fi
@@ -143,7 +143,7 @@ elif [ -f "$state" ]; then
   if [ -n "$head" ] && [ "$head" != "$base" ]; then
     if [ -n "$base" ]; then range="$base..$head"; else range="$head"; fi
     git rev-list --max-count=200 "$range" 2>/dev/null | while read -r c; do
-      git notes --ref=refs/notes/gitnado/agents add -f -m "Agent: Claude Code" -m "Session: $sid" "$c" >/dev/null 2>&1
+      git notes --ref=refs/notes/gitduda/agents add -f -m "Agent: Claude Code" -m "Session: $sid" "$c" >/dev/null 2>&1
     done
   fi
 fi
@@ -177,14 +177,14 @@ fn open(path: &str) -> Result<Repository> {
 fn workdir(repo: &Repository) -> Result<PathBuf> {
     repo.workdir()
         .map(Path::to_path_buf)
-        .ok_or_else(|| GitnadoError::OperationFailed("Agent hooks need a working tree".to_string()))
+        .ok_or_else(|| GitdudaError::OperationFailed("Agent hooks need a working tree".to_string()))
 }
 
 fn script_path(repo: &Repository) -> PathBuf {
     repo.path().join(SCRIPT_DIR).join(SCRIPT_NAME)
 }
 
-/// SHA-256 of every script a previous Gitnado release installed. A script on
+/// SHA-256 of every script a previous Gitduda release installed. A script on
 /// disk matching one is ours and unedited, so it may be replaced; anything
 /// else is the user's and is left alone. Append the outgoing hash whenever
 /// SCRIPT changes:
@@ -248,7 +248,7 @@ pub fn upgrade_managed_script(repo: &Repository) -> Result<bool> {
 /// Best-effort [`upgrade_managed_script`] for callers that must not fail.
 pub fn upgrade_managed_script_quietly(repo: &Repository) {
     if let Err(e) = upgrade_managed_script(repo) {
-        tracing::warn!("Could not update the Gitnado agent hook script: {}", e);
+        tracing::warn!("Could not update the Gitduda agent hook script: {}", e);
     }
 }
 
@@ -280,7 +280,7 @@ fn read_settings(path: &Path) -> Result<Map<String, Value>> {
         Ok(text) if text.trim().is_empty() => Ok(Map::new()),
         Ok(text) => match serde_json::from_str::<Value>(&text) {
             Ok(Value::Object(map)) => Ok(map),
-            _ => Err(GitnadoError::OperationFailed(format!(
+            _ => Err(GitdudaError::OperationFailed(format!(
                 "{} is not a valid JSON object — fix or remove it, then try again",
                 path.display()
             ))),
@@ -350,7 +350,7 @@ fn ensure_settings_ignored(repo: &Repository) -> Result<()> {
     if !text.is_empty() && !text.ends_with('\n') {
         text.push('\n');
     }
-    text.push_str("# Added by Gitnado: personal Claude Code settings (agent hooks)\n");
+    text.push_str("# Added by Gitduda: personal Claude Code settings (agent hooks)\n");
     text.push_str("/.claude/settings.local.json\n");
     std::fs::write(&exclude, text)?;
     Ok(())
@@ -368,7 +368,7 @@ pub fn install_in(repo: &Repository) -> Result<AgentHooksStatus> {
         .entry("hooks")
         .or_insert_with(|| Value::Object(Map::new()));
     let Value::Object(hooks) = hooks else {
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "\"hooks\" in {} is not an object",
             settings_file.display()
         )));
@@ -378,7 +378,7 @@ pub fn install_in(repo: &Repository) -> Result<AgentHooksStatus> {
             .entry(event)
             .or_insert_with(|| Value::Array(Vec::new()));
         let Value::Array(groups) = groups else {
-            return Err(GitnadoError::OperationFailed(format!(
+            return Err(GitdudaError::OperationFailed(format!(
                 "\"hooks.{event}\" in {} is not a list",
                 settings_file.display()
             )));
@@ -801,7 +801,7 @@ mod tests {
         let t = TestRepo::with_initial_commit();
         let repo = t.repo();
         let script = script_path(&repo);
-        let legacy = "#!/bin/sh\n# Managed by Gitnado: an older release\nexit 0\n";
+        let legacy = "#!/bin/sh\n# Managed by Gitduda: an older release\nexit 0\n";
         let known = sha256_hex(legacy.as_bytes());
 
         // Not installed: nothing is created.

@@ -103,7 +103,7 @@ describe('gn-graph-canvas graph-commits-changed', () => {
     clearGraphCacheForTests();
     setupMocks([commitB, commitA]);
     try {
-      localStorage.removeItem(`gitnado-hidden-branches-${REPO_PATH}`);
+      localStorage.removeItem(`gitduda-hidden-branches-${REPO_PATH}`);
     } catch {
       // Ignore
     }

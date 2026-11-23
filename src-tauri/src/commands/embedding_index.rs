@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use tauri::command;
 
-use crate::error::{GitnadoError, Result};
+use crate::error::{GitdudaError, Result};
 use crate::services::embedding::embedding_index::SemanticSearchResult;
 use crate::services::embedding::vector_store::EmbeddingIndexStatus;
 use crate::services::embedding::SharedEmbeddingIndex;
@@ -19,7 +19,7 @@ pub async fn build_embedding_index(
 ) -> Result<usize> {
     crate::services::embedding::embedding_index::build_embedding_index(&state, path, app_handle)
         .await
-        .map_err(GitnadoError::OperationFailed)
+        .map_err(GitdudaError::OperationFailed)
 }
 
 /// Incrementally refresh the embedding index
@@ -31,7 +31,7 @@ pub async fn refresh_embedding_index(
 ) -> Result<usize> {
     crate::services::embedding::embedding_index::update_embedding_index(&state, path, app_handle)
         .await
-        .map_err(GitnadoError::OperationFailed)
+        .map_err(GitdudaError::OperationFailed)
 }
 
 /// Perform a semantic search
@@ -45,7 +45,7 @@ pub async fn semantic_search(
     let limit = limit.unwrap_or(100);
     crate::services::embedding::embedding_index::semantic_search(&state, path, query, limit)
         .await
-        .map_err(GitnadoError::OperationFailed)
+        .map_err(GitdudaError::OperationFailed)
 }
 
 /// Get embedding index status for a repository
@@ -56,7 +56,7 @@ pub async fn get_embedding_index_status(
 ) -> Result<EmbeddingIndexStatus> {
     crate::services::embedding::embedding_index::get_embedding_status(&state, path)
         .await
-        .map_err(GitnadoError::OperationFailed)
+        .map_err(GitdudaError::OperationFailed)
 }
 
 /// Cancel an in-progress embedding build
@@ -102,5 +102,5 @@ pub async fn download_embedding_model(
         &cancel_flag,
     )
     .await
-    .map_err(GitnadoError::OperationFailed)
+    .map_err(GitdudaError::OperationFailed)
 }

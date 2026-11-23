@@ -15,7 +15,7 @@ use std::sync::{Mutex, OnceLock};
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use tauri::command;
 
-use crate::error::{GitnadoError, Result};
+use crate::error::{GitdudaError, Result};
 
 const MAX_HOOK_EXECUTION_LOGS: usize = 100;
 
@@ -233,7 +233,7 @@ pub fn run_hook(
     let started = Instant::now();
 
     let mut child = cmd.spawn().map_err(|e| {
-        GitnadoError::OperationFailed(format!("Failed to run {} hook: {}", name, e))
+        GitdudaError::OperationFailed(format!("Failed to run {} hook: {}", name, e))
     })?;
 
     if let Some(data) = stdin_data {
@@ -245,7 +245,7 @@ pub fn run_hook(
     }
 
     let output = child.wait_with_output().map_err(|e| {
-        GitnadoError::OperationFailed(format!("Failed to run {} hook: {}", name, e))
+        GitdudaError::OperationFailed(format!("Failed to run {} hook: {}", name, e))
     })?;
 
     let duration_ms = started.elapsed().as_millis() as u64;
@@ -290,7 +290,7 @@ pub fn run_hook_blocking(
     let outcome = run_hook(repo, name, args, stdin_data)?;
     if outcome.ran && !outcome.success {
         let detail = outcome.output.trim();
-        return Err(GitnadoError::OperationFailed(if detail.is_empty() {
+        return Err(GitdudaError::OperationFailed(if detail.is_empty() {
             format!("{} hook failed", name)
         } else {
             format!("{} hook failed:\n{}", name, detail)
@@ -489,12 +489,12 @@ const HOOKS: &[(&str, &str)] = &[
     (
         "prepare-commit-msg",
         // Honest about reachability: git runs this to seed the message the
-        // editor opens on, and Gitnado commits from its own message box with
+        // editor opens on, and Gitduda commits from its own message box with
         // no editor, so it has no point to call it from. Advertising it
         // unqualified — and shipping a one-click template for it — meant a hook
         // could be installed, badged Enabled and counted as active while no
         // commit made in the app would ever run it.
-        "Run by git before the commit editor opens. Gitnado commits without an editor, so it does not run this hook.",
+        "Run by git before the commit editor opens. Gitduda commits without an editor, so it does not run this hook.",
     ),
     (
         "commit-msg",
@@ -515,7 +515,7 @@ const HOOKS: &[(&str, &str)] = &[
     ),
     (
         "pre-merge-commit",
-        // Gitnado runs this as a blocking hook on merge and on the merge leg
+        // Gitduda runs this as a blocking hook on merge and on the merge leg
         // of pull, exactly as git does. Leaving it out of this list meant the
         // dialog never listed it: a merge vetoed by a broken hook (husky
         // installs these under core.hooksPath) had no entry to read, edit or
@@ -601,7 +601,7 @@ fn validate_hook_name(name: &str) -> Result<()> {
     let mut components = Path::new(name).components();
     match (components.next(), components.next()) {
         (Some(Component::Normal(part)), None) if part == name => Ok(()),
-        _ => Err(GitnadoError::InvalidPath(format!(
+        _ => Err(GitdudaError::InvalidPath(format!(
             "Invalid hook name: {}",
             name
         ))),
@@ -1217,7 +1217,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_existing_hookspath_hook_is_visible() {
-        // The inverse: a hook installed by husky before Gitnado ever opened
+        // The inverse: a hook installed by husky before Gitduda ever opened
         // the repo must not read as "not configured".
         let repo = TestRepo::with_initial_commit();
         let alt = repo.path.join(".husky");

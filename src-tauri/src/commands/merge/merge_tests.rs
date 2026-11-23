@@ -231,7 +231,7 @@ mod tests {
             None,
         )
         .await;
-        assert!(matches!(result, Err(GitnadoError::MergeConflict)));
+        assert!(matches!(result, Err(GitdudaError::MergeConflict)));
 
         abort_merge(repo.path_str()).await.unwrap();
 
@@ -689,7 +689,7 @@ mod tests {
         let repo = TestRepo::with_initial_commit();
         let err = execute_interactive_rebase(
             repo.path_str(),
-            "--exec=touch /tmp/gitnado-should-not-exist".to_string(),
+            "--exec=touch /tmp/gitduda-should-not-exist".to_string(),
             "pick abc123\n".to_string(),
         )
         .await
@@ -700,7 +700,7 @@ mod tests {
             err
         );
         assert!(
-            !std::path::Path::new("/tmp/gitnado-should-not-exist").exists(),
+            !std::path::Path::new("/tmp/gitduda-should-not-exist").exists(),
             "and refuse BEFORE spawning anything"
         );
     }
@@ -1385,7 +1385,7 @@ mod tests {
             None,
         )
         .await;
-        assert!(matches!(result, Err(GitnadoError::MergeConflict)));
+        assert!(matches!(result, Err(GitdudaError::MergeConflict)));
 
         let result = merge(
             repo.path_str(),
@@ -1992,7 +1992,7 @@ mod tests {
             None,
         )
         .await;
-        assert!(matches!(result, Err(GitnadoError::MergeConflict)));
+        assert!(matches!(result, Err(GitdudaError::MergeConflict)));
 
         resolve_conflict(
             repo.path_str(),
@@ -2033,7 +2033,7 @@ mod tests {
             None,
         )
         .await;
-        assert!(matches!(result, Err(GitnadoError::MergeConflict)));
+        assert!(matches!(result, Err(GitdudaError::MergeConflict)));
 
         resolve_conflict(
             repo.path_str(),
@@ -2077,7 +2077,7 @@ mod tests {
             None,
         )
         .await;
-        assert!(matches!(result, Err(GitnadoError::MergeConflict)));
+        assert!(matches!(result, Err(GitdudaError::MergeConflict)));
 
         // Simulate git's MERGE_MSG with conflict comment lines.
         let merge_msg = "Merge branch 'feature'\n\n# Conflicts:\n#\tshared.txt\n";
@@ -2244,7 +2244,7 @@ mod tests {
             None,
         )
         .await;
-        assert!(matches!(result, Err(GitnadoError::MergeConflict)));
+        assert!(matches!(result, Err(GitdudaError::MergeConflict)));
 
         resolve_conflict(
             repo.path_str(),
@@ -2295,7 +2295,7 @@ mod tests {
         .await;
 
         let result = commit_merge(repo.path_str(), None, None).await;
-        assert!(matches!(result, Err(GitnadoError::MergeConflict)));
+        assert!(matches!(result, Err(GitdudaError::MergeConflict)));
         // Still mid-merge so the user can keep resolving
         assert_eq!(repo.repo().state(), git2::RepositoryState::Merge);
     }
@@ -2496,7 +2496,7 @@ mod tests {
             None,
         )
         .await;
-        assert!(matches!(result, Err(GitnadoError::MergeConflict)));
+        assert!(matches!(result, Err(GitdudaError::MergeConflict)));
 
         let result = resolve_conflict_take_side(
             repo.path_str(),
@@ -4275,7 +4275,7 @@ mod tests {
 
         repo.checkout_branch("feature");
         let result = rebase(repo.path_str(), initial_branch.clone()).await;
-        assert!(matches!(result, Err(GitnadoError::RebaseConflict)));
+        assert!(matches!(result, Err(GitdudaError::RebaseConflict)));
 
         resolve_conflict(
             repo.path_str(),
@@ -4307,7 +4307,7 @@ mod tests {
 
         repo.checkout_branch("feature");
         let result = rebase(repo.path_str(), initial_branch.clone()).await;
-        assert!(matches!(result, Err(GitnadoError::RebaseConflict)));
+        assert!(matches!(result, Err(GitdudaError::RebaseConflict)));
 
         resolve_conflict(
             repo.path_str(),
@@ -4359,7 +4359,7 @@ mod tests {
         }
 
         let result = rebase(repo.path_str(), initial_branch.clone()).await;
-        assert!(matches!(result, Err(GitnadoError::RebaseConflict)));
+        assert!(matches!(result, Err(GitdudaError::RebaseConflict)));
 
         resolve_conflict(
             repo.path_str(),
@@ -4407,7 +4407,7 @@ mod tests {
 
         repo.checkout_branch("feature");
         let result = rebase(repo.path_str(), initial_branch).await;
-        assert!(matches!(result, Err(GitnadoError::RebaseConflict)));
+        assert!(matches!(result, Err(GitdudaError::RebaseConflict)));
 
         resolve_conflict(
             repo.path_str(),
@@ -4450,7 +4450,7 @@ mod tests {
 
         repo.checkout_branch("feature");
         let result = rebase(repo.path_str(), initial_branch).await;
-        assert!(matches!(result, Err(GitnadoError::RebaseConflict)));
+        assert!(matches!(result, Err(GitdudaError::RebaseConflict)));
 
         resolve_conflict(
             repo.path_str(),

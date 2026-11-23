@@ -575,7 +575,7 @@ pub async fn review_branch_diff(
 
     let (diff_text, files_reviewed) = crate::utils::blocking_git(move || {
         compute_branch_diff(Path::new(&repo_path), &base, head.as_deref())
-            .map_err(crate::error::GitnadoError::OperationFailed)
+            .map_err(crate::error::GitdudaError::OperationFailed)
     })
     .await
     .map_err(|e| e.to_string())?;
@@ -923,7 +923,7 @@ pub async fn suggest_comment_resolution_patch(
             &original_content,
             &ai_response,
         )
-        .map_err(crate::error::GitnadoError::OperationFailed)
+        .map_err(crate::error::GitdudaError::OperationFailed)
     })
     .await
     .map_err(|e| e.to_string())
@@ -937,7 +937,7 @@ pub async fn apply_comment_resolution_patch(
 ) -> Result<(), String> {
     crate::utils::blocking_git(move || {
         apply_unified_diff_to_workdir(Path::new(&path), &unified_diff)
-            .map_err(crate::error::GitnadoError::OperationFailed)
+            .map_err(crate::error::GitdudaError::OperationFailed)
     })
     .await
     .map_err(|e| e.to_string())

@@ -1,4 +1,4 @@
-# Website (gitnado.dev)
+# Website (gitduda.dev)
 
 The landing page lives in [`site/`](../site) as plain static files (one HTML
 page, a few assets, no build step) and is published to GitHub Pages by
@@ -21,9 +21,9 @@ paths, so opening `site/index.html` locally needs no build step.
    deployment → Source: GitHub Actions*. Then run the "Deploy Website"
    workflow once (Actions tab → Run workflow) or merge a change under `site/`.
 2. **Custom domain.** Still under *Settings → Pages*, set *Custom domain* to
-   `gitnado.dev` and tick *Enforce HTTPS* once the certificate has been issued
+   `gitduda.dev` and tick *Enforce HTTPS* once the certificate has been issued
    (`site/CNAME` carries the same value so a deploy never resets it).
-3. **DNS for gitnado.dev** (apex domain), at your registrar or DNS host:
+3. **DNS for gitduda.dev** (apex domain), at your registrar or DNS host:
 
    | Type  | Name | Value |
    |-------|------|-------|
@@ -35,13 +35,13 @@ paths, so opening `site/index.html` locally needs no build step.
    | AAAA  | `@`  | `2606:50c0:8001::153` |
    | AAAA  | `@`  | `2606:50c0:8002::153` |
    | AAAA  | `@`  | `2606:50c0:8003::153` |
-   | CNAME | `www` | `hegsie.github.io` |
+   | CNAME | `www` | `rdias612.github.io` |
 
    `.dev` is an HSTS-preloaded TLD, so the site only works over HTTPS — GitHub
    provisions the certificate automatically once the A records resolve
    (usually within an hour).
-4. **gitnado.com and gitnado.app** — set a registrar-level (or Cloudflare)
-   301 redirect to `https://gitnado.dev` for the apex and `www`. Nothing needs
+4. **gitduda.com and gitduda.app** — set a registrar-level (or Cloudflare)
+   301 redirect to `https://gitduda.dev` for the apex and `www`. Nothing needs
    to be hosted there.
 
 ## Updating the page
@@ -50,7 +50,7 @@ Edit `site/index.html` and push to `main`. Assets:
 
 - `site/assets/main-window.webp` — hero screenshot, generated from
   `docs/screenshots/main-window.png` (resized to 1600px wide, WebP quality
-  82). Regenerate after the 0.9.0 release so the title bar shows *Gitnado*.
+  82). Regenerate after the 0.9.0 release so the title bar shows *Gitduda*.
 - `site/assets/icon-256.png`, `site/assets/icon-512.png`,
   `site/assets/favicon-64.png` — written by `npm run icons:build` from
   `src-tauri/icons/icon-source.png`, alongside the app icons (see
@@ -62,6 +62,6 @@ Download links are matched by asset-name suffix (`_aarch64.dmg`,
 page's script alongside `publish-packages.yml`.
 
 The `homepage` fields in `src-tauri/tauri.conf.json` (`bundle.homepage`),
-`packaging/scoop/gitnado.json` and `packaging/homebrew/gitnado.rb.template`
-already point at `https://gitnado.dev`; use the same URL for the winget
-manifest's `PublisherUrl` / `PackageUrl` when submitting `hegsie.Gitnado`.
+`packaging/scoop/gitduda.json` and `packaging/homebrew/gitduda.rb.template`
+already point at `https://gitduda.dev`; use the same URL for the winget
+manifest's `PublisherUrl` / `PackageUrl` when submitting `rdias612.Gitduda`.

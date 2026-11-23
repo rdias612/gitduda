@@ -5,7 +5,7 @@ use std::path::Path;
 use std::process::Command;
 use tauri::command;
 
-use crate::error::{GitnadoError, Result};
+use crate::error::{GitdudaError, Result};
 
 /// A user-defined custom action
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
@@ -116,7 +116,7 @@ fn shell_quote_windows(value: &str) -> Result<String> {
         } else {
             format!("metacharacter '{}'", c)
         };
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "Refusing to substitute value containing shell {} on Windows",
             label
         )));
@@ -157,7 +157,7 @@ fn substitute_variables(
 pub async fn get_custom_actions(path: String) -> Result<Vec<CustomAction>> {
     let repo_path = Path::new(&path);
     if git2::Repository::open(repo_path).is_err() {
-        return Err(GitnadoError::RepositoryNotFound(path));
+        return Err(GitdudaError::RepositoryNotFound(path));
     }
     read_actions(repo_path)
 }
@@ -167,7 +167,7 @@ pub async fn get_custom_actions(path: String) -> Result<Vec<CustomAction>> {
 pub async fn save_custom_action(path: String, action: CustomAction) -> Result<Vec<CustomAction>> {
     let repo_path = Path::new(&path);
     if git2::Repository::open(repo_path).is_err() {
-        return Err(GitnadoError::RepositoryNotFound(path));
+        return Err(GitdudaError::RepositoryNotFound(path));
     }
 
     let mut actions = read_actions(repo_path)?;
@@ -188,7 +188,7 @@ pub async fn save_custom_action(path: String, action: CustomAction) -> Result<Ve
 pub async fn delete_custom_action(path: String, action_id: String) -> Result<Vec<CustomAction>> {
     let repo_path = Path::new(&path);
     if git2::Repository::open(repo_path).is_err() {
-        return Err(GitnadoError::RepositoryNotFound(path));
+        return Err(GitdudaError::RepositoryNotFound(path));
     }
 
     let mut actions = read_actions(repo_path)?;
@@ -202,7 +202,7 @@ pub async fn delete_custom_action(path: String, action_id: String) -> Result<Vec
 /// # Security
 ///
 /// This command executes arbitrary shell commands defined by the user in
-/// `.git/gitnado/custom_actions.json`. Because the action definitions live
+/// `.git/gitduda/custom_actions.json`. Because the action definitions live
 /// inside the repository's `.git/` directory (not tracked by Git) and the
 /// user must explicitly create them through the UI, the trust boundary is
 /// equivalent to the user running commands in their own terminal.
@@ -219,14 +219,14 @@ pub async fn delete_custom_action(path: String, action_id: String) -> Result<Vec
 pub async fn run_custom_action(path: String, action_id: String) -> Result<ActionResult> {
     let repo_path = Path::new(&path);
     if git2::Repository::open(repo_path).is_err() {
-        return Err(GitnadoError::RepositoryNotFound(path));
+        return Err(GitdudaError::RepositoryNotFound(path));
     }
 
     let actions = read_actions(repo_path)?;
     let action = actions
         .iter()
         .find(|a| a.id == action_id)
-        .ok_or_else(|| GitnadoError::OperationFailed(format!("Action not found: {}", action_id)))?
+        .ok_or_else(|| GitdudaError::OperationFailed(format!("Action not found: {}", action_id)))?
         .clone();
 
     let branch = get_current_branch(repo_path);
@@ -290,7 +290,7 @@ pub async fn run_custom_action(path: String, action_id: String) -> Result<Action
                 success: output.status.success(),
             })
         }
-        Err(e) => Err(GitnadoError::OperationFailed(format!(
+        Err(e) => Err(GitdudaError::OperationFailed(format!(
             "Failed to execute command: {}",
             e
         ))),

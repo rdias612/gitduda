@@ -4,7 +4,7 @@ use std::path::Path;
 use tauri::command;
 
 use super::super::path_utils::validate_path_within_repo;
-use crate::error::{GitnadoError, Result};
+use crate::error::{GitdudaError, Result};
 use crate::models::{
     ConflictDetails, ConflictEntry, ConflictFile, ConflictHunk, ConflictMarker, ConflictMarkerFile,
 };
@@ -540,7 +540,7 @@ pub async fn get_blob_content(path: String, oid: String) -> Result<String> {
     let blob = repo.find_blob(blob_oid)?;
 
     if blob.is_binary() {
-        return Err(GitnadoError::OperationFailed(
+        return Err(GitdudaError::OperationFailed(
             "Cannot display binary file".to_string(),
         ));
     }
@@ -551,7 +551,7 @@ pub async fn get_blob_content(path: String, oid: String) -> Result<String> {
     // text into the resolved file. The caller treats the error like any
     // other unreadable side and offers verbatim (raw-bytes) resolution.
     String::from_utf8(blob.content().to_vec())
-        .map_err(|_| GitnadoError::OperationFailed("File content is not valid UTF-8".to_string()))
+        .map_err(|_| GitdudaError::OperationFailed("File content is not valid UTF-8".to_string()))
 }
 
 /// Mark a file as resolved with the given content.
@@ -582,7 +582,7 @@ pub async fn resolve_conflict(
         for entry in [&c.our, &c.their, &c.ancestor].into_iter().flatten() {
             if String::from_utf8_lossy(&entry.path) == file_path.as_str() {
                 if std::str::from_utf8(&entry.path).is_err() {
-                    return Err(GitnadoError::OperationFailed(format!(
+                    return Err(GitdudaError::OperationFailed(format!(
                         "'{}' has a non-UTF-8 name and can't be resolved in the app — resolve it with git in a terminal",
                         file_path
                     )));
@@ -594,7 +594,7 @@ pub async fn resolve_conflict(
         }
     }
     if special_mode && !delete_file.unwrap_or(false) {
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "'{}' is a symlink or submodule conflict — choose a side instead of writing text",
             file_path
         )));
@@ -668,7 +668,7 @@ pub async fn resolve_conflict_take_side(
                 .unwrap_or(false)
         })
         .ok_or_else(|| {
-            GitnadoError::OperationFailed(format!("No conflict found for '{}'", file_path))
+            GitdudaError::OperationFailed(format!("No conflict found for '{}'", file_path))
         })?;
 
     // A NON-UTF-8 filename cannot round-trip through the String API — the
@@ -681,7 +681,7 @@ pub async fn resolve_conflict_take_side(
         .flatten()
         .any(|e| std::str::from_utf8(&e.path).is_err())
     {
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "'{}' has a non-UTF-8 name and can't be resolved in the app — resolve it with git in a terminal",
             file_path
         )));
@@ -691,7 +691,7 @@ pub async fn resolve_conflict_take_side(
         "ours" => conflict.our,
         "theirs" => conflict.their,
         other => {
-            return Err(GitnadoError::OperationFailed(format!(
+            return Err(GitdudaError::OperationFailed(format!(
                 "Invalid side '{}': expected 'ours' or 'theirs'",
                 other
             )));
@@ -746,7 +746,7 @@ pub async fn resolve_conflict_take_side(
                 // conflict with no submodule involved, so the message must
                 // not assume one.
                 if meta.file_type().is_dir() && std::fs::remove_dir(&full_path).is_err() {
-                    return Err(GitnadoError::OperationFailed(format!(
+                    return Err(GitdudaError::OperationFailed(format!(
                         "'{}' is a directory with files in it (the other side made this path a directory) — move or remove it, then take this side again",
                         file_path
                     )));
@@ -895,7 +895,7 @@ pub async fn get_conflict_details(path: String, file_path: String) -> Result<Con
     // Read file content and parse markers
     let full_path = validate_path_within_repo(Path::new(&path), &file_path)?;
     let content = std::fs::read_to_string(&full_path)
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to read file: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to read file: {}", e)))?;
 
     let markers = parse_conflict_markers(&content);
 

@@ -72,8 +72,8 @@ impl Default for ConnectionLimits {
 /// start failing with it.
 pub const UNAUTHORIZED_MESSAGE: &str =
     "Unauthorized: this MCP server requires an 'Authorization: Bearer <token>' header. \
-     An MCP client configured before Gitnado added authentication must add that header. \
-     Copy the token from Gitnado Settings -> MCP Server.";
+     An MCP client configured before Gitduda added authentication must add that header. \
+     Copy the token from Gitduda Settings -> MCP Server.";
 
 /// Generate a new random bearer token for the MCP server
 pub fn generate_auth_token() -> String {
@@ -391,7 +391,7 @@ pub struct McpServer {
     config_dir: PathBuf,
     running: Arc<AtomicBool>,
     shutdown_tx: Option<tokio::sync::oneshot::Sender<()>>,
-    /// Paths of repositories currently open in Gitnado
+    /// Paths of repositories currently open in Gitduda
     open_repos: Arc<RwLock<Vec<String>>>,
     /// Error from the last failed start attempt, surfaced in the status
     last_error: Option<String>,
@@ -955,7 +955,7 @@ impl McpServer {
     ) -> Result<Value, String> {
         if !gate.enabled() {
             return Err(
-                "Write tools are turned off. Enable them in Gitnado: Settings > MCP Server."
+                "Write tools are turned off. Enable them in Gitduda: Settings > MCP Server."
                     .to_string(),
             );
         }
@@ -964,10 +964,10 @@ impl McpServer {
             .and_then(Value::as_str)
             .ok_or_else(|| "Missing required argument: repo_path".to_string())?
             .to_string();
-        // Writes are confined to repositories open in Gitnado — never "any
+        // Writes are confined to repositories open in Gitduda — never "any
         // repository on disk", even before the open list is known.
         if open_repos.is_empty() {
-            return Err("No repositories are open in Gitnado".to_string());
+            return Err("No repositories are open in Gitduda".to_string());
         }
         tools::validate_repo_path(&repo_path, open_repos)?;
 
@@ -998,7 +998,7 @@ impl McpServer {
             }
             Decision::Denied => Err(format!("The user declined: {}", prepared.summary)),
             Decision::TimedOut => Err(format!(
-                "No one approved this in Gitnado in time: {}",
+                "No one approved this in Gitduda in time: {}",
                 prepared.summary
             )),
         }

@@ -19,13 +19,13 @@ import { STACK_SECTION_START } from '../../utils/stack-pr-table.ts';
 
 const GITHUB: PullRequestProviderTarget = {
   provider: 'github', providerName: 'GitHub', itemNoun: 'pull request', itemNounPlural: 'pull requests',
-  itemNounTitle: 'Pull Requests', repoLabel: 'octo/gitnado',
-  github: { owner: 'octo', repo: 'gitnado' } as PullRequestProviderTarget['github'],
+  itemNounTitle: 'Pull Requests', repoLabel: 'octo/gitduda',
+  github: { owner: 'octo', repo: 'gitduda' } as PullRequestProviderTarget['github'],
 };
 const GITLAB: PullRequestProviderTarget = {
   provider: 'gitlab', providerName: 'GitLab', itemNoun: 'merge request', itemNounPlural: 'merge requests',
-  itemNounTitle: 'Merge Requests', repoLabel: 'octo/gitnado',
-  gitlab: { instanceUrl: 'https://gitlab.com', projectPath: 'octo/gitnado' } as PullRequestProviderTarget['gitlab'],
+  itemNounTitle: 'Merge Requests', repoLabel: 'octo/gitduda',
+  gitlab: { instanceUrl: 'https://gitlab.com', projectPath: 'octo/gitduda' } as PullRequestProviderTarget['gitlab'],
 };
 
 const entry = (name: string, parent: string, depth: number, parentMissing = false) => ({

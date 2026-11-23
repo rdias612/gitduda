@@ -659,7 +659,7 @@ export interface CredentialManagerStatus {
   gcmAvailable: boolean;
   gcmVersion: string | null;
   configuredHelper: string | null;
-  usingGitnadoFallback: boolean;
+  usingGitdudaFallback: boolean;
 }
 
 export async function detectCredentialManager(

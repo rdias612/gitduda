@@ -233,7 +233,7 @@ test("writeManifests places the files at the winget-pkgs path for the version", 
 test("sha256Of returns the upper-case hex digest winget expects", () => {
   const dir = mkdtempSync(join(tmpdir(), "winget-sha-"));
   const file = join(dir, "installer.bin");
-  writeFileSync(file, "gitnado");
+  writeFileSync(file, "gitduda");
   assert.equal(
     sha256Of(file),
     "9CED9F4CAF7440E302E4B533F1578E83E41B20F2BC7820C1F680E611B563E3AC",

@@ -157,7 +157,7 @@ test.describe('Clone Dialog - from a connected account', () => {
         get_keyring_token: 'gh-e2e-tok',
         list_github_repositories: {
           repositories: [
-            repository('gitnado', {
+            repository('gitduda', {
               isPrivate: true,
               description: 'A git client',
               lastPushedAt: '2024-05-01T10:00:00Z',
@@ -167,8 +167,8 @@ test.describe('Clone Dialog - from a connected account', () => {
           nextPage: null,
         },
         clone_repository: {
-          path: '/home/user/projects/gitnado',
-          name: 'gitnado',
+          path: '/home/user/projects/gitduda',
+          name: 'gitduda',
           headRef: null,
           isBare: false,
         },
@@ -182,7 +182,7 @@ test.describe('Clone Dialog - from a connected account', () => {
 
       await expect(repoItems(page)).toHaveCount(2);
       const first = repoItems(page).first();
-      await expect(first).toContainText('gitnado');
+      await expect(first).toContainText('gitduda');
       await expect(first).toContainText('octocat');
       await expect(first).toContainText('Private');
       await expect(first).toContainText('A git client');
@@ -228,10 +228,10 @@ test.describe('Clone Dialog - from a connected account', () => {
       await repoItems(page).first().click();
 
       await expect(dialogs.clone.urlInput).toHaveValue(
-        'https://github.com/octocat/gitnado.git',
+        'https://github.com/octocat/gitduda.git',
       );
       await dialogs.clone.fillPath('/home/user/projects');
-      await expect(page.getByText('Selected: octocat/gitnado')).toBeVisible();
+      await expect(page.getByText('Selected: octocat/gitduda')).toBeVisible();
 
       await startCommandCapture(page);
       await dialogs.clone.clone();
@@ -239,8 +239,8 @@ test.describe('Clone Dialog - from a connected account', () => {
 
       const cloneCommands = await findCommand(page, 'clone_repository');
       const args = cloneCommands[0].args as { url?: string; path?: string; token?: string };
-      expect(args.url).toBe('https://github.com/octocat/gitnado.git');
-      expect(args.path).toBe('/home/user/projects/gitnado');
+      expect(args.url).toBe('https://github.com/octocat/gitduda.git');
+      expect(args.path).toBe('/home/user/projects/gitduda');
       // The clone still picks up the account's token, unchanged by this flow.
       expect(args.token).toBe('gh-e2e-tok');
     });
@@ -259,12 +259,12 @@ test.describe('Clone Dialog - from a connected account', () => {
 
       const rows = list.getByRole('button');
       await expect(rows).toHaveCount(2);
-      const gitnado = rows.filter({ hasText: 'gitnado' });
-      await expect(gitnado).toHaveAttribute('aria-pressed', 'false');
+      const gitduda = rows.filter({ hasText: 'gitduda' });
+      await expect(gitduda).toHaveAttribute('aria-pressed', 'false');
 
-      await gitnado.click();
+      await gitduda.click();
 
-      await expect(gitnado).toHaveAttribute('aria-pressed', 'true');
+      await expect(gitduda).toHaveAttribute('aria-pressed', 'true');
       await expect(rows.filter({ hasText: 'dotfiles' })).toHaveAttribute(
         'aria-pressed',
         'false',

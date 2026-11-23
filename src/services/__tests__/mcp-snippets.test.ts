@@ -37,9 +37,9 @@ describe('mcp-snippets', () => {
   });
 
   it('builds a stdio launcher passing the token through the environment', () => {
-    const stdio = JSON.parse(stdioSnippet(3001, token, '/Applications/Gitnado.app/Contents/MacOS/gitnado', ['--mcp-stdio']));
+    const stdio = JSON.parse(stdioSnippet(3001, token, '/Applications/Gitduda.app/Contents/MacOS/gitduda', ['--mcp-stdio']));
     expect(stdio.mcpServers.gitduda).to.deep.equal({
-      command: '/Applications/Gitnado.app/Contents/MacOS/gitnado',
+      command: '/Applications/Gitduda.app/Contents/MacOS/gitduda',
       args: ['--mcp-stdio'],
       env: { GITNADO_MCP_TOKEN: 'gnc_abc123', GITNADO_MCP_URL: 'http://127.0.0.1:3001/mcp' },
     });

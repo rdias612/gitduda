@@ -8,7 +8,7 @@ use std::path::Path;
 use serde::{Deserialize, Serialize};
 use tauri::command;
 
-use crate::error::GitnadoError;
+use crate::error::GitdudaError;
 use crate::error::Result;
 
 /// Refuse to reset while a multi-step operation (rebase, bisect, or a
@@ -24,17 +24,17 @@ fn ensure_resettable(repo: &git2::Repository) -> Result<()> {
     use git2::RepositoryState::*;
     match repo.state() {
         Rebase | RebaseInteractive | RebaseMerge | ApplyMailbox | ApplyMailboxOrRebase => {
-            Err(GitnadoError::OperationFailed(
+            Err(GitdudaError::OperationFailed(
                 "Cannot reset while a rebase is in progress. Finish or abort the rebase (git rebase --continue or --abort) before undoing.".to_string(),
             ))
         }
-        Bisect => Err(GitnadoError::OperationFailed(
+        Bisect => Err(GitdudaError::OperationFailed(
             "Cannot reset while a bisect is in progress. Run 'git bisect reset' before undoing.".to_string(),
         )),
-        CherryPickSequence => Err(GitnadoError::OperationFailed(
+        CherryPickSequence => Err(GitdudaError::OperationFailed(
             "Cannot reset while a cherry-pick sequence is in progress. Finish or abort it (git cherry-pick --continue or --abort) before undoing.".to_string(),
         )),
-        RevertSequence => Err(GitnadoError::OperationFailed(
+        RevertSequence => Err(GitdudaError::OperationFailed(
             "Cannot reset while a revert sequence is in progress. Finish or abort it (git revert --continue or --abort) before undoing.".to_string(),
         )),
         _ => Ok(()),
@@ -72,19 +72,19 @@ fn head_ref_name(repo: &git2::Repository) -> Option<String> {
 /// OID check and reset that OTHER branch to the redo target.
 fn set_redo_marker(repo: &git2::Repository, redo_target: &str, undo_head: &str) {
     if let Ok(mut cfg) = repo.config() {
-        let _ = cfg.set_str("gitnado.redotarget", redo_target);
-        let _ = cfg.set_str("gitnado.redohead", undo_head);
+        let _ = cfg.set_str("gitduda.redotarget", redo_target);
+        let _ = cfg.set_str("gitduda.redohead", undo_head);
         match head_ref_name(repo) {
             // A mixed reset does not change which ref HEAD points at, so reading
             // it after the undo names the ref the undo actually moved.
             Some(name) => {
-                let _ = cfg.set_str("gitnado.redoref", &name);
+                let _ = cfg.set_str("gitduda.redoref", &name);
             }
             // Without a recorded ref, redo_last_action refuses rather than
             // falling back to the OID-only check that lets it hit the wrong
             // branch. Remove any stale value so it cannot be inherited.
             None => {
-                let _ = cfg.remove("gitnado.redoref");
+                let _ = cfg.remove("gitduda.redoref");
             }
         }
     }
@@ -92,9 +92,9 @@ fn set_redo_marker(repo: &git2::Repository, redo_target: &str, undo_head: &str) 
 
 fn clear_redo_marker(repo: &git2::Repository) {
     if let Ok(mut cfg) = repo.config() {
-        let _ = cfg.remove("gitnado.redotarget");
-        let _ = cfg.remove("gitnado.redohead");
-        let _ = cfg.remove("gitnado.redoref");
+        let _ = cfg.remove("gitduda.redotarget");
+        let _ = cfg.remove("gitduda.redohead");
+        let _ = cfg.remove("gitduda.redoref");
     }
 }
 
@@ -324,20 +324,20 @@ pub async fn undo_last_action(path: String) -> Result<UndoAction> {
 
             // We need at least 2 entries to undo (current + previous)
             if reflog.len() < 2 {
-                return Err(crate::error::GitnadoError::OperationFailed(
+                return Err(crate::error::GitdudaError::OperationFailed(
                     "Nothing to undo: not enough reflog history".to_string(),
                 ));
             }
 
             // Entry 0 is the current state, entry 1 is the state before
             let current_entry = reflog.get(0).ok_or_else(|| {
-                crate::error::GitnadoError::OperationFailed(
+                crate::error::GitdudaError::OperationFailed(
                     "Failed to read current reflog entry".to_string(),
                 )
             })?;
 
             let previous_entry = reflog.get(1).ok_or_else(|| {
-                crate::error::GitnadoError::OperationFailed(
+                crate::error::GitdudaError::OperationFailed(
                     "Failed to read previous reflog entry".to_string(),
                 )
             })?;
@@ -388,7 +388,7 @@ pub async fn undo_last_action(path: String) -> Result<UndoAction> {
         // commit), a reset to that OID is a silent no-op that restores nothing.
         // Refuse rather than claim a successful undo.
         if target_oid_str == before_oid_str {
-            return Err(GitnadoError::OperationFailed(
+            return Err(GitdudaError::OperationFailed(
                 "This action did not move HEAD, so it cannot be undone by resetting. Nothing was changed.".to_string(),
             ));
         }
@@ -440,7 +440,7 @@ fn undo_checkout(
     crate::commands::branch::ensure_checkoutable(repo)?;
 
     let from = parse_checkout_source(message).ok_or_else(|| {
-        GitnadoError::OperationFailed(
+        GitdudaError::OperationFailed(
             "Could not determine which branch to switch back to for this checkout.".to_string(),
         )
     })?;
@@ -493,13 +493,13 @@ pub async fn redo_last_action(path: String) -> Result<UndoAction> {
         // app undo, so there is nothing to redo.
         let (redo_target, undo_head, undo_ref) = {
             let cfg = repo.config()?;
-            let target = cfg.get_string("gitnado.redotarget").ok();
-            let head = cfg.get_string("gitnado.redohead").ok();
-            let reference = cfg.get_string("gitnado.redoref").ok();
+            let target = cfg.get_string("gitduda.redotarget").ok();
+            let head = cfg.get_string("gitduda.redohead").ok();
+            let reference = cfg.get_string("gitduda.redoref").ok();
             match (target, head) {
                 (Some(t), Some(h)) if !t.is_empty() && !h.is_empty() => (t, h, reference),
                 _ => {
-                    return Err(GitnadoError::OperationFailed(
+                    return Err(GitdudaError::OperationFailed(
                         "Nothing to redo: the last action was not an undo.".to_string(),
                     ));
                 }
@@ -514,7 +514,7 @@ pub async fn redo_last_action(path: String) -> Result<UndoAction> {
             .and_then(|h| h.target())
             .map(|o| o.to_string());
         if current_head.as_deref() != Some(undo_head.as_str()) {
-            return Err(GitnadoError::OperationFailed(
+            return Err(GitdudaError::OperationFailed(
                 "Nothing to redo: the repository has changed since the last undo.".to_string(),
             ));
         }
@@ -528,7 +528,7 @@ pub async fn redo_last_action(path: String) -> Result<UndoAction> {
         // costs at most one redo and never resets a branch the undo never touched.
         let current_ref = head_ref_name(&repo);
         if undo_ref.is_none() || current_ref != undo_ref {
-            return Err(GitnadoError::OperationFailed(
+            return Err(GitdudaError::OperationFailed(
                 "Nothing to redo: the repository has changed since the last undo.".to_string(),
             ));
         }
@@ -579,7 +579,7 @@ pub async fn record_action(path: String, action: UndoAction) -> Result<()> {
         // Write a reflog entry for the current HEAD with the action description
         let head_ref = repo.head()?;
         let head_oid = head_ref.target().ok_or_else(|| {
-            crate::error::GitnadoError::OperationFailed(
+            crate::error::GitdudaError::OperationFailed(
                 "HEAD does not point to a valid commit".to_string(),
             )
         })?;

@@ -1,5 +1,5 @@
 /**
- * Gitnado - Git GUI Client
+ * Gitduda - Git GUI Client
  * Application entry point
  */
 

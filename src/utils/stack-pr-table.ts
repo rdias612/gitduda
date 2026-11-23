@@ -1,7 +1,7 @@
 import type { Stack } from '../types/git.types.ts';
 
-export const STACK_SECTION_START = '<!-- gitnado-stack:start -->';
-export const STACK_SECTION_END = '<!-- gitnado-stack:end -->';
+export const STACK_SECTION_START = '<!-- gitduda-stack:start -->';
+export const STACK_SECTION_END = '<!-- gitduda-stack:end -->';
 
 export interface StackPrRef {
   number: number;

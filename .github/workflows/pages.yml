@@ -1,6 +1,6 @@
 name: Deploy Website
 
-# Publishes site/ (gitnado.dev) to GitHub Pages. The site is plain static
+# Publishes site/ (gitduda.dev) to GitHub Pages. The site is plain static
 # files — no build step. Pages must be set to deploy from "GitHub Actions"
 # in the repository settings; see docs/website.md.
 

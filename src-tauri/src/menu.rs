@@ -1,6 +1,6 @@
 //! Native application menu bar.
 //!
-//! Most of Gitnado's feature set (clean, bisect, worktrees, submodules, LFS,
+//! Most of Gitduda's feature set (clean, bisect, worktrees, submodules, LFS,
 //! hooks, remotes, git configuration, repository health,
 //! .gitignore/.gitattributes) was
 //! reachable only by typing into the command palette. A desktop app is expected
@@ -23,7 +23,7 @@ use serde::Deserialize;
 use tauri::menu::{MenuBuilder, MenuItem, SubmenuBuilder};
 use tauri::{AppHandle, Emitter, Manager, Wry};
 
-use crate::error::{GitnadoError, Result};
+use crate::error::{GitdudaError, Result};
 
 /// Event emitted to the frontend with the id of the chosen menu item.
 pub const MENU_ACTION_EVENT: &str = "app-menu-action";
@@ -208,7 +208,7 @@ impl AppMenuState {
         let items = self
             .items
             .lock()
-            .map_err(|_| GitnadoError::OperationFailed("app menu state is poisoned".into()))?;
+            .map_err(|_| GitdudaError::OperationFailed("app menu state is poisoned".into()))?;
 
         let mut failures: Vec<String> = Vec::new();
 
@@ -234,7 +234,7 @@ impl AppMenuState {
         if failures.is_empty() {
             Ok(())
         } else {
-            Err(GitnadoError::OperationFailed(format!(
+            Err(GitdudaError::OperationFailed(format!(
                 "failed to update {} menu item(s): {}",
                 failures.len(),
                 failures.join("; ")

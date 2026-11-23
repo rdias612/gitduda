@@ -4,7 +4,7 @@
 use std::path::{Path, PathBuf};
 use tauri::command;
 
-use crate::error::{GitnadoError, Result};
+use crate::error::{GitdudaError, Result};
 use crate::utils::create_command;
 
 /// Current state of a bisect session
@@ -98,7 +98,7 @@ fn run_git_command(repo_path: &Path, args: &[&str]) -> Result<String> {
     let output = git_command(repo_path)
         .args(args)
         .output()
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to run git: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to run git: {}", e)))?;
 
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
     let stderr = String::from_utf8_lossy(&output.stderr).to_string();
@@ -120,7 +120,7 @@ fn run_git_command(repo_path: &Path, args: &[&str]) -> Result<String> {
             } else {
                 stderr.trim()
             };
-            Err(GitnadoError::OperationFailed(message.to_string()))
+            Err(GitdudaError::OperationFailed(message.to_string()))
         }
     }
 }
@@ -500,7 +500,7 @@ fn run_bisect_step(repo_path: &Path, args: &[&str]) -> Result<String> {
     let output = git_command(repo_path)
         .args(args)
         .output()
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to run git: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to run git: {}", e)))?;
 
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
     let stderr = String::from_utf8_lossy(&output.stderr).to_string();
@@ -517,7 +517,7 @@ fn run_bisect_step(repo_path: &Path, args: &[&str]) -> Result<String> {
         } else {
             stderr.trim()
         };
-        Err(GitnadoError::OperationFailed(message.to_string()))
+        Err(GitdudaError::OperationFailed(message.to_string()))
     }
 }
 

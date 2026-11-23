@@ -10,11 +10,11 @@
 ---
 
 ## 1. Visão Geral e Regras Locais Aplicáveis
-- **Objetivo**: Reestruturar o frontend do Gitnado do layout atual de 3 colunas (`left-panel` + `center-panel` + `right-panel` + `<gn-context-dashboard>`) para o workspace de **2 painéis** definido na spec `spec/redesign-layout-github-desktop.md`: Faixa Superior Compacta + Triple Action Bar + Sidebar Esquerda com 3 abas (`Changes`, `History`, `Branches & Refs`) + `main-pane` contextual (com expansão sob demanda para `<gn-graph-canvas>`) + Status Bar com Bottom Drawer unificado (`Terminal`, `Git Output`, `AI Review`, `Analytics`).
+- **Objetivo**: Reestruturar o frontend do Gitduda do layout atual de 3 colunas (`left-panel` + `center-panel` + `right-panel` + `<gn-context-dashboard>`) para o workspace de **2 painéis** definido na spec `spec/redesign-layout-github-desktop.md`: Faixa Superior Compacta + Triple Action Bar + Sidebar Esquerda com 3 abas (`Changes`, `History`, `Branches & Refs`) + `main-pane` contextual (com expansão sob demanda para `<gn-graph-canvas>`) + Status Bar com Bottom Drawer unificado (`Terminal`, `Git Output`, `AI Review`, `Analytics`).
 - **Restrições do Projeto e Invariantes**:
   - **Preservação de Tokens**: manter intacta a paleta de cores e temas em `src/styles/tokens.css`; novos estilos de componentes Lit devem incluir `sharedStyles` como primeiro item de `static styles`.
   - **Menus Nativos e Contrato IPC/Menu**: manter `src-tauri/src/menu.rs` e `APP_MENU_ACTIONS` em `src/services/app-menu.service.ts` alinhados (validado por `scripts/menu-contract.test.mjs`), sem janela *frameless* nem duplicação de menus HTML.
-  - **Pilha de Overlays (`overlay-stack.ts`)**: todo novo popover/overlay com listener de teclado global ou fechamento por `Escape` deve cumprir a regra de ESLint `gitnado/overlay-stack-membership` (`eslint-rules/overlay-stack-membership.mjs`).
+  - **Pilha de Overlays (`overlay-stack.ts`)**: todo novo popover/overlay com listener de teclado global ou fechamento por `Escape` deve cumprir a regra de ESLint `gitduda/overlay-stack-membership` (`eslint-rules/overlay-stack-membership.mjs`).
   - **Sem código de demonstração do mockup**: não portar a `.eval-bar` presente em `mockups/github-desktop-ux/opcao_2_dashboard_v2.html`.
 - **Comando de Build Global**: `npm run typecheck && npm run build` (e validação de contratos via `npm run test:contract`).
 
@@ -66,7 +66,7 @@
 - **Critérios de Aceitação (Code Review)**:
   - `<gn-context-dashboard>` não ocupa mais faixa dedicada abaixo da toolbar; seus controles principais estão acessíveis via Profile Pill.
   - `<gn-welcome>` não exibe a Triple Action Bar; `Ctrl+F` (`<gn-search-bar>`), Settings, Shortcuts e menus nativos `File > Open/Clone/Init` continuam operacionais.
-  - Nenhum erro de ESLint na regra `gitnado/overlay-stack-membership`.
+  - Nenhum erro de ESLint na regra `gitduda/overlay-stack-membership`.
 
 ### Etapa 3: Sidebar Esquerda Unificada com 3 Abas (`Changes`, `History`, `Branches & Refs`)
 - **Objetivo**: Consolidar a navegação esquerda e o painel de staging/commit em uma única sidebar esquerda redimensionável com 3 abas segmentadas (`Changes`, `History`, `Branches & Refs`), desacoplar a hidratação de `commitsStore` de `<gn-graph-canvas>` e transferir imediatamente a posse única de `<gn-file-status>`/`<gn-commit-panel>` para `<gn-left-panel>`.

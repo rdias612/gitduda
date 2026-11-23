@@ -189,7 +189,7 @@ mod tests {
         assert!(result.is_err(), "Cherry-pick should fail with conflict");
         let err = result.unwrap_err();
         assert!(
-            matches!(err, GitnadoError::CherryPickConflict),
+            matches!(err, GitdudaError::CherryPickConflict),
             "Error should be CherryPickConflict"
         );
 
@@ -332,7 +332,7 @@ mod tests {
             "Should not be able to cherry-pick root commit"
         );
         let err = result.unwrap_err();
-        assert!(matches!(err, GitnadoError::OperationFailed(_)));
+        assert!(matches!(err, GitdudaError::OperationFailed(_)));
     }
 
     #[tokio::test]
@@ -385,7 +385,7 @@ mod tests {
             "Should fail when cherry-pick already in progress"
         );
         let err = result.unwrap_err();
-        assert!(matches!(err, GitnadoError::CherryPickInProgress));
+        assert!(matches!(err, GitdudaError::CherryPickInProgress));
     }
 
     #[tokio::test]
@@ -639,7 +639,7 @@ mod tests {
         )
         .await;
 
-        assert!(matches!(result, Err(GitnadoError::CherryPickConflict)));
+        assert!(matches!(result, Err(GitdudaError::CherryPickConflict)));
         assert!(
             repo.repo().path().join(CHERRY_PICK_SEQUENCE_HEAD).exists(),
             "a conflict stop must keep the sequence head so abort can rewind"
@@ -768,7 +768,7 @@ mod tests {
 
         assert!(result.is_err(), "Revert should fail with conflict");
         let err = result.unwrap_err();
-        assert!(matches!(err, GitnadoError::RevertConflict));
+        assert!(matches!(err, GitdudaError::RevertConflict));
     }
 
     #[tokio::test]
@@ -940,7 +940,7 @@ mod tests {
 
         assert!(result.is_err());
         let err = result.unwrap_err();
-        assert!(matches!(err, GitnadoError::OperationFailed(_)));
+        assert!(matches!(err, GitdudaError::OperationFailed(_)));
     }
 
     #[tokio::test]
@@ -2172,7 +2172,7 @@ mod tests {
 
         // Cherry-pick conflicts on conflict.txt.
         let result = cherry_pick(test_repo.path_str(), feature_oid.to_string(), None, None).await;
-        assert!(matches!(result, Err(GitnadoError::CherryPickConflict)));
+        assert!(matches!(result, Err(GitdudaError::CherryPickConflict)));
 
         // Abort must restore conflict.txt but preserve the unrelated edit.
         abort_cherry_pick(test_repo.path_str()).await.unwrap();
@@ -2199,7 +2199,7 @@ mod tests {
 
         // Reverting the add conflicts on file.txt (later modified).
         let result = revert(test_repo.path_str(), add_oid.to_string(), None).await;
-        assert!(matches!(result, Err(GitnadoError::RevertConflict)));
+        assert!(matches!(result, Err(GitdudaError::RevertConflict)));
 
         abort_revert(test_repo.path_str()).await.unwrap();
 
@@ -2254,7 +2254,7 @@ mod tests {
         test_repo.create_commit("Main edits shared", &[("shared.txt", "main")]);
 
         let result = cherry_pick(test_repo.path_str(), feature_oid.to_string(), None, None).await;
-        assert!(matches!(result, Err(GitnadoError::CherryPickConflict)));
+        assert!(matches!(result, Err(GitdudaError::CherryPickConflict)));
         assert!(
             test_repo.path.join(odd_rel).exists(),
             "the conflicting pick writes the added file into the working tree"
@@ -2297,7 +2297,7 @@ mod tests {
         // Range [A, B]: A applies cleanly, B conflicts.
         let result =
             cherry_pick_range(test_repo.path_str(), vec![a.to_string(), b.to_string()]).await;
-        assert!(matches!(result, Err(GitnadoError::CherryPickConflict)));
+        assert!(matches!(result, Err(GitdudaError::CherryPickConflict)));
 
         // A was applied on top of M, so HEAD advanced and a.txt exists.
         assert_ne!(test_repo.head_oid(), m);
@@ -2381,7 +2381,7 @@ mod tests {
             vec![a.to_string(), b.to_string(), c.to_string()],
         )
         .await;
-        assert!(matches!(result, Err(GitnadoError::CherryPickConflict)));
+        assert!(matches!(result, Err(GitdudaError::CherryPickConflict)));
 
         // Resolve B's conflict and stage it.
         std::fs::write(test_repo.path.join("shared.txt"), "resolved").unwrap();
@@ -2507,7 +2507,7 @@ mod tests {
             vec![a.to_string(), b.to_string(), c.to_string()],
         )
         .await;
-        assert!(matches!(result, Err(GitnadoError::CherryPickConflict)));
+        assert!(matches!(result, Err(GitdudaError::CherryPickConflict)));
 
         // Skip abandons the conflicted B and applies the pending C.
         let last = skip_cherry_pick(test_repo.path_str())
@@ -2592,7 +2592,7 @@ mod tests {
             vec![a.to_string(), b.to_string(), c.to_string()],
         )
         .await;
-        assert!(matches!(result, Err(GitnadoError::CherryPickConflict)));
+        assert!(matches!(result, Err(GitdudaError::CherryPickConflict)));
 
         // C is still queued; corrupt the file so read_to_string fails with
         // something other than NotFound (invalid UTF-8 -> InvalidData).
@@ -2678,7 +2678,7 @@ mod tests {
             vec![a.to_string(), b.to_string(), d.to_string(), e.to_string()],
         )
         .await;
-        assert!(matches!(result, Err(GitnadoError::CherryPickConflict)));
+        assert!(matches!(result, Err(GitdudaError::CherryPickConflict)));
 
         // Resolve B and stage it.
         std::fs::write(test_repo.path.join("shared.txt"), "resolved").unwrap();
@@ -2772,7 +2772,7 @@ mod tests {
 
         // Cherry-pick in the worktree conflicts.
         let result = cherry_pick(wt_path_str.clone(), feature_oid.to_string(), None, None).await;
-        assert!(matches!(result, Err(GitnadoError::CherryPickConflict)));
+        assert!(matches!(result, Err(GitdudaError::CherryPickConflict)));
 
         // Resolve the conflict inside the worktree and stage it.
         std::fs::write(wt_path.join("conflict.txt"), "resolved in wt").unwrap();

@@ -1,6 +1,6 @@
 /**
  * Component exports
- * All Gitnado web components are registered here
+ * All Gitduda web components are registered here
  */
 
 // Common components

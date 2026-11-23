@@ -46,7 +46,7 @@ use std::time::Duration;
 use notify::{Config, RecommendedWatcher, RecursiveMode};
 use notify_debouncer_full::{new_debouncer_opt, DebounceEventResult, Debouncer, NoCache};
 
-use crate::error::{GitnadoError, Result};
+use crate::error::{GitdudaError, Result};
 
 /// How long raw file system events are collected before a batch is delivered.
 /// A `git gc` or `fetch` fires its events far faster than this, so the whole
@@ -307,7 +307,7 @@ impl WatcherService {
             NoCache::new(),
             config,
         )
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to create watcher: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to create watcher: {}", e)))?;
 
         let mut roots: Vec<(PathBuf, RecursiveMode)> = Vec::new();
 
@@ -611,15 +611,15 @@ fn is_watch_limit(error: &notify::Error) -> bool {
 /// Build the error the frontend turns into a user-visible warning. The watch
 /// limit is called out by name because it is the one cause the user can
 /// actually fix.
-fn watch_error(path: &Path, error: &notify::Error) -> GitnadoError {
+fn watch_error(path: &Path, error: &notify::Error) -> GitdudaError {
     if is_watch_limit(error) {
-        GitnadoError::OperationFailed(format!(
+        GitdudaError::OperationFailed(format!(
             "the system file-watch limit was reached while watching {}. {}",
             path.display(),
             WATCH_LIMIT_HINT
         ))
     } else {
-        GitnadoError::OperationFailed(format!("failed to watch {}: {}", path.display(), error))
+        GitdudaError::OperationFailed(format!("failed to watch {}: {}", path.display(), error))
     }
 }
 

@@ -7,7 +7,7 @@
 //! and (b) preceded by `--` in the argv so that even unforeseen GNU-parser
 //! behaviour can't reinterpret it as a flag.
 
-use crate::error::{GitnadoError, Result};
+use crate::error::{GitdudaError, Result};
 
 /// Reject values that could be parsed as a CLI flag.
 ///
@@ -18,13 +18,13 @@ use crate::error::{GitnadoError, Result};
 /// reject those too.
 pub fn reject_flag_like(value: &str, label: &str) -> Result<()> {
     if value.starts_with('-') {
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "{} must not start with '-'",
             label
         )));
     }
     if value.contains('\n') || value.contains('\r') {
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "{} must not contain newlines",
             label
         )));

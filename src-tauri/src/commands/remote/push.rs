@@ -7,7 +7,7 @@ use super::{
     await_remote_task, guard_push_destinations, guard_remote_op, late_failure, network_timeout,
     operation_monitor, transfer_failure,
 };
-use crate::error::{GitnadoError, Result};
+use crate::error::{GitdudaError, Result};
 use crate::models::{MultiPushResult, RemoteOperationResult, RemotePushResult};
 use crate::services::cancellation::CancellationRegistry;
 use crate::services::credentials_service;
@@ -21,7 +21,7 @@ pub async fn get_push_remote(path: String, remote: Option<String>) -> Result<Str
     let repo = git2::Repository::open(Path::new(&path))?;
     let remote_name = resolve_push_remote(&repo, remote);
     repo.find_remote(&remote_name)
-        .map_err(|_| GitnadoError::RemoteNotFound(remote_name.clone()))?;
+        .map_err(|_| GitdudaError::RemoteNotFound(remote_name.clone()))?;
     Ok(remote_name)
 }
 
@@ -120,7 +120,7 @@ pub(crate) fn push_branch(
     // git2 path, `push_negotiation` — see `get_push_options_with_monitor` for
     // why that is the last one git2 offers.
     if monitor.is_cancelled() {
-        return Err(GitnadoError::OperationCancelled);
+        return Err(GitdudaError::OperationCancelled);
     }
 
     let repo = git2::Repository::open(Path::new(path_for_task))?;
@@ -134,7 +134,7 @@ pub(crate) fn push_branch(
     let remote_for_task = resolve_push_remote(&repo, requested_remote.clone());
 
     repo.find_remote(&remote_for_task)
-        .map_err(|_| GitnadoError::RemoteNotFound(remote_for_task.clone()))?;
+        .map_err(|_| GitdudaError::RemoteNotFound(remote_for_task.clone()))?;
 
     let branch_name = if let Some(ref b) = branch_for_task {
         b.clone()
@@ -155,7 +155,7 @@ pub(crate) fn push_branch(
     if force_val || use_force_with_lease {
         let rules = crate::commands::branch_rules::load_rules(Path::new(&path_for_task))?;
         if crate::commands::branch_rules::is_force_push_prevented(&rules, &branch_name) {
-            return Err(GitnadoError::OperationFailed(format!(
+            return Err(GitdudaError::OperationFailed(format!(
                 "Branch \"{}\" is protected by a branch rule and cannot be \
                          force-pushed. Remove the rule first.",
                 branch_name
@@ -207,12 +207,12 @@ pub(crate) fn push_branch(
         // The pre-push hook can take a while (test suites are a common one),
         // so re-check before opening a connection.
         if monitor.is_cancelled() {
-            return Err(GitnadoError::OperationCancelled);
+            return Err(GitdudaError::OperationCancelled);
         }
 
         let mut git_remote = repo
             .find_remote(&remote_for_task)
-            .map_err(|_| GitnadoError::RemoteNotFound(remote_for_task.clone()))?;
+            .map_err(|_| GitdudaError::RemoteNotFound(remote_for_task.clone()))?;
 
         let (mut push_opts, abort) =
             credentials_service::get_push_options_with_monitor(token, monitor);
@@ -509,7 +509,7 @@ pub(super) fn run_push_command(
     monitor: &TransferMonitor,
 ) -> Result<std::process::Output> {
     if monitor.is_cancelled() {
-        return Err(GitnadoError::OperationCancelled);
+        return Err(GitdudaError::OperationCancelled);
     }
 
     // The child is driven by hand below so a cancellation can kill it, which
@@ -522,7 +522,7 @@ pub(super) fn run_push_command(
 
     let mut child = cmd
         .spawn()
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to execute git push: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to execute git push: {}", e)))?;
 
     let drain = |pipe: Option<Box<dyn std::io::Read + Send>>| {
         std::thread::spawn(move || {
@@ -562,9 +562,9 @@ pub(super) fn run_push_command(
             let _ = stdout_reader.join();
             let _ = stderr_reader.join();
             return Err(match abnormal {
-                PushOutcome::Cancelled => GitnadoError::OperationCancelled,
+                PushOutcome::Cancelled => GitdudaError::OperationCancelled,
                 PushOutcome::WaitFailed(e) => {
-                    GitnadoError::OperationFailed(format!("Failed to wait for git push: {}", e))
+                    GitdudaError::OperationFailed(format!("Failed to wait for git push: {}", e))
                 }
                 PushOutcome::Finished(_) => unreachable!("handled above"),
             });
@@ -665,12 +665,12 @@ pub(super) fn push_via_cli(
         // without it, so silently dropping it would trade a clear error for a
         // force push that can discard a colleague's commits.
         if force_with_lease && stderr.contains("force-if-includes") {
-            return Err(GitnadoError::OperationFailed(
+            return Err(GitdudaError::OperationFailed(
                 "Force push needs git 2.30 or newer for its safety check (--force-if-includes). Please update git."
                     .to_string(),
             ));
         }
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "git push failed: {}",
             stderr.trim()
         )));
@@ -792,7 +792,7 @@ pub async fn push_to_multiple_remotes(
             // Validate that all remotes exist before starting
             for remote_name in &remotes_for_task {
                 repo.find_remote(remote_name)
-                    .map_err(|_| GitnadoError::RemoteNotFound(remote_name.clone()))?;
+                    .map_err(|_| GitdudaError::RemoteNotFound(remote_name.clone()))?;
             }
 
             let mut results: Vec<RemotePushResult> = Vec::new();
@@ -844,7 +844,7 @@ pub async fn push_to_multiple_remotes(
             Ok((results, total_success, total_failed))
         })
         .await
-        .map_err(|e| GitnadoError::Custom(format!("Push task failed: {}", e)))??;
+        .map_err(|e| GitdudaError::Custom(format!("Push task failed: {}", e)))??;
 
     let overall_success = total_failed == 0;
 

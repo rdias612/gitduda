@@ -1,4 +1,4 @@
-# Gitnado: Comprehensive Development Plan
+# Gitduda: Comprehensive Development Plan
 
 ## A fully-featured, open-source Git GUI client
 
@@ -4349,7 +4349,7 @@ mod test_repos {
 
 # Appendix A: Competitor Feature Comparison
 
-| Feature | Sourcetree | Fork | GitHub Desktop | Gitnado |
+| Feature | Sourcetree | Fork | GitHub Desktop | Gitduda |
 |---------|------------|------|----------------|-----------|
 | Graph visualization | ✅ | ✅ | ❌ | 🎯 |
 | Interactive rebase | ✅ | ✅ | ❌ | 🎯 |
@@ -4365,7 +4365,7 @@ mod test_repos {
 
 *Sourcetree Windows/Mac only
 
-🎯 = Planned for Gitnado
+🎯 = Planned for Gitduda
 
 ---
 

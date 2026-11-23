@@ -33,7 +33,7 @@ pub async fn get_cleanable_files(
     crate::utils::blocking_git(move || {
         let repo = git2::Repository::open(Path::new(&path))?;
         let workdir = repo.workdir().ok_or_else(|| {
-            crate::error::GitnadoError::OperationFailed(
+            crate::error::GitdudaError::OperationFailed(
                 "Repository has no working directory".into(),
             )
         })?;
@@ -128,7 +128,7 @@ pub async fn clean_files(
     crate::utils::blocking_git(move || {
         let repo = git2::Repository::open(Path::new(&path))?;
         let workdir = repo.workdir().ok_or_else(|| {
-            crate::error::GitnadoError::OperationFailed(
+            crate::error::GitdudaError::OperationFailed(
                 "Repository has no working directory".into(),
             )
         })?;

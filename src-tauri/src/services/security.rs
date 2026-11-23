@@ -24,7 +24,7 @@
 //! Being stricter than the frontend would refuse operations the user can see
 //! being allowed in Settings, so any change here has to move in step with it.
 
-use crate::error::{GitnadoError, Result};
+use crate::error::{GitdudaError, Result};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
@@ -539,7 +539,7 @@ fn check_target(
         return Ok(());
     }
     if settings.offline_mode {
-        return Err(GitnadoError::NetworkBlocked(
+        return Err(GitdudaError::NetworkBlocked(
             "Offline mode is enabled. Disable in Settings > Security.".to_string(),
         ));
     }
@@ -550,17 +550,17 @@ fn check_target(
     // through: silently allowing is the failure mode that made this setting
     // decorative in the first place.
     let Some(target) = target.filter(|t| !t.trim().is_empty()) else {
-        return Err(GitnadoError::NetworkBlocked(
+        return Err(GitdudaError::NetworkBlocked(
             "Could not determine the remote URL, and an allowlist is configured".to_string(),
         ));
     };
     match target_host(target) {
         Some(host) if host_allowed(&host, &settings.remote_allowlist) => Ok(()),
-        Some(_) => Err(GitnadoError::NetworkBlocked(format!(
+        Some(_) => Err(GitdudaError::NetworkBlocked(format!(
             "Remote \"{}\" is not in your allowlist",
             target
         ))),
-        None => Err(GitnadoError::NetworkBlocked(
+        None => Err(GitdudaError::NetworkBlocked(
             "Could not determine the remote URL, and an allowlist is configured".to_string(),
         )),
     }
@@ -1094,7 +1094,7 @@ mod tests {
 
     fn blocked(result: Result<()>) -> String {
         match result {
-            Err(GitnadoError::NetworkBlocked(message)) => message,
+            Err(GitdudaError::NetworkBlocked(message)) => message,
             other => panic!("expected a NetworkBlocked refusal, got {:?}", other.err()),
         }
     }
@@ -2313,7 +2313,7 @@ mod tests {
     #[test]
     fn the_refusal_is_reported_with_the_blocked_code() {
         let response: crate::error::ErrorResponse =
-            GitnadoError::NetworkBlocked("nope".to_string()).into();
+            GitdudaError::NetworkBlocked("nope".to_string()).into();
         assert_eq!(response.code, "BLOCKED");
     }
 
@@ -2645,7 +2645,7 @@ mod tests {
     /// instead. `Ok` is the failure that matters: it means the request went out.
     fn expect_blocked<T: std::fmt::Debug>(result: Result<T>, what: &str) {
         match result {
-            Err(GitnadoError::NetworkBlocked(_)) => {}
+            Err(GitdudaError::NetworkBlocked(_)) => {}
             Ok(value) => panic!("{what} was allowed to run offline: {value:?}"),
             Err(other) => panic!("{what} failed for the wrong reason: {other}"),
         }

@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::path::Path;
 use tauri::command;
 
-use crate::error::{GitnadoError, Result};
+use crate::error::{GitdudaError, Result};
 use crate::models::Stash;
 
 /// Result of showing stash contents
@@ -99,7 +99,7 @@ pub async fn apply_stash(path: String, index: usize, drop_after: Option<bool>) -
         repo.stash_apply(index, None)?;
 
         if repo.index()?.has_conflicts() {
-            return Err(GitnadoError::MergeConflict);
+            return Err(GitdudaError::MergeConflict);
         }
 
         if drop_after.unwrap_or(false) {
@@ -131,7 +131,7 @@ pub async fn pop_stash(path: String, index: usize) -> Result<()> {
         repo.stash_apply(index, None)?;
 
         if repo.index()?.has_conflicts() {
-            return Err(GitnadoError::MergeConflict);
+            return Err(GitdudaError::MergeConflict);
         }
 
         repo.stash_drop(index)?;
@@ -264,7 +264,7 @@ pub async fn stash_show(
         })?;
 
         let (message, stash_oid) = stash_info.ok_or_else(|| {
-            crate::error::GitnadoError::Git(git2::Error::from_str(&format!(
+            crate::error::GitdudaError::Git(git2::Error::from_str(&format!(
                 "Stash entry {} not found",
                 index
             )))
@@ -553,7 +553,7 @@ mod tests {
 
         let result = pop_stash(repo.path_str(), 0).await;
         assert!(
-            matches!(result, Err(GitnadoError::MergeConflict)),
+            matches!(result, Err(GitdudaError::MergeConflict)),
             "conflicted pop must return MergeConflict, got {:?}",
             result
         );
@@ -582,7 +582,7 @@ mod tests {
         // Even with drop_after=true, a conflicted apply must NOT drop the stash.
         let result = apply_stash(repo.path_str(), 0, Some(true)).await;
         assert!(
-            matches!(result, Err(GitnadoError::MergeConflict)),
+            matches!(result, Err(GitdudaError::MergeConflict)),
             "conflicted apply must return MergeConflict, got {:?}",
             result
         );

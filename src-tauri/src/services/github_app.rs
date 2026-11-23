@@ -154,7 +154,7 @@ fn api_client() -> crate::error::Result<reqwest::Client> {
 ///
 /// Uses the JWT to authenticate and request a short-lived installation token.
 ///
-/// Returns a [`crate::error::GitnadoError`] rather than a `String` so a
+/// Returns a [`crate::error::GitdudaError`] rather than a `String` so a
 /// refusal from the network gate keeps its `NetworkBlocked` identity all the
 /// way to the frontend, where it reads as `BLOCKED` like every other refusal.
 pub async fn get_installation_token(
@@ -176,7 +176,7 @@ pub async fn get_installation_token(
         .send()
         .await
         .map_err(|e| {
-            crate::error::GitnadoError::OperationFailed(format!(
+            crate::error::GitdudaError::OperationFailed(format!(
                 "Failed to request installation token: {}",
                 e
             ))
@@ -188,7 +188,7 @@ pub async fn get_installation_token(
             .text()
             .await
             .unwrap_or_else(|_| "Unknown error".to_string());
-        return Err(crate::error::GitnadoError::OperationFailed(format!(
+        return Err(crate::error::GitdudaError::OperationFailed(format!(
             "GitHub API error ({}): {}",
             status, body
         )));
@@ -201,7 +201,7 @@ pub async fn get_installation_token(
     }
 
     let token_response: TokenResponse = response.json().await.map_err(|e| {
-        crate::error::GitnadoError::OperationFailed(format!(
+        crate::error::GitdudaError::OperationFailed(format!(
             "Failed to parse token response: {}",
             e
         ))
@@ -216,7 +216,7 @@ pub async fn get_installation_token(
 /// List all installations for a GitHub App.
 ///
 /// See [`get_installation_token`] for why this returns a
-/// [`crate::error::GitnadoError`].
+/// [`crate::error::GitdudaError`].
 pub async fn list_installations(jwt: &str) -> crate::error::Result<Vec<AppInstallation>> {
     let client = api_client()?;
 
@@ -229,7 +229,7 @@ pub async fn list_installations(jwt: &str) -> crate::error::Result<Vec<AppInstal
         .send()
         .await
         .map_err(|e| {
-            crate::error::GitnadoError::OperationFailed(format!(
+            crate::error::GitdudaError::OperationFailed(format!(
                 "Failed to list installations: {}",
                 e
             ))
@@ -241,14 +241,14 @@ pub async fn list_installations(jwt: &str) -> crate::error::Result<Vec<AppInstal
             .text()
             .await
             .unwrap_or_else(|_| "Unknown error".to_string());
-        return Err(crate::error::GitnadoError::OperationFailed(format!(
+        return Err(crate::error::GitdudaError::OperationFailed(format!(
             "GitHub API error ({}): {}",
             status, body
         )));
     }
 
     response.json().await.map_err(|e| {
-        crate::error::GitnadoError::OperationFailed(format!("Failed to parse installations: {}", e))
+        crate::error::GitdudaError::OperationFailed(format!("Failed to parse installations: {}", e))
     })
 }
 
@@ -267,7 +267,7 @@ pub async fn get_or_refresh_token(
 
     // Generate new token
     let jwt = generate_jwt(config.app_id, &config.private_key_pem)
-        .map_err(crate::error::GitnadoError::OperationFailed)?;
+        .map_err(crate::error::GitdudaError::OperationFailed)?;
     let token = get_installation_token(&jwt, config.installation_id).await?;
     let token_str = token.token.clone();
 

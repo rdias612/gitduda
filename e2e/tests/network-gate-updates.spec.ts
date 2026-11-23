@@ -167,7 +167,7 @@ test.describe('Settings Dialog — the updater respects the network gate', () =>
     await injectCommandError(
       page,
       'check_for_update',
-      'Remote "https://cdn.example.net/Gitnado.AppImage" is not in your allowlist',
+      'Remote "https://cdn.example.net/Gitduda.AppImage" is not in your allowlist',
       'BLOCKED',
     );
     await setSecurity(page, { remoteAllowlist: ['github.com'] });

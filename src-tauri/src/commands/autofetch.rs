@@ -1,6 +1,6 @@
 //! Auto-fetch commands
 
-use crate::error::{GitnadoError, Result};
+use crate::error::{GitdudaError, Result};
 use crate::services::autofetch_service::{AutoFetchState, RemoteStatus};
 use tauri::{command, AppHandle, State};
 
@@ -16,7 +16,7 @@ pub async fn start_auto_fetch(
     token: Option<String>,
 ) -> Result<()> {
     if interval_minutes == 0 {
-        return Err(GitnadoError::OperationFailed(
+        return Err(GitdudaError::OperationFailed(
             "Interval must be greater than 0".to_string(),
         ));
     }
@@ -37,7 +37,7 @@ pub async fn trigger_auto_fetch(state: State<'_, AutoFetchState>, path: String) 
     if service.trigger(&path) {
         Ok(())
     } else {
-        Err(GitnadoError::OperationFailed(
+        Err(GitdudaError::OperationFailed(
             "Auto-fetch is not running for this repository".to_string(),
         ))
     }
@@ -63,7 +63,7 @@ pub async fn is_auto_fetch_running(state: State<'_, AutoFetchState>, path: Strin
 pub async fn get_remote_status(path: String) -> Result<RemoteStatus> {
     crate::utils::blocking_git(move || {
         let repo = git2::Repository::open(&path)
-            .map_err(|e| GitnadoError::OperationFailed(format!("Failed to open repo: {}", e)))?;
+            .map_err(|e| GitdudaError::OperationFailed(format!("Failed to open repo: {}", e)))?;
 
         let head = match repo.head() {
             Ok(head) => head,
@@ -79,7 +79,7 @@ pub async fn get_remote_status(path: String) -> Result<RemoteStatus> {
                 });
             }
             Err(e) => {
-                return Err(GitnadoError::OperationFailed(format!("No HEAD: {}", e)));
+                return Err(GitdudaError::OperationFailed(format!("No HEAD: {}", e)));
             }
         };
 
@@ -98,12 +98,12 @@ pub async fn get_remote_status(path: String) -> Result<RemoteStatus> {
 
         let branch_name = head
             .shorthand()
-            .map_err(|_| GitnadoError::OperationFailed("Invalid branch name".to_string()))?;
+            .map_err(|_| GitdudaError::OperationFailed("Invalid branch name".to_string()))?;
 
         // Try to find upstream
         let local_branch = repo
             .find_branch(branch_name, git2::BranchType::Local)
-            .map_err(|e| GitnadoError::OperationFailed(format!("Branch not found: {}", e)))?;
+            .map_err(|e| GitdudaError::OperationFailed(format!("Branch not found: {}", e)))?;
 
         let upstream = match local_branch.upstream() {
             Ok(upstream) => upstream,
@@ -121,16 +121,16 @@ pub async fn get_remote_status(path: String) -> Result<RemoteStatus> {
 
         let local_oid = head
             .target()
-            .ok_or_else(|| GitnadoError::OperationFailed("No local target".to_string()))?;
+            .ok_or_else(|| GitdudaError::OperationFailed("No local target".to_string()))?;
 
         let upstream_oid = upstream
             .get()
             .target()
-            .ok_or_else(|| GitnadoError::OperationFailed("No upstream target".to_string()))?;
+            .ok_or_else(|| GitdudaError::OperationFailed("No upstream target".to_string()))?;
 
         let (ahead, behind) = repo
             .graph_ahead_behind(local_oid, upstream_oid)
-            .map_err(|e| GitnadoError::OperationFailed(format!("Failed to compare: {}", e)))?;
+            .map_err(|e| GitdudaError::OperationFailed(format!("Failed to compare: {}", e)))?;
 
         Ok(RemoteStatus {
             ahead,

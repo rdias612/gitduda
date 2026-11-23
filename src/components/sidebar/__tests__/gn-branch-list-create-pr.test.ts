@@ -59,11 +59,11 @@ function setupMocks(branches: BranchFields[], provider: Provider): void {
         return [];
       case 'detect_github_repo':
         return provider === 'github'
-          ? { owner: 'octo', repo: 'gitnado', remoteName: 'origin' }
+          ? { owner: 'octo', repo: 'gitduda', remoteName: 'origin' }
           : null;
       case 'detect_gitlab_repo':
         return provider === 'gitlab'
-          ? { instanceUrl: 'https://gitlab.com', projectPath: 'octo/gitnado', remoteName: 'origin' }
+          ? { instanceUrl: 'https://gitlab.com', projectPath: 'octo/gitduda', remoteName: 'origin' }
           : null;
       case 'detect_ado_repo':
       case 'detect_bitbucket_repo':

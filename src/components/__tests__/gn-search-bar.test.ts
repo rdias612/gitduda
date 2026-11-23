@@ -51,7 +51,7 @@ function cleanupMockPrompt(): void {
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
-const PRESETS_STORAGE_KEY = 'gitnado-search-filter-presets';
+const PRESETS_STORAGE_KEY = 'gitduda-search-filter-presets';
 
 function clearHistory(): void {
   invokeHistory.length = 0;

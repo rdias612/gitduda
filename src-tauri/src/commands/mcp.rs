@@ -1,9 +1,9 @@
 //! MCP (Model Context Protocol) server management commands
 //!
 //! Provides Tauri commands for starting, stopping, and configuring
-//! the MCP server that allows external tools to query Gitnado.
+//! the MCP server that allows external tools to query Gitduda.
 
-use crate::error::{GitnadoError, Result};
+use crate::error::{GitdudaError, Result};
 use crate::services::ai::mcp::clients::{CreatedMcpClient, McpClientInfo};
 use crate::services::ai::mcp::write::{ConsentRequest, WriteSettings};
 use crate::services::ai::mcp::{McpConfig, McpState, McpStatus};
@@ -13,14 +13,14 @@ use tauri::{command, State};
 #[command]
 pub async fn start_mcp_server(state: State<'_, McpState>) -> Result<()> {
     let mut server = state.write().await;
-    server.start().await.map_err(GitnadoError::OperationFailed)
+    server.start().await.map_err(GitdudaError::OperationFailed)
 }
 
 /// Stop the MCP server
 #[command]
 pub async fn stop_mcp_server(state: State<'_, McpState>) -> Result<()> {
     let mut server = state.write().await;
-    server.stop().await.map_err(GitnadoError::OperationFailed)
+    server.stop().await.map_err(GitdudaError::OperationFailed)
 }
 
 /// Get the current MCP server status
@@ -46,7 +46,7 @@ pub async fn set_mcp_config(state: State<'_, McpState>, config: McpConfig) -> Re
     let mut server = state.write().await;
     server
         .set_config(config)
-        .map_err(GitnadoError::OperationFailed)
+        .map_err(GitdudaError::OperationFailed)
 }
 
 /// Generate a new MCP access token, invalidating the previous one
@@ -55,7 +55,7 @@ pub async fn regenerate_mcp_token(state: State<'_, McpState>) -> Result<String> 
     let mut server = state.write().await;
     server
         .regenerate_auth_token()
-        .map_err(GitnadoError::OperationFailed)
+        .map_err(GitdudaError::OperationFailed)
 }
 
 /// Write-tool settings: on/off and the saved "always allow" policies.
@@ -73,7 +73,7 @@ pub async fn set_mcp_write_settings(
 ) -> Result<()> {
     let gate = state.read().await.write_gate();
     gate.set_settings(settings)
-        .map_err(GitnadoError::OperationFailed)
+        .map_err(GitdudaError::OperationFailed)
 }
 
 /// Write requests waiting for the user (e.g. after the window reloaded).
@@ -93,7 +93,7 @@ pub async fn respond_mcp_consent(
 ) -> Result<()> {
     let gate = state.read().await.write_gate();
     gate.respond(id, approve, always_allow_pattern)
-        .map_err(GitnadoError::OperationFailed)
+        .map_err(GitdudaError::OperationFailed)
 }
 
 /// Named MCP client tokens (never the tokens themselves).
@@ -109,14 +109,14 @@ pub async fn create_mcp_client(
     name: String,
 ) -> Result<CreatedMcpClient> {
     let clients = state.read().await.clients();
-    clients.create(&name).map_err(GitnadoError::OperationFailed)
+    clients.create(&name).map_err(GitdudaError::OperationFailed)
 }
 
 /// Revoke a client token; it stops working on the next request.
 #[command]
 pub async fn revoke_mcp_client(state: State<'_, McpState>, id: String) -> Result<()> {
     let clients = state.read().await.clients();
-    clients.revoke(&id).map_err(GitnadoError::OperationFailed)
+    clients.revoke(&id).map_err(GitdudaError::OperationFailed)
 }
 
 /// How to launch the stdio bridge: this executable plus `--mcp-stdio`.
@@ -130,7 +130,7 @@ pub struct McpStdioCommand {
 #[command]
 pub async fn get_mcp_stdio_command() -> Result<McpStdioCommand> {
     let exe = std::env::current_exe().map_err(|e| {
-        GitnadoError::OperationFailed(format!("Cannot locate the Gitnado executable: {e}"))
+        GitdudaError::OperationFailed(format!("Cannot locate the Gitduda executable: {e}"))
     })?;
     Ok(McpStdioCommand {
         program: exe.to_string_lossy().into_owned(),

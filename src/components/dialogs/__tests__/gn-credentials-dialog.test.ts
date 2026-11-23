@@ -25,7 +25,7 @@ let mockRemotes: Remote[] = [];
 let mockTestResult: CredentialTestResult | null = null;
 /**
  * When set, `test_credentials` rejects with it — the shape a Rust
- * `GitnadoError` arrives in. A `NetworkBlocked` from the BACKEND gate comes
+ * `GitdudaError` arrives in. A `NetworkBlocked` from the BACKEND gate comes
  * through as `code: 'BLOCKED'` with nothing having toasted it.
  */
 let testCredentialsFailure: { code: string; message: string } | null = null;

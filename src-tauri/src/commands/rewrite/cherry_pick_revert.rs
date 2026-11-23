@@ -4,7 +4,7 @@ use std::path::Path;
 use tauri::command;
 
 use super::{CHERRY_PICK_SEQUENCE, CHERRY_PICK_SEQUENCE_HEAD};
-use crate::error::{GitnadoError, Result};
+use crate::error::{GitdudaError, Result};
 use crate::models::Commit;
 
 /// Message git prints when a cherry-pick becomes empty (its changes are already
@@ -28,14 +28,14 @@ fn ensure_index_matches_head(repo: &git2::Repository) -> Result<()> {
     // cherry-pick dialog routes any message containing it to the
     // conflict-resolution flow, which has no operation to resolve here.
     if index.has_conflicts() {
-        return Err(GitnadoError::OperationFailed(
+        return Err(GitdudaError::OperationFailed(
             "The index has unmerged files. Resolve them before starting this operation."
                 .to_string(),
         ));
     }
 
     if index.write_tree()? != head_tree.id() {
-        return Err(GitnadoError::OperationFailed(
+        return Err(GitdudaError::OperationFailed(
             "The index has staged changes. Commit or stash them before starting this operation."
                 .to_string(),
         ));
@@ -170,13 +170,13 @@ enum PickOutcome {
 /// failures.
 fn cherry_pick_one(repo: &git2::Repository, commit: &git2::Commit) -> Result<PickOutcome> {
     if commit.parent_count() == 0 {
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "Cannot cherry-pick root commit {}",
             commit.id()
         )));
     }
     if commit.parent_count() > 1 {
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "Commit {} is a merge but no mainline parent was given; refusing to cherry-pick a merge commit without an explicit mainline.",
             commit.id()
         )));
@@ -284,20 +284,20 @@ fn resolve_sequence<'repo>(
 
     for commit_oid in commit_oids {
         let oid = git2::Oid::from_str(commit_oid)
-            .map_err(|_| GitnadoError::CommitNotFound(commit_oid.clone()))?;
+            .map_err(|_| GitdudaError::CommitNotFound(commit_oid.clone()))?;
         let commit = repo
             .find_commit(oid)
-            .map_err(|_| GitnadoError::CommitNotFound(commit_oid.clone()))?;
+            .map_err(|_| GitdudaError::CommitNotFound(commit_oid.clone()))?;
 
         // Same refusals cherry_pick_one makes, hoisted ahead of the first pick.
         if commit.parent_count() == 0 {
-            return Err(GitnadoError::OperationFailed(format!(
+            return Err(GitdudaError::OperationFailed(format!(
                 "Cannot cherry-pick root commit {}",
                 commit.id()
             )));
         }
         if commit.parent_count() > 1 {
-            return Err(GitnadoError::OperationFailed(format!(
+            return Err(GitdudaError::OperationFailed(format!(
                 "Commit {} is a merge but no mainline parent was given; refusing to cherry-pick a merge commit without an explicit mainline.",
                 commit.id()
             )));
@@ -338,7 +338,7 @@ fn resume_sequence(repo: &git2::Repository) -> Result<Option<Commit>> {
         // abort past commits it never touched.
         Err(e) => {
             clear_sequencer_state_if_not_in_progress(repo);
-            return Err(GitnadoError::OperationFailed(format!(
+            return Err(GitdudaError::OperationFailed(format!(
                 "Could not read the queued cherry-pick sequence: {}",
                 e
             )));
@@ -371,11 +371,11 @@ fn resume_sequence(repo: &git2::Repository) -> Result<Option<Commit>> {
             Ok(PickOutcome::Applied(c)) => last = Some(*c),
             Ok(PickOutcome::Conflicted) => {
                 std::fs::write(&seq_path, still.join("\n"))?;
-                return Err(GitnadoError::CherryPickConflict);
+                return Err(GitdudaError::CherryPickConflict);
             }
             Ok(PickOutcome::Empty) => {
                 std::fs::write(&seq_path, still.join("\n"))?;
-                return Err(GitnadoError::OperationFailed(
+                return Err(GitdudaError::OperationFailed(
                     EMPTY_CHERRY_PICK_MSG.to_string(),
                 ));
             }
@@ -408,18 +408,18 @@ pub async fn cherry_pick(
     if repo.state() != git2::RepositoryState::Clean {
         match repo.state() {
             git2::RepositoryState::CherryPick | git2::RepositoryState::CherryPickSequence => {
-                return Err(GitnadoError::CherryPickInProgress);
+                return Err(GitdudaError::CherryPickInProgress);
             }
             git2::RepositoryState::Revert | git2::RepositoryState::RevertSequence => {
-                return Err(GitnadoError::RevertInProgress);
+                return Err(GitdudaError::RevertInProgress);
             }
             git2::RepositoryState::Rebase
             | git2::RepositoryState::RebaseInteractive
             | git2::RepositoryState::RebaseMerge => {
-                return Err(GitnadoError::RebaseInProgress);
+                return Err(GitdudaError::RebaseInProgress);
             }
             _ => {
-                return Err(GitnadoError::OperationFailed(
+                return Err(GitdudaError::OperationFailed(
                     "Another operation is in progress".to_string(),
                 ));
             }
@@ -429,14 +429,14 @@ pub async fn cherry_pick(
 
     // Find the commit to cherry-pick
     let oid = git2::Oid::from_str(&commit_oid)
-        .map_err(|_| GitnadoError::CommitNotFound(commit_oid.clone()))?;
+        .map_err(|_| GitdudaError::CommitNotFound(commit_oid.clone()))?;
     let commit = repo
         .find_commit(oid)
-        .map_err(|_| GitnadoError::CommitNotFound(commit_oid.clone()))?;
+        .map_err(|_| GitdudaError::CommitNotFound(commit_oid.clone()))?;
 
     // Verify commit has a parent (can't cherry-pick root commit)
     if commit.parent_count() == 0 {
-        return Err(GitnadoError::OperationFailed(
+        return Err(GitdudaError::OperationFailed(
             "Cannot cherry-pick root commit".to_string(),
         ));
     }
@@ -458,7 +458,7 @@ pub async fn cherry_pick(
                 opts.mainline(m);
             }
             Some(m) => {
-                return Err(GitnadoError::OperationFailed(format!(
+                return Err(GitdudaError::OperationFailed(format!(
                     "Mainline {} is out of range: commit {} has {} parents.",
                     m,
                     commit_oid,
@@ -466,7 +466,7 @@ pub async fn cherry_pick(
                 )));
             }
             None => {
-                return Err(GitnadoError::OperationFailed(format!(
+                return Err(GitdudaError::OperationFailed(format!(
                     "Commit {} is a merge but no mainline parent was given; choose which parent to cherry-pick relative to.",
                     commit_oid
                 )));
@@ -488,7 +488,7 @@ pub async fn cherry_pick(
 
     if has_conflicts {
         tracing::debug!("Returning CherryPickConflict error");
-        return Err(GitnadoError::CherryPickConflict);
+        return Err(GitdudaError::CherryPickConflict);
     }
 
     // If no_commit is true, just stage the changes without committing
@@ -506,7 +506,7 @@ pub async fn cherry_pick(
     // If the pick is already applied the result is empty; git stops here (leaving
     // CHERRY_PICK_HEAD in place) instead of creating an empty commit.
     if tree_oid == head.tree_id() {
-        return Err(GitnadoError::OperationFailed(
+        return Err(GitdudaError::OperationFailed(
             EMPTY_CHERRY_PICK_MSG.to_string(),
         ));
     }
@@ -543,7 +543,7 @@ pub async fn continue_cherry_pick(path: String) -> Result<Commit> {
     // repo.path() so this works in linked worktrees (where <wt>/.git is a file).
     let cherry_pick_head_path = repo.path().join("CHERRY_PICK_HEAD");
     if !cherry_pick_head_path.exists() {
-        return Err(GitnadoError::OperationFailed(
+        return Err(GitdudaError::OperationFailed(
             "No cherry-pick in progress".to_string(),
         ));
     }
@@ -553,13 +553,13 @@ pub async fn continue_cherry_pick(path: String) -> Result<Commit> {
         .trim()
         .to_string();
     let original_oid = git2::Oid::from_str(&original_oid_str)
-        .map_err(|_| GitnadoError::CommitNotFound(original_oid_str.clone()))?;
+        .map_err(|_| GitdudaError::CommitNotFound(original_oid_str.clone()))?;
     let original_commit = repo.find_commit(original_oid)?;
 
     // Check for remaining conflicts
     let mut index = repo.index()?;
     if index.has_conflicts() {
-        return Err(GitnadoError::CherryPickConflict);
+        return Err(GitdudaError::CherryPickConflict);
     }
 
     // Get the current HEAD
@@ -571,7 +571,7 @@ pub async fn continue_cherry_pick(path: String) -> Result<Commit> {
     // A conflict resolution that leaves nothing to apply is empty; git stops
     // rather than recording an empty commit.
     if tree_oid == head.tree_id() {
-        return Err(GitnadoError::OperationFailed(
+        return Err(GitdudaError::OperationFailed(
             EMPTY_CHERRY_PICK_MSG.to_string(),
         ));
     }
@@ -626,7 +626,7 @@ pub async fn skip_cherry_pick(path: String) -> Result<Option<Commit>> {
     // working tree untouched. Resolve via repo.path() (worktree-safe).
     let cherry_pick_head_path = repo.path().join("CHERRY_PICK_HEAD");
     if !cherry_pick_head_path.exists() {
-        return Err(GitnadoError::OperationFailed(
+        return Err(GitdudaError::OperationFailed(
             "There is no cherry-pick in progress to skip.".to_string(),
         ));
     }
@@ -655,7 +655,7 @@ pub async fn abort_cherry_pick(path: String) -> Result<()> {
     // uncommitted work. Resolve the state file via repo.path() (worktree-safe).
     let cherry_pick_head_path = repo.path().join("CHERRY_PICK_HEAD");
     if !cherry_pick_head_path.exists() {
-        return Err(GitnadoError::OperationFailed(
+        return Err(GitdudaError::OperationFailed(
             "There is no cherry-pick in progress to abort.".to_string(),
         ));
     }
@@ -692,7 +692,7 @@ pub async fn revert(path: String, commit_oid: String, mainline: Option<u32>) -> 
 
     // Check for existing operations in progress
     if repo.state() != git2::RepositoryState::Clean {
-        return Err(GitnadoError::OperationFailed(
+        return Err(GitdudaError::OperationFailed(
             "Another operation is in progress".to_string(),
         ));
     }
@@ -700,14 +700,14 @@ pub async fn revert(path: String, commit_oid: String, mainline: Option<u32>) -> 
 
     // Find the commit to revert
     let oid = git2::Oid::from_str(&commit_oid)
-        .map_err(|_| GitnadoError::CommitNotFound(commit_oid.clone()))?;
+        .map_err(|_| GitdudaError::CommitNotFound(commit_oid.clone()))?;
     let commit = repo
         .find_commit(oid)
-        .map_err(|_| GitnadoError::CommitNotFound(commit_oid.clone()))?;
+        .map_err(|_| GitdudaError::CommitNotFound(commit_oid.clone()))?;
 
     // Verify commit has a parent (can't revert root commit)
     if commit.parent_count() == 0 {
-        return Err(GitnadoError::OperationFailed(
+        return Err(GitdudaError::OperationFailed(
             "Cannot revert root commit".to_string(),
         ));
     }
@@ -729,7 +729,7 @@ pub async fn revert(path: String, commit_oid: String, mainline: Option<u32>) -> 
                 opts.mainline(m);
             }
             Some(m) => {
-                return Err(GitnadoError::OperationFailed(format!(
+                return Err(GitdudaError::OperationFailed(format!(
                     "Mainline {} is out of range: commit {} has {} parents.",
                     m,
                     commit_oid,
@@ -737,7 +737,7 @@ pub async fn revert(path: String, commit_oid: String, mainline: Option<u32>) -> 
                 )));
             }
             None => {
-                return Err(GitnadoError::OperationFailed(format!(
+                return Err(GitdudaError::OperationFailed(format!(
                     "Commit {} is a merge but no mainline parent was given; choose which parent to revert relative to.",
                     commit_oid
                 )));
@@ -750,7 +750,7 @@ pub async fn revert(path: String, commit_oid: String, mainline: Option<u32>) -> 
     // Check if there are conflicts
     let mut index = repo.index()?;
     if index.has_conflicts() {
-        return Err(GitnadoError::RevertConflict);
+        return Err(GitdudaError::RevertConflict);
     }
 
     // No conflicts - the working directory and index are updated, now create the commit
@@ -760,7 +760,7 @@ pub async fn revert(path: String, commit_oid: String, mainline: Option<u32>) -> 
     // A revert that changes nothing is empty; git stops rather than recording an
     // empty commit (leaving REVERT_HEAD in place).
     if tree_oid == head.tree_id() {
-        return Err(GitnadoError::OperationFailed(EMPTY_REVERT_MSG.to_string()));
+        return Err(GitdudaError::OperationFailed(EMPTY_REVERT_MSG.to_string()));
     }
 
     let tree = repo.find_tree(tree_oid)?;
@@ -811,7 +811,7 @@ pub async fn continue_revert(path: String) -> Result<Commit> {
     // works in linked worktrees (where <wt>/.git is a file, not a directory).
     let revert_head_path = repo.path().join("REVERT_HEAD");
     if !revert_head_path.exists() {
-        return Err(GitnadoError::OperationFailed(
+        return Err(GitdudaError::OperationFailed(
             "No revert in progress".to_string(),
         ));
     }
@@ -821,13 +821,13 @@ pub async fn continue_revert(path: String) -> Result<Commit> {
         .trim()
         .to_string();
     let original_oid = git2::Oid::from_str(&original_oid_str)
-        .map_err(|_| GitnadoError::CommitNotFound(original_oid_str.clone()))?;
+        .map_err(|_| GitdudaError::CommitNotFound(original_oid_str.clone()))?;
     let original_commit = repo.find_commit(original_oid)?;
 
     // Check for remaining conflicts
     let mut index = repo.index()?;
     if index.has_conflicts() {
-        return Err(GitnadoError::RevertConflict);
+        return Err(GitdudaError::RevertConflict);
     }
 
     // Get the current HEAD
@@ -839,7 +839,7 @@ pub async fn continue_revert(path: String) -> Result<Commit> {
     // A conflict resolution that undoes nothing is empty; git stops rather than
     // recording an empty commit.
     if tree_oid == head.tree_id() {
-        return Err(GitnadoError::OperationFailed(EMPTY_REVERT_MSG.to_string()));
+        return Err(GitdudaError::OperationFailed(EMPTY_REVERT_MSG.to_string()));
     }
 
     let tree = repo.find_tree(tree_oid)?;
@@ -883,7 +883,7 @@ pub async fn skip_revert(path: String) -> Result<()> {
     // tree untouched. Resolve via repo.path() (worktree-safe).
     let revert_head_path = repo.path().join("REVERT_HEAD");
     if !revert_head_path.exists() {
-        return Err(GitnadoError::OperationFailed(
+        return Err(GitdudaError::OperationFailed(
             "There is no revert in progress to skip.".to_string(),
         ));
     }
@@ -906,7 +906,7 @@ pub async fn abort_revert(path: String) -> Result<()> {
     // work. Resolve the state file via repo.path() (worktree-safe).
     let revert_head_path = repo.path().join("REVERT_HEAD");
     if !revert_head_path.exists() {
-        return Err(GitnadoError::OperationFailed(
+        return Err(GitdudaError::OperationFailed(
             "There is no revert in progress to abort.".to_string(),
         ));
     }
@@ -926,14 +926,14 @@ pub async fn cherry_pick_range(path: String, commit_oids: Vec<String>) -> Result
 
     // Check for existing operations in progress
     if repo.state() != git2::RepositoryState::Clean {
-        return Err(GitnadoError::OperationFailed(
+        return Err(GitdudaError::OperationFailed(
             "Another operation is in progress".to_string(),
         ));
     }
     ensure_index_matches_head(&repo)?;
 
     if commit_oids.is_empty() {
-        return Err(GitnadoError::OperationFailed(
+        return Err(GitdudaError::OperationFailed(
             "No commits specified for cherry-pick".to_string(),
         ));
     }
@@ -969,7 +969,7 @@ pub async fn cherry_pick_range(path: String, commit_oids: Vec<String>) -> Result
                 // pre-sequence HEAD so continue/abort behave like git's
                 // sequencer.
                 write_sequencer_state(&repo, pre_sequence_head, &remaining)?;
-                return Err(GitnadoError::CherryPickConflict);
+                return Err(GitdudaError::CherryPickConflict);
             }
             Ok(PickOutcome::Empty) => {
                 // git's sequencer stops on an already-applied pick but keeps the
@@ -977,7 +977,7 @@ pub async fn cherry_pick_range(path: String, commit_oids: Vec<String>) -> Result
                 // this the remainder was dropped on the floor and Abort — which
                 // rewinds every applied pick — was the only way out.
                 write_sequencer_state(&repo, pre_sequence_head, &remaining)?;
-                return Err(GitnadoError::OperationFailed(
+                return Err(GitdudaError::OperationFailed(
                     EMPTY_CHERRY_PICK_MSG.to_string(),
                 ));
             }
@@ -1015,18 +1015,18 @@ pub async fn cherry_pick_from_branch(
     if repo.state() != git2::RepositoryState::Clean {
         match repo.state() {
             git2::RepositoryState::CherryPick | git2::RepositoryState::CherryPickSequence => {
-                return Err(GitnadoError::CherryPickInProgress);
+                return Err(GitdudaError::CherryPickInProgress);
             }
             git2::RepositoryState::Revert | git2::RepositoryState::RevertSequence => {
-                return Err(GitnadoError::RevertInProgress);
+                return Err(GitdudaError::RevertInProgress);
             }
             git2::RepositoryState::Rebase
             | git2::RepositoryState::RebaseInteractive
             | git2::RepositoryState::RebaseMerge => {
-                return Err(GitnadoError::RebaseInProgress);
+                return Err(GitdudaError::RebaseInProgress);
             }
             _ => {
-                return Err(GitnadoError::OperationFailed(
+                return Err(GitdudaError::OperationFailed(
                     "Another operation is in progress".to_string(),
                 ));
             }
@@ -1036,7 +1036,7 @@ pub async fn cherry_pick_from_branch(
 
     let count = count.unwrap_or(1);
     if count == 0 {
-        return Err(GitnadoError::OperationFailed(
+        return Err(GitdudaError::OperationFailed(
             "Count must be at least 1".to_string(),
         ));
     }
@@ -1045,12 +1045,12 @@ pub async fn cherry_pick_from_branch(
     let branch_ref = repo
         .find_branch(&branch, git2::BranchType::Local)
         .or_else(|_| repo.find_branch(&branch, git2::BranchType::Remote))
-        .map_err(|_| GitnadoError::BranchNotFound(branch.clone()))?;
+        .map_err(|_| GitdudaError::BranchNotFound(branch.clone()))?;
 
     let tip_oid = branch_ref
         .get()
         .target()
-        .ok_or_else(|| GitnadoError::BranchNotFound(branch.clone()))?;
+        .ok_or_else(|| GitdudaError::BranchNotFound(branch.clone()))?;
 
     // Walk backwards from the tip to collect `count` commits (oldest first)
     let mut revwalk = repo.revwalk()?;
@@ -1067,7 +1067,7 @@ pub async fn cherry_pick_from_branch(
     }
 
     if commit_oids.is_empty() {
-        return Err(GitnadoError::OperationFailed(
+        return Err(GitdudaError::OperationFailed(
             "No commits found on the specified branch".to_string(),
         ));
     }
@@ -1100,13 +1100,13 @@ pub async fn cherry_pick_from_branch(
             Ok(PickOutcome::Applied(new_commit)) => results.push(*new_commit),
             Ok(PickOutcome::Conflicted) => {
                 write_sequencer_state(&repo, pre_sequence_head, &remaining)?;
-                return Err(GitnadoError::CherryPickConflict);
+                return Err(GitdudaError::CherryPickConflict);
             }
             Ok(PickOutcome::Empty) => {
                 // Keep the rest of the range queued so Skip can resume it — see
                 // cherry_pick_range's Empty arm.
                 write_sequencer_state(&repo, pre_sequence_head, &remaining)?;
-                return Err(GitnadoError::OperationFailed(
+                return Err(GitdudaError::OperationFailed(
                     EMPTY_CHERRY_PICK_MSG.to_string(),
                 ));
             }

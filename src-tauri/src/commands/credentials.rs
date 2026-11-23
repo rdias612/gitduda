@@ -5,7 +5,7 @@ use std::path::Path;
 use tauri::command;
 
 use crate::commands::config::{run_git_config_raw, run_git_config_unset};
-use crate::error::{GitnadoError, Result};
+use crate::error::{GitdudaError, Result};
 use crate::utils::create_command;
 
 // ========================================================================
@@ -148,7 +148,7 @@ fn run_git_config(repo_path: Option<&Path>, args: &[&str]) -> Result<String> {
 
     let output = cmd
         .output()
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to run git config: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to run git config: {}", e)))?;
 
     let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
     let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
@@ -158,7 +158,7 @@ fn run_git_config(repo_path: Option<&Path>, args: &[&str]) -> Result<String> {
     } else if output.status.code() == Some(1) && stderr.is_empty() && stdout.is_empty() {
         Ok(String::new())
     } else {
-        Err(GitnadoError::OperationFailed(if stderr.is_empty() {
+        Err(GitdudaError::OperationFailed(if stderr.is_empty() {
             stdout
         } else {
             stderr
@@ -281,13 +281,13 @@ fn extract_helper_name(cmd: &str) -> String {
 /// Both reject control characters and quotes outright.
 fn validate_url_pattern(pat: &str) -> Result<()> {
     if pat.is_empty() {
-        return Err(GitnadoError::OperationFailed(
+        return Err(GitdudaError::OperationFailed(
             "url_pattern must not be empty".to_string(),
         ));
     }
     for ch in pat.chars() {
         if ch.is_control() {
-            return Err(GitnadoError::OperationFailed(format!(
+            return Err(GitdudaError::OperationFailed(format!(
                 "url_pattern contains invalid control character U+{:04X}",
                 ch as u32
             )));
@@ -298,7 +298,7 @@ fn validate_url_pattern(pat: &str) -> Result<()> {
             'a'..='z' | 'A'..='Z' | '0'..='9'
             | '.' | ':' | '/' | '-' | '_' | '*' | '+' | '%' | '@'
         ) {
-            return Err(GitnadoError::OperationFailed(format!(
+            return Err(GitdudaError::OperationFailed(format!(
                 "url_pattern contains disallowed character {:?} — only letters, digits, and .:-/_*+%@ are permitted",
                 ch
             )));
@@ -309,7 +309,7 @@ fn validate_url_pattern(pat: &str) -> Result<()> {
 
 fn validate_helper(helper: &str) -> Result<()> {
     if helper.is_empty() {
-        return Err(GitnadoError::OperationFailed(
+        return Err(GitdudaError::OperationFailed(
             "helper must not be empty".to_string(),
         ));
     }
@@ -322,7 +322,7 @@ fn validate_helper(helper: &str) -> Result<()> {
     // file or inject additional lines.
     for ch in helper.chars() {
         if ch.is_control() {
-            return Err(GitnadoError::OperationFailed(format!(
+            return Err(GitdudaError::OperationFailed(format!(
                 "helper contains invalid control character U+{:04X}",
                 ch as u32
             )));
@@ -383,7 +383,7 @@ pub async fn unset_credential_helper(
     // with no path, is whatever directory the app process happens to be in,
     // not the repository on screen. Refuse instead of guessing.
     if !global && repo_path.is_none() {
-        return Err(GitnadoError::OperationFailed(
+        return Err(GitdudaError::OperationFailed(
             "A repository path is required to remove a repository-scoped credential helper"
                 .to_string(),
         ));
@@ -405,7 +405,7 @@ pub async fn unset_credential_helper(
     // genuine no-op — so the removal has to be confirmed, not assumed.
     let scope_name = if global { "global" } else { "local" };
     if let Some(origin) = key_origin_in_scope(repo_path, scope_name, &key) {
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "\"{}\" is still set by {}, a file included from the {} git config. \
              Edit that file to remove it.",
             key, origin, scope_name
@@ -572,7 +572,7 @@ pub async fn test_credentials(path: String, remote_url: String) -> Result<Creden
             command.args(["-p".to_string(), port.to_string()]);
         }
         let output = command.arg(&ssh_destination).output().map_err(|e| {
-            GitnadoError::OperationFailed(format!("Failed to test SSH connection: {}", e))
+            GitdudaError::OperationFailed(format!("Failed to test SSH connection: {}", e))
         })?;
 
         let stdout = String::from_utf8_lossy(&output.stdout);
@@ -607,7 +607,7 @@ pub async fn test_credentials(path: String, remote_url: String) -> Result<Creden
         cmd.stderr(std::process::Stdio::piped());
 
         let mut child = cmd.spawn().map_err(|e| {
-            GitnadoError::OperationFailed(format!("Failed to run git credential: {}", e))
+            GitdudaError::OperationFailed(format!("Failed to run git credential: {}", e))
         })?;
 
         // Send credential request
@@ -617,7 +617,7 @@ pub async fn test_credentials(path: String, remote_url: String) -> Result<Creden
         }
 
         let output = child.wait_with_output().map_err(|e| {
-            GitnadoError::OperationFailed(format!("Failed to get credential output: {}", e))
+            GitdudaError::OperationFailed(format!("Failed to get credential output: {}", e))
         })?;
 
         let stdout = String::from_utf8_lossy(&output.stdout);
@@ -919,7 +919,7 @@ pub async fn store_git_credentials(url: String, username: String, password: Stri
     tracing::info!("Storing git credentials for URL: {}", safe_url);
     credentials_service::store_credentials(&url, &username, &password).map_err(|e| {
         tracing::error!("Failed to store credentials for {}: {}", safe_url, e);
-        GitnadoError::OperationFailed(format!("Failed to store credentials: {}", e))
+        GitdudaError::OperationFailed(format!("Failed to store credentials: {}", e))
     })?;
     tracing::info!("Successfully stored git credentials for URL: {}", safe_url);
     Ok(())
@@ -931,7 +931,7 @@ pub async fn delete_git_credentials(url: String) -> Result<()> {
     use crate::services::credentials_service;
 
     credentials_service::delete_credentials(&url)
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to delete credentials: {}", e)))
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to delete credentials: {}", e)))
 }
 
 /// Erase stored credentials for a host
@@ -945,7 +945,7 @@ pub async fn erase_credentials(path: String, host: String, protocol: String) -> 
     cmd.stdin(std::process::Stdio::piped());
 
     let mut child = cmd.spawn().map_err(|e| {
-        GitnadoError::OperationFailed(format!("Failed to run git credential: {}", e))
+        GitdudaError::OperationFailed(format!("Failed to run git credential: {}", e))
     })?;
 
     // Send credential info to reject
@@ -1006,7 +1006,7 @@ pub(crate) fn build_security_add_args<'a>(service: &'a str, key: &'a str) -> Vec
 #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 fn build_security_add_stdin(value: &str) -> Result<String> {
     if value.contains('\n') || value.contains('\r') {
-        return Err(GitnadoError::OperationFailed(
+        return Err(GitdudaError::OperationFailed(
             "Cannot store a token containing a line break in the macOS keychain.".to_string(),
         ));
     }
@@ -1036,19 +1036,19 @@ pub(crate) fn write_keyring_token(service: &str, key: &str, value: &str) -> Resu
             .stdout(std::process::Stdio::null())
             .stderr(std::process::Stdio::piped())
             .spawn()
-            .map_err(|e| GitnadoError::OperationFailed(format!("Failed to run security: {e}")))?;
+            .map_err(|e| GitdudaError::OperationFailed(format!("Failed to run security: {e}")))?;
         if let Some(mut stdin) = child.stdin.take() {
             stdin.write_all(stdin_payload.as_bytes()).map_err(|e| {
-                GitnadoError::OperationFailed(format!("Failed to write token: {e}"))
+                GitdudaError::OperationFailed(format!("Failed to write token: {e}"))
             })?;
         }
         let output = child
             .wait_with_output()
-            .map_err(|e| GitnadoError::OperationFailed(format!("Failed to run security: {e}")))?;
+            .map_err(|e| GitdudaError::OperationFailed(format!("Failed to run security: {e}")))?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(GitnadoError::OperationFailed(format!(
+            return Err(GitdudaError::OperationFailed(format!(
                 "Failed to store token: {stderr}"
             )));
         }
@@ -1070,7 +1070,7 @@ pub(crate) fn write_keyring_token(service: &str, key: &str, value: &str) -> Resu
         crate::services::keyring_util::set(service, key, value).map_err(|e| {
             #[cfg(target_os = "linux")]
             {
-                GitnadoError::OperationFailed(format!(
+                GitdudaError::OperationFailed(format!(
                     "Failed to store token: {e}. Linux credential storage requires an \
                          available, unlocked Secret Service provider such as GNOME Keyring \
                          or KWallet."
@@ -1078,7 +1078,7 @@ pub(crate) fn write_keyring_token(service: &str, key: &str, value: &str) -> Resu
             }
             #[cfg(not(target_os = "linux"))]
             {
-                GitnadoError::OperationFailed(format!("Failed to store token: {e}"))
+                GitdudaError::OperationFailed(format!("Failed to store token: {e}"))
             }
         })?;
     }
@@ -1114,7 +1114,7 @@ fn interpret_keychain_read(
     if success {
         let password = String::from_utf8_lossy(stdout).trim().to_string();
         if password.is_empty() {
-            return Err(GitnadoError::OperationFailed(format!(
+            return Err(GitdudaError::OperationFailed(format!(
                 "Keychain entry for {key} exists but holds no value. Reconnect the account to store its token again."
             )));
         }
@@ -1129,7 +1129,7 @@ fn interpret_keychain_read(
     let status = status_code
         .map(|c| c.to_string())
         .unwrap_or_else(|| "a signal".to_string());
-    Err(GitnadoError::OperationFailed(format!(
+    Err(GitdudaError::OperationFailed(format!(
         "Keychain read failed for {key} (security exited with {status}): {}",
         if stderr.is_empty() {
             "no error output".to_string()
@@ -1158,7 +1158,7 @@ fn interpret_keychain_delete(
     let status = status_code
         .map(|code| code.to_string())
         .unwrap_or_else(|| "a signal".to_string());
-    Err(GitnadoError::OperationFailed(format!(
+    Err(GitdudaError::OperationFailed(format!(
         "Keychain delete failed for {key} (security exited with {status}): {}",
         if stderr.is_empty() {
             "no error output".to_string()
@@ -1179,15 +1179,15 @@ fn verify_keychain_write(
 ) -> Result<()> {
     match read_back {
         Ok(Some(actual)) if actual == expected => Ok(()),
-        Ok(Some(actual)) => Err(GitnadoError::OperationFailed(format!(
+        Ok(Some(actual)) => Err(GitdudaError::OperationFailed(format!(
             "Keychain entry for {key} was stored but reads back differently ({} bytes written, {} read).",
             expected.len(),
             actual.len()
         ))),
-        Ok(None) => Err(GitnadoError::OperationFailed(format!(
+        Ok(None) => Err(GitdudaError::OperationFailed(format!(
             "Keychain entry for {key} was stored but could not be found when read back."
         ))),
-        Err(e) => Err(GitnadoError::OperationFailed(format!(
+        Err(e) => Err(GitdudaError::OperationFailed(format!(
             "Keychain entry for {key} was stored but could not be read back: {e}"
         ))),
     }
@@ -1201,7 +1201,7 @@ pub(crate) fn read_keyring_token(service: &str, key: &str) -> Result<Option<Stri
         let output = std::process::Command::new("security")
             .args(["find-generic-password", "-s", service, "-a", key, "-w"])
             .output()
-            .map_err(|e| GitnadoError::OperationFailed(format!("Failed to run security: {e}")))?;
+            .map_err(|e| GitdudaError::OperationFailed(format!("Failed to run security: {e}")))?;
 
         interpret_keychain_read(
             key,
@@ -1217,7 +1217,7 @@ pub(crate) fn read_keyring_token(service: &str, key: &str) -> Result<Option<Stri
         crate::services::keyring_util::get(service, key).map_err(|e| {
             #[cfg(target_os = "linux")]
             {
-                GitnadoError::OperationFailed(format!(
+                GitdudaError::OperationFailed(format!(
                     "Failed to get token: {e}. Linux credential storage requires an \
                          available, unlocked Secret Service provider such as GNOME Keyring \
                          or KWallet."
@@ -1225,7 +1225,7 @@ pub(crate) fn read_keyring_token(service: &str, key: &str) -> Result<Option<Stri
             }
             #[cfg(not(target_os = "linux"))]
             {
-                GitnadoError::OperationFailed(format!("Failed to get token: {e}"))
+                GitdudaError::OperationFailed(format!("Failed to get token: {e}"))
             }
         })
     }
@@ -1238,7 +1238,7 @@ pub(crate) fn remove_keyring_token(service: &str, key: &str) -> Result<()> {
         let output = std::process::Command::new("security")
             .args(["delete-generic-password", "-s", service, "-a", key])
             .output()
-            .map_err(|e| GitnadoError::OperationFailed(format!("Failed to run security: {e}")))?;
+            .map_err(|e| GitdudaError::OperationFailed(format!("Failed to run security: {e}")))?;
         interpret_keychain_delete(
             key,
             output.status.success(),
@@ -1251,7 +1251,7 @@ pub(crate) fn remove_keyring_token(service: &str, key: &str) -> Result<()> {
     {
         // Removes the primary entry and any chunk entries a large token created.
         crate::services::keyring_util::delete(service, key)
-            .map_err(|e| GitnadoError::OperationFailed(format!("Failed to delete token: {e}")))
+            .map_err(|e| GitdudaError::OperationFailed(format!("Failed to delete token: {e}")))
     }
 }
 
@@ -2015,7 +2015,7 @@ mod tests {
             Some(repo.path_str()),
             "cache".to_string(),
             Some(false),
-            Some("https://gitnado-scope.example".to_string()),
+            Some("https://gitduda-scope.example".to_string()),
         )
         .await
         .unwrap();
@@ -2025,7 +2025,7 @@ mod tests {
             .iter()
             .find(|h| {
                 h.scope == "url"
-                    && h.url_pattern.as_deref() == Some("https://gitnado-scope.example")
+                    && h.url_pattern.as_deref() == Some("https://gitduda-scope.example")
             })
             .expect("URL-scoped helper should be listed");
 
@@ -2041,7 +2041,7 @@ mod tests {
         let result = unset_credential_helper(
             None,
             Some(false),
-            Some("https://gitnado-scope.example".to_string()),
+            Some("https://gitduda-scope.example".to_string()),
         )
         .await;
 
@@ -2059,7 +2059,7 @@ mod tests {
         let result = unset_credential_helper(
             Some(dir.path().to_string_lossy().into_owned()),
             Some(false),
-            Some("https://gitnado-scope.example".to_string()),
+            Some("https://gitduda-scope.example".to_string()),
         )
         .await;
 
@@ -2094,7 +2094,7 @@ mod tests {
             Some(repo.path_str()),
             "cache".to_string(),
             Some(false),
-            Some("https://gitnado-remove.example".to_string()),
+            Some("https://gitduda-remove.example".to_string()),
         )
         .await
         .unwrap();
@@ -2102,7 +2102,7 @@ mod tests {
         unset_credential_helper(
             Some(repo.path_str()),
             Some(false),
-            Some("https://gitnado-remove.example".to_string()),
+            Some("https://gitduda-remove.example".to_string()),
         )
         .await
         .unwrap();
@@ -2111,7 +2111,7 @@ mod tests {
         assert!(
             !helpers
                 .iter()
-                .any(|h| h.url_pattern.as_deref() == Some("https://gitnado-remove.example")),
+                .any(|h| h.url_pattern.as_deref() == Some("https://gitduda-remove.example")),
             "the URL-scoped helper should be gone from the listing"
         );
     }
@@ -2558,7 +2558,7 @@ mod tests {
         let failed = verify_keychain_write(
             "k",
             "tok",
-            Err(GitnadoError::OperationFailed("locked".to_string())),
+            Err(GitdudaError::OperationFailed("locked".to_string())),
         )
         .unwrap_err()
         .to_string();
@@ -2626,7 +2626,7 @@ mod tests {
     #[cfg(target_os = "macos")]
     #[test]
     fn keychain_write_round_trips_through_security() {
-        let service = "gitnado-test-keychain-roundtrip";
+        let service = "gitduda-test-keychain-roundtrip";
         let key = &format!("roundtrip-{}", std::process::id());
         let token = "ghp_round_trip_value";
 
@@ -2769,7 +2769,7 @@ pub struct CredentialManagerStatus {
     pub gcm_available: bool,
     pub gcm_version: Option<String>,
     pub configured_helper: Option<String>,
-    pub using_gitnado_fallback: bool,
+    pub using_gitduda_fallback: bool,
 }
 
 /// Detect the system's Git Credential Manager and its configuration
@@ -2833,12 +2833,12 @@ pub async fn detect_credential_manager(path: String) -> Result<CredentialManager
             })
     });
 
-    let using_gitnado_fallback = !gcm_available && configured_helper.is_none();
+    let using_gitduda_fallback = !gcm_available && configured_helper.is_none();
 
     Ok(CredentialManagerStatus {
         gcm_available,
         gcm_version,
         configured_helper,
-        using_gitnado_fallback,
+        using_gitduda_fallback,
     })
 }

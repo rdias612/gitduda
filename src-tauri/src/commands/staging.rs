@@ -480,7 +480,7 @@ pub async fn discard_changes(path: String, paths: Vec<String>) -> Result<()> {
                 .map(|m| m.file_type().is_dir())
                 .unwrap_or(false);
             if is_dir && crate::utils::contains_nested_repo(full_path) {
-                return Err(crate::error::GitnadoError::OperationFailed(format!(
+                return Err(crate::error::GitdudaError::OperationFailed(format!(
                     "'{}' contains a git repository — discarding it would destroy its history. \
                      Nothing was discarded. Use the Clean Working Directory dialog, which asks \
                      for confirmation before removing a nested repository.",
@@ -537,7 +537,7 @@ fn apply_patch_to_index(repo_path: &str, patch: &str, reverse: bool) -> Result<(
     // NamedTempFile produces a unique name (random suffix) and removes
     // the file on drop, so concurrent calls cannot collide.
     let mut tmp = tempfile::Builder::new()
-        .prefix("gitnado_hunk_")
+        .prefix("gitduda_hunk_")
         .suffix(".patch")
         .tempfile()?;
     tmp.write_all(patch.as_bytes())?;
@@ -554,7 +554,7 @@ fn apply_patch_to_index(repo_path: &str, patch: &str, reverse: bool) -> Result<(
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         let label = if reverse { "unstage" } else { "stage" };
-        return Err(crate::error::GitnadoError::OperationFailed(format!(
+        return Err(crate::error::GitdudaError::OperationFailed(format!(
             "Failed to {} hunk: {}",
             label, stderr
         )));
@@ -632,7 +632,7 @@ pub async fn read_file_content(
                 return Ok(content);
             }
 
-            Err(crate::error::GitnadoError::OperationFailed(
+            Err(crate::error::GitdudaError::OperationFailed(
                 "File not found in index".to_string(),
             ))
         } else {
@@ -642,7 +642,7 @@ pub async fn read_file_content(
             // (legacy encoding), which are presented very differently.
             let full_path = validate_path_within_repo(Path::new(&repo_path), &file_path)?;
             if !full_path.exists() {
-                return Err(crate::error::GitnadoError::FileNotFound(file_path));
+                return Err(crate::error::GitdudaError::FileNotFound(file_path));
             }
             let content = std::fs::read_to_string(&full_path)?;
             Ok(content)
@@ -801,7 +801,7 @@ pub async fn stage_hunk_by_index(path: String, file_path: String, hunk_index: u3
             .iter()
             .find(|h| h.index == hunk_index)
             .ok_or_else(|| {
-                crate::error::GitnadoError::OperationFailed(format!(
+                crate::error::GitdudaError::OperationFailed(format!(
                     "Hunk index {} not found for file {}",
                     hunk_index, file_path
                 ))
@@ -817,7 +817,7 @@ pub async fn stage_hunk_by_index(path: String, file_path: String, hunk_index: u3
 /// the index (and so anything already staged) alone.
 fn reverse_apply_to_worktree(repo_path: &str, patch: &str) -> Result<()> {
     let mut tmp = tempfile::Builder::new()
-        .prefix("gitnado_hunk_")
+        .prefix("gitduda_hunk_")
         .suffix(".patch")
         .tempfile()?;
     tmp.write_all(patch.as_bytes())?;
@@ -828,7 +828,7 @@ fn reverse_apply_to_worktree(repo_path: &str, patch: &str) -> Result<()> {
         .current_dir(repo_path)
         .output()?;
     if !output.status.success() {
-        return Err(crate::error::GitnadoError::OperationFailed(format!(
+        return Err(crate::error::GitdudaError::OperationFailed(format!(
             "Failed to revert hunk: {}",
             String::from_utf8_lossy(&output.stderr)
         )));
@@ -851,7 +851,7 @@ pub async fn discard_hunk_by_index(path: String, file_path: String, hunk_index: 
             .iter()
             .find(|h| h.index == hunk_index)
             .ok_or_else(|| {
-                crate::error::GitnadoError::OperationFailed(format!(
+                crate::error::GitdudaError::OperationFailed(format!(
                     "Hunk index {} not found for file {}",
                     hunk_index, file_path
                 ))
@@ -876,7 +876,7 @@ pub async fn unstage_hunk_by_index(path: String, file_path: String, hunk_index: 
             .iter()
             .find(|h| h.index == hunk_index)
             .ok_or_else(|| {
-                crate::error::GitnadoError::OperationFailed(format!(
+                crate::error::GitdudaError::OperationFailed(format!(
                     "Hunk index {} not found for file {}",
                     hunk_index, file_path
                 ))
@@ -921,7 +921,7 @@ pub async fn stage_lines(
         }
 
         if selected_hunks.is_empty() {
-            return Err(crate::error::GitnadoError::OperationFailed(
+            return Err(crate::error::GitdudaError::OperationFailed(
                 "No lines found in the specified range".to_string(),
             ));
         }
@@ -979,7 +979,7 @@ pub async fn stage_lines(
 
         // Apply the patch
         let temp_dir = std::env::temp_dir();
-        let patch_file = temp_dir.join(format!("gitnado_stage_lines_{}.patch", std::process::id()));
+        let patch_file = temp_dir.join(format!("gitduda_stage_lines_{}.patch", std::process::id()));
 
         let mut file = std::fs::File::create(&patch_file)?;
         file.write_all(patch.as_bytes())?;
@@ -996,7 +996,7 @@ pub async fn stage_lines(
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(crate::error::GitnadoError::OperationFailed(format!(
+            return Err(crate::error::GitdudaError::OperationFailed(format!(
                 "Failed to stage lines: {}",
                 stderr
             )));
@@ -1458,10 +1458,10 @@ mod tests {
 
         // Either Ok (file has no real changes, returned as empty diff via
         // fallback) or Err (the explicit "not found in diff" path). Must
-        // not panic or produce a non-Gitnado error.
+        // not panic or produce a non-Gitduda error.
         match result {
             Ok(_) => {}
-            Err(crate::error::GitnadoError::OperationFailed(msg)) => {
+            Err(crate::error::GitdudaError::OperationFailed(msg)) => {
                 assert!(
                     msg.contains("not found in diff"),
                     "Unexpected error message: {}",

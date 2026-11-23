@@ -222,7 +222,7 @@ describe('gn-diff-view', () => {
     // test from the shipped defaults.
     settingsStore.getState().setDiffIgnoreWhitespace('none');
     settingsStore.getState().setDiffContextLines(3);
-    localStorage.removeItem('gitnado-diff-word-wrap');
+    localStorage.removeItem('gitduda-diff-word-wrap');
   });
 
   describe('async diff context pinning', () => {
@@ -1967,7 +1967,7 @@ describe('gn-diff-view', () => {
       clickWordWrapButton(el);
       await el.updateComplete;
 
-      expect(localStorage.getItem('gitnado-diff-word-wrap')).to.be.null;
+      expect(localStorage.getItem('gitduda-diff-word-wrap')).to.be.null;
     });
 
     it('stops following the setting once removed', async () => {

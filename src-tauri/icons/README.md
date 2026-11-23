@@ -12,7 +12,7 @@ npm run test:contract    # rebuilds and checks the committed files match
 
 Do not run `tauri icon` over this directory: it resizes and nothing more,
 and the contract test will fail on every file it touches. The `android/` and
-`ios/` sets are the exception — Gitnado ships no mobile build, they are left
+`ios/` sets are the exception — Gitduda ships no mobile build, they are left
 as `tauri icon` made them, and the build does not touch them.
 
 ## What the build does that a plain resize does not
@@ -51,4 +51,4 @@ as `tauri icon` made them, and the build does not touch them.
 | `icon.ico`                                     | Windows: taskbar, Explorer, installer; entry 0 (32px) is the window and tray icon |
 | `Square*Logo.png`, `StoreLogo.png`             | Windows Store/MSIX tiles — no current bundle target reads them; kept current so nothing here carries the old art |
 | `site/assets/{favicon-64,icon-256,icon-512}`   | the website                                                         |
-| `src/assets/mascot/gitnado-400.png`            | the in-app welcome screen                                           |
+| `src/assets/mascot/gitduda-400.png`            | the in-app welcome screen                                           |

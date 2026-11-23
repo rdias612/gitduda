@@ -4,7 +4,7 @@
 //! Token storage is handled by the frontend credential service (OS keyring).
 //! All API functions accept an optional token parameter from the frontend.
 
-use crate::error::{GitnadoError, Result};
+use crate::error::{GitdudaError, Result};
 use crate::models::{ProviderRepository, ProviderRepositoryPage, ProviderUserStatus};
 use crate::services::provider_http;
 use serde::{Deserialize, Serialize};
@@ -17,7 +17,7 @@ const GITLAB_API_VERSION: &str = "v4";
 fn resolve_token(token: Option<String>) -> Result<String> {
     match token {
         Some(t) if !t.is_empty() => Ok(t),
-        _ => Err(GitnadoError::OperationFailed(
+        _ => Err(GitdudaError::OperationFailed(
             "GitLab token not configured".to_string(),
         )),
     }
@@ -44,7 +44,7 @@ async fn gitlab_get(url: &str, token: &str) -> Result<reqwest::Response> {
         .header("Authorization", format!("Bearer {}", token))
         .send()
         .await
-        .map_err(|e| GitnadoError::OperationFailed(format!("Request failed: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Request failed: {}", e)))?;
 
     // If Bearer auth fails with 401, try PRIVATE-TOKEN (for PATs)
     if response.status() == reqwest::StatusCode::UNAUTHORIZED {
@@ -53,7 +53,7 @@ async fn gitlab_get(url: &str, token: &str) -> Result<reqwest::Response> {
             .header("PRIVATE-TOKEN", token)
             .send()
             .await
-            .map_err(|e| GitnadoError::OperationFailed(format!("Request failed: {}", e)));
+            .map_err(|e| GitdudaError::OperationFailed(format!("Request failed: {}", e)));
     }
 
     Ok(response)
@@ -76,7 +76,7 @@ async fn gitlab_post<T: Serialize + ?Sized>(
         .json(body)
         .send()
         .await
-        .map_err(|e| GitnadoError::OperationFailed(format!("Request failed: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Request failed: {}", e)))?;
 
     // If Bearer auth fails with 401, try PRIVATE-TOKEN (for PATs)
     if response.status() == reqwest::StatusCode::UNAUTHORIZED {
@@ -87,7 +87,7 @@ async fn gitlab_post<T: Serialize + ?Sized>(
             .json(body)
             .send()
             .await
-            .map_err(|e| GitnadoError::OperationFailed(format!("Request failed: {}", e)));
+            .map_err(|e| GitdudaError::OperationFailed(format!("Request failed: {}", e)));
     }
 
     Ok(response)
@@ -284,7 +284,7 @@ pub async fn check_gitlab_connection(
         .header("Authorization", format!("Bearer {}", token))
         .send()
         .await
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to check connection: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to check connection: {}", e)))?;
 
     // If Bearer auth fails with 401, try PRIVATE-TOKEN (for PATs)
     let response = if response.status() == reqwest::StatusCode::UNAUTHORIZED {
@@ -295,7 +295,7 @@ pub async fn check_gitlab_connection(
             .send()
             .await
             .map_err(|e| {
-                GitnadoError::OperationFailed(format!("Failed to check connection: {}", e))
+                GitdudaError::OperationFailed(format!("Failed to check connection: {}", e))
             })?
     } else {
         response
@@ -321,7 +321,7 @@ pub async fn check_gitlab_connection(
     let api_user: ApiUser = response
         .json()
         .await
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to parse user data: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to parse user data: {}", e)))?;
 
     Ok(GitLabConnectionStatus {
         connected: true,
@@ -344,12 +344,12 @@ pub async fn detect_gitlab_repo(
 ) -> Result<Option<DetectedGitLabRepo>> {
     crate::utils::blocking_git(move || {
         let repo = git2::Repository::open(&path).map_err(|e| {
-            GitnadoError::OperationFailed(format!("Failed to open repository: {}", e))
+            GitdudaError::OperationFailed(format!("Failed to open repository: {}", e))
         })?;
 
         let remotes = repo
             .remotes()
-            .map_err(|e| GitnadoError::OperationFailed(format!("Failed to get remotes: {}", e)))?;
+            .map_err(|e| GitdudaError::OperationFailed(format!("Failed to get remotes: {}", e)))?;
 
         for candidate in remotes.iter().flatten().flatten() {
             if remote_name
@@ -453,7 +453,7 @@ pub async fn list_gitlab_merge_requests(
     if !response.status().is_success() {
         let status = response.status();
         let body = response.text().await.unwrap_or_default();
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "GitLab API error {}: {}",
             status, body
         )));
@@ -484,7 +484,7 @@ pub async fn list_gitlab_merge_requests(
     }
 
     let mrs: Vec<ApiMR> = response.json().await.map_err(|e| {
-        GitnadoError::OperationFailed(format!("Failed to parse merge requests: {}", e))
+        GitdudaError::OperationFailed(format!("Failed to parse merge requests: {}", e))
     })?;
 
     Ok(mrs
@@ -532,7 +532,7 @@ pub async fn get_gitlab_merge_request(
     if !response.status().is_success() {
         let status = response.status();
         let body = response.text().await.unwrap_or_default();
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "GitLab API error {}: {}",
             status, body
         )));
@@ -563,7 +563,7 @@ pub async fn get_gitlab_merge_request(
     }
 
     let mr: ApiMR = response.json().await.map_err(|e| {
-        GitnadoError::OperationFailed(format!("Failed to parse merge request: {}", e))
+        GitdudaError::OperationFailed(format!("Failed to parse merge request: {}", e))
     })?;
 
     Ok(GitLabMergeRequest {
@@ -629,7 +629,7 @@ pub async fn create_gitlab_merge_request(
     if !response.status().is_success() {
         let status = response.status();
         let body = response.text().await.unwrap_or_default();
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "GitLab API error {}: {}",
             status, body
         )));
@@ -660,7 +660,7 @@ pub async fn create_gitlab_merge_request(
     }
 
     let mr: ApiMR = response.json().await.map_err(|e| {
-        GitnadoError::OperationFailed(format!("Failed to parse merge request: {}", e))
+        GitdudaError::OperationFailed(format!("Failed to parse merge request: {}", e))
     })?;
 
     Ok(GitLabMergeRequest {
@@ -737,13 +737,13 @@ fn map_gitlab_note(note: GitLabNoteResponse) -> GitLabMrComment {
 
 fn parse_gitlab_mr_comments(json: &str) -> Result<Vec<GitLabMrComment>> {
     let notes: Vec<GitLabNoteResponse> = serde_json::from_str(json)
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to parse MR notes: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to parse MR notes: {}", e)))?;
     Ok(notes.into_iter().map(map_gitlab_note).collect())
 }
 
 fn parse_gitlab_mr_comment_item(json: &str) -> Result<GitLabMrComment> {
     let note: GitLabNoteResponse = serde_json::from_str(json)
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to parse MR note: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to parse MR note: {}", e)))?;
     Ok(map_gitlab_note(note))
 }
 
@@ -775,7 +775,7 @@ pub async fn get_gitlab_mr_comments(
     if !response.status().is_success() {
         let status = response.status();
         let body = response.text().await.unwrap_or_default();
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "GitLab API error {}: {}",
             status, body
         )));
@@ -784,7 +784,7 @@ pub async fn get_gitlab_mr_comments(
     let body = response
         .text()
         .await
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to read MR notes: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to read MR notes: {}", e)))?;
 
     parse_gitlab_mr_comments(&body)
 }
@@ -819,7 +819,7 @@ pub async fn add_gitlab_mr_comment(
     let resp_body = response
         .text()
         .await
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to read MR note: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to read MR note: {}", e)))?;
 
     parse_gitlab_mr_comment_item(&resp_body)
 }
@@ -857,7 +857,7 @@ pub async fn list_gitlab_issues(
     if !response.status().is_success() {
         let status = response.status();
         let body = response.text().await.unwrap_or_default();
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "GitLab API error {}: {}",
             status, body
         )));
@@ -888,7 +888,7 @@ pub async fn list_gitlab_issues(
     let issues: Vec<ApiIssue> = response
         .json()
         .await
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to parse issues: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to parse issues: {}", e)))?;
 
     Ok(issues
         .into_iter()
@@ -955,7 +955,7 @@ pub async fn create_gitlab_issue(
     if !response.status().is_success() {
         let status = response.status();
         let body = response.text().await.unwrap_or_default();
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "GitLab API error {}: {}",
             status, body
         )));
@@ -986,7 +986,7 @@ pub async fn create_gitlab_issue(
     let issue: ApiIssue = response
         .json()
         .await
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to parse issue: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to parse issue: {}", e)))?;
 
     Ok(GitLabIssue {
         iid: issue.iid,
@@ -1051,7 +1051,7 @@ pub async fn list_gitlab_pipelines(
     if !response.status().is_success() {
         let status = response.status();
         let body = response.text().await.unwrap_or_default();
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "GitLab API error {}: {}",
             status, body
         )));
@@ -1074,7 +1074,7 @@ pub async fn list_gitlab_pipelines(
     let pipelines: Vec<ApiPipeline> = response
         .json()
         .await
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to parse pipelines: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to parse pipelines: {}", e)))?;
 
     Ok(pipelines
         .into_iter()
@@ -1117,7 +1117,7 @@ pub async fn get_gitlab_labels(
         }
         let status = response.status();
         let body = response.text().await.unwrap_or_default();
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "GitLab API error {}: {}",
             status, body
         )));
@@ -1148,7 +1148,7 @@ const PROJECTS_DEFAULT_PER_PAGE: u32 = 30;
 /// A 401 means the account's stored token is dead — reported as
 /// `AUTH_REQUIRED` so the picker can offer "reconnect this account" instead of
 /// a raw API string. Anything else keeps the module's usual message shape.
-fn map_project_list_error(status: reqwest::StatusCode, body: &str) -> GitnadoError {
+fn map_project_list_error(status: reqwest::StatusCode, body: &str) -> GitdudaError {
     provider_http::map_repository_list_api_error("GitLab", status, body, false)
 }
 
@@ -1176,7 +1176,7 @@ fn parse_gitlab_project_page(
     page: u32,
 ) -> Result<ProviderRepositoryPage> {
     let entries: Vec<ApiProjectListEntry> = serde_json::from_str(body)
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to parse projects: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to parse projects: {}", e)))?;
 
     // A short page is the last one. GitLab reports totals in headers that
     // self-hosted instances may omit above 10k projects, so page length is the
@@ -1250,7 +1250,7 @@ pub async fn list_gitlab_projects(
     let body = response
         .text()
         .await
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to read projects: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to read projects: {}", e)))?;
 
     parse_gitlab_project_page(&body, per_page, page)
 }
@@ -1268,7 +1268,7 @@ struct ApiGitLabUserEntry {
 
 fn parse_gitlab_users_status(body: &str) -> Result<ProviderUserStatus> {
     let entries: Vec<ApiGitLabUserEntry> = serde_json::from_str(body)
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to parse users: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to parse users: {}", e)))?;
 
     if entries.is_empty() {
         return Ok(ProviderUserStatus {
@@ -1358,7 +1358,7 @@ pub async fn check_gitlab_user_exists(
         let body = response
             .text()
             .await
-            .map_err(|e| GitnadoError::OperationFailed(format!("Failed to read users: {}", e)))?;
+            .map_err(|e| GitdudaError::OperationFailed(format!("Failed to read users: {}", e)))?;
 
         let status = parse_gitlab_users_status(&body)?;
         if status.status == "active" {
@@ -1434,16 +1434,16 @@ pub async fn update_gitlab_merge_request(
     // Bearer first (OAuth), PRIVATE-TOKEN on 401 (PATs), as gitlab_post does.
     let mut response = send(("Authorization", format!("Bearer {}", token)))
         .await
-        .map_err(|e| GitnadoError::OperationFailed(format!("Request failed: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Request failed: {}", e)))?;
     if response.status() == reqwest::StatusCode::UNAUTHORIZED {
         response = send(("PRIVATE-TOKEN", token.clone()))
             .await
-            .map_err(|e| GitnadoError::OperationFailed(format!("Request failed: {}", e)))?;
+            .map_err(|e| GitdudaError::OperationFailed(format!("Request failed: {}", e)))?;
     }
     if !response.status().is_success() {
         let status = response.status();
         let body = response.text().await.unwrap_or_default();
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "GitLab API error {}: {}",
             status, body
         )));
@@ -1676,12 +1676,12 @@ mod tests {
     const PROJECT_PAGE_JSON: &str = r#"[
         {
             "id": 11,
-            "name": "Gitnado",
-            "path_with_namespace": "group/sub/gitnado",
+            "name": "Gitduda",
+            "path_with_namespace": "group/sub/gitduda",
             "description": "A git client",
             "visibility": "private",
-            "http_url_to_repo": "https://gitlab.com/group/sub/gitnado.git",
-            "web_url": "https://gitlab.com/group/sub/gitnado",
+            "http_url_to_repo": "https://gitlab.com/group/sub/gitduda.git",
+            "web_url": "https://gitlab.com/group/sub/gitduda",
             "default_branch": "main",
             "last_activity_at": "2024-05-01T10:00:00Z"
         },
@@ -1705,13 +1705,13 @@ mod tests {
         assert_eq!(page.repositories.len(), 2);
         let first = &page.repositories[0];
         assert_eq!(first.id, "11");
-        assert_eq!(first.name, "Gitnado");
+        assert_eq!(first.name, "Gitduda");
         // The namespace is everything before the last path segment, so a
         // subgroup is preserved rather than truncated to the top-level group.
         assert_eq!(first.owner, "group/sub");
-        assert_eq!(first.full_name, "group/sub/gitnado");
+        assert_eq!(first.full_name, "group/sub/gitduda");
         assert!(first.is_private);
-        assert_eq!(first.clone_url, "https://gitlab.com/group/sub/gitnado.git");
+        assert_eq!(first.clone_url, "https://gitlab.com/group/sub/gitduda.git");
         assert_eq!(first.default_branch.as_deref(), Some("main"));
         assert_eq!(
             first.last_pushed_at.as_deref(),
@@ -1772,10 +1772,10 @@ mod tests {
     #[test]
     fn test_map_project_list_error_auth() {
         let err = map_project_list_error(reqwest::StatusCode::UNAUTHORIZED, "401 Unauthorized");
-        assert!(matches!(err, GitnadoError::AuthenticationRequired));
+        assert!(matches!(err, GitdudaError::AuthenticationRequired));
 
         let other = map_project_list_error(reqwest::StatusCode::INTERNAL_SERVER_ERROR, "boom");
-        assert!(matches!(other, GitnadoError::OperationFailed(_)));
+        assert!(matches!(other, GitdudaError::OperationFailed(_)));
         assert!(other.to_string().contains("boom"));
     }
 
@@ -2094,7 +2094,7 @@ mod tests {
         )
         .await
         .expect_err("offline mode should block get_gitlab_mr_comments");
-        assert!(matches!(get_err, GitnadoError::NetworkBlocked(_)));
+        assert!(matches!(get_err, GitdudaError::NetworkBlocked(_)));
 
         let post_err = add_gitlab_mr_comment(
             "https://gitlab.com".to_string(),
@@ -2105,6 +2105,6 @@ mod tests {
         )
         .await
         .expect_err("offline mode should block add_gitlab_mr_comment");
-        assert!(matches!(post_err, GitnadoError::NetworkBlocked(_)));
+        assert!(matches!(post_err, GitdudaError::NetworkBlocked(_)));
     }
 }

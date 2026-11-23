@@ -174,13 +174,13 @@ async function setStagedFiles(el: GnCommitPanel, files: StatusEntry[]): Promise<
 describe('gn-commit-panel default commit message', () => {
   beforeEach(() => {
     invokeHistory.length = 0;
-    localStorage.removeItem('gitnado-commit-history');
+    localStorage.removeItem('gitduda-commit-history');
     setupDefaultMocks();
     setupStore();
   });
 
   afterEach(() => {
-    localStorage.removeItem('gitnado-commit-history');
+    localStorage.removeItem('gitduda-commit-history');
     repositoryStore.getState().reset();
   });
 
@@ -366,7 +366,7 @@ describe('gn-commit-panel default commit message', () => {
 
     it('does not overwrite history message when stagedFiles changes', async () => {
       localStorage.setItem(
-        'gitnado-commit-history',
+        'gitduda-commit-history',
         JSON.stringify(['Previous commit summary\n\nPrevious commit body'])
       );
 

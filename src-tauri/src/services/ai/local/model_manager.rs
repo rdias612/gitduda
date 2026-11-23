@@ -497,7 +497,7 @@ mod tests {
 
     #[test]
     fn test_list_downloaded_nonexistent_dir() {
-        let manager = ModelManager::new(PathBuf::from("/tmp/nonexistent_gitnado_test_dir"));
+        let manager = ModelManager::new(PathBuf::from("/tmp/nonexistent_gitduda_test_dir"));
         let models = manager.list_downloaded().unwrap();
         assert!(models.is_empty());
     }

@@ -116,7 +116,7 @@ function harness(overrides = {}) {
     get eventName() {
       return state.eventName;
     },
-    repo: { owner: 'hegsie', repo: 'Gitnado' },
+    repo: { owner: 'rdias612', repo: 'Gitduda' },
     payload: {
       workflow_run: { head_branch: 'dependabot/cargo/src-tauri/glob-0.3.4', head_sha: HEAD_SHA },
       repository: { default_branch: 'main' },
@@ -142,8 +142,8 @@ test('merges a compatible update by squash, pinned to the tested commit', async 
   assert.equal(result.merged, true);
   assert.deepEqual(h.calls.merged, [
     {
-      owner: 'hegsie',
-      repo: 'Gitnado',
+      owner: 'rdias612',
+      repo: 'Gitduda',
       pull_number: 318,
       merge_method: 'squash',
       sha: HEAD_SHA,
@@ -168,10 +168,10 @@ test('holds a breaking update, and says why exactly once', async () => {
 });
 
 test("refuses a pull request that is not Dependabot's", async () => {
-  h.state.pr.user.login = 'hegsie';
+  h.state.pr.user.login = 'rdias612';
 
   const result = only(await run(h));
-  assert.match(result.reason, /opened by hegsie/);
+  assert.match(result.reason, /opened by rdias612/);
   assert.equal(h.calls.merged.length, 0);
 });
 
@@ -353,7 +353,7 @@ test('the sweep considers every open Dependabot pull request', async () => {
 test('the sweep skips pull requests that are not Dependabot drafts of its own', async () => {
   h.state.eventName = 'schedule';
   h.state.openPullRequests = [
-    { number: 345, user: { login: 'hegsie' }, draft: false },
+    { number: 345, user: { login: 'rdias612' }, draft: false },
     { number: 346, user: { login: 'dependabot[bot]' }, draft: true },
   ];
 

@@ -6,8 +6,8 @@
 //! These tests call the actual Tauri commands to verify the full interface.
 
 use git2::{Repository, Signature, Time};
-use gitnado_lib::commands::commit::get_commit_history;
-use gitnado_lib::models::commit::Commit;
+use gitduda_lib::commands::commit::get_commit_history;
+use gitduda_lib::models::commit::Commit;
 use std::path::Path;
 use tempfile::TempDir;
 

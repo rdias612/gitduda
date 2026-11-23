@@ -6,7 +6,7 @@ use std::path::Path;
 use tauri::command;
 
 use super::path_utils::resolve_path_within_repo;
-use crate::error::{GitnadoError, Result};
+use crate::error::{GitdudaError, Result};
 
 /// Information about a file's encoding
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -197,19 +197,19 @@ pub async fn detect_file_encoding(
     let full_path = resolve_path_within_repo(Path::new(&path), &filePath)?;
 
     if !full_path.exists() {
-        return Err(GitnadoError::InvalidPath(
+        return Err(GitdudaError::InvalidPath(
             full_path.to_string_lossy().to_string(),
         ));
     }
 
     if full_path.is_dir() {
-        return Err(GitnadoError::OperationFailed(
+        return Err(GitdudaError::OperationFailed(
             "Cannot detect encoding of a directory".to_string(),
         ));
     }
 
     let data = fs::read(&full_path)
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to read file: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to read file: {}", e)))?;
 
     let is_binary = is_binary_data(&data);
     let has_bom = detect_bom(&data).is_some();
@@ -248,16 +248,16 @@ pub async fn convert_file_encoding(
     let full_path = resolve_path_within_repo(Path::new(&path), &filePath)?;
 
     if !full_path.exists() {
-        return Err(GitnadoError::InvalidPath(
+        return Err(GitdudaError::InvalidPath(
             full_path.to_string_lossy().to_string(),
         ));
     }
 
     let data = fs::read(&full_path)
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to read file: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to read file: {}", e)))?;
 
     if is_binary_data(&data) {
-        return Err(GitnadoError::OperationFailed(
+        return Err(GitdudaError::OperationFailed(
             "Cannot convert encoding of binary file".to_string(),
         ));
     }
@@ -323,7 +323,7 @@ pub async fn convert_file_encoding(
             (bytes, "UTF-16BE".to_string())
         }
         "utf-32" | "utf32" | "utf-32le" | "utf32le" | "utf-32be" | "utf32be" => {
-            return Err(GitnadoError::OperationFailed(
+            return Err(GitdudaError::OperationFailed(
                 "UTF-32 encoding is not supported. Please choose UTF-8, UTF-16LE, or UTF-16BE."
                     .to_string(),
             ));
@@ -331,7 +331,7 @@ pub async fn convert_file_encoding(
         _ => {
             let target_enc =
                 encoding_rs::Encoding::for_label(target_norm.as_bytes()).ok_or_else(|| {
-                    GitnadoError::OperationFailed(format!(
+                    GitdudaError::OperationFailed(format!(
                         "Unsupported target encoding: {}",
                         targetEncoding
                     ))
@@ -366,7 +366,7 @@ pub async fn convert_file_encoding(
 
     // Write the file
     fs::write(&full_path, &output).map_err(|e| {
-        GitnadoError::OperationFailed(format!("Failed to write converted file: {}", e))
+        GitdudaError::OperationFailed(format!("Failed to write converted file: {}", e))
     })?;
 
     Ok(ConvertEncodingResult {

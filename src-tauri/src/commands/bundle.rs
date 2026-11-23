@@ -5,7 +5,7 @@ use std::path::Path;
 use std::process::Stdio;
 use tauri::command;
 
-use crate::error::{GitnadoError, Result};
+use crate::error::{GitdudaError, Result};
 use crate::utils::{create_command, reject_flag_like};
 
 /// Reference in a bundle
@@ -45,7 +45,7 @@ pub async fn bundle_create(
     crate::utils::blocking_git(move || {
         let repo_path = Path::new(&path);
         if !repo_path.exists() {
-            return Err(GitnadoError::RepositoryNotFound(path));
+            return Err(GitdudaError::RepositoryNotFound(path));
         }
 
         reject_flag_like(&bundle_path, "Bundle path")?;
@@ -61,7 +61,7 @@ pub async fn bundle_create(
         cmd.current_dir(repo_path).arg("bundle").arg("create");
 
         if !all && refs.is_empty() {
-            return Err(GitnadoError::OperationFailed(
+            return Err(GitdudaError::OperationFailed(
                 "Either refs must be provided or 'all' must be true".to_string(),
             ));
         }
@@ -77,12 +77,12 @@ pub async fn bundle_create(
         }
 
         let output = cmd.output().map_err(|e| {
-            GitnadoError::OperationFailed(format!("Failed to execute git bundle create: {}", e))
+            GitdudaError::OperationFailed(format!("Failed to execute git bundle create: {}", e))
         })?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(GitnadoError::OperationFailed(format!(
+            return Err(GitdudaError::OperationFailed(format!(
                 "git bundle create failed: {}",
                 stderr
             )));
@@ -145,13 +145,13 @@ pub async fn bundle_verify(path: String, bundle_path: String) -> Result<BundleVe
     crate::utils::blocking_git(move || {
         let repo_path = Path::new(&path);
         if !repo_path.exists() {
-            return Err(GitnadoError::RepositoryNotFound(path));
+            return Err(GitdudaError::RepositoryNotFound(path));
         }
 
         reject_flag_like(&bundle_path, "Bundle path")?;
         let bundle_file = Path::new(&bundle_path);
         if !bundle_file.exists() {
-            return Err(GitnadoError::OperationFailed(format!(
+            return Err(GitdudaError::OperationFailed(format!(
                 "Bundle file not found: {}",
                 bundle_path
             )));
@@ -167,7 +167,7 @@ pub async fn bundle_verify(path: String, bundle_path: String) -> Result<BundleVe
             .arg(&bundle_path)
             .output()
             .map_err(|e| {
-                GitnadoError::OperationFailed(format!("Failed to execute git bundle verify: {}", e))
+                GitdudaError::OperationFailed(format!("Failed to execute git bundle verify: {}", e))
             })?;
 
         let stdout = String::from_utf8_lossy(&output.stdout);
@@ -256,7 +256,7 @@ fn bundle_list_heads_sync(bundle_path: &str) -> Result<Vec<BundleRef>> {
     reject_flag_like(bundle_path, "Bundle path")?;
     let bundle_file = Path::new(bundle_path);
     if !bundle_file.exists() {
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "Bundle file not found: {}",
             bundle_path
         )));
@@ -270,12 +270,12 @@ fn bundle_list_heads_sync(bundle_path: &str) -> Result<Vec<BundleRef>> {
         .arg(bundle_path)
         .output()
         .map_err(|e| {
-            GitnadoError::OperationFailed(format!("Failed to execute git bundle list-heads: {}", e))
+            GitdudaError::OperationFailed(format!("Failed to execute git bundle list-heads: {}", e))
         })?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "git bundle list-heads failed: {}",
             stderr
         )));
@@ -310,13 +310,13 @@ pub async fn bundle_unbundle(path: String, bundle_path: String) -> Result<Vec<Bu
     crate::utils::blocking_git(move || {
         let repo_path = Path::new(&path);
         if !repo_path.exists() {
-            return Err(GitnadoError::RepositoryNotFound(path));
+            return Err(GitdudaError::RepositoryNotFound(path));
         }
 
         reject_flag_like(&bundle_path, "Bundle path")?;
         let bundle_file = Path::new(&bundle_path);
         if !bundle_file.exists() {
-            return Err(GitnadoError::OperationFailed(format!(
+            return Err(GitdudaError::OperationFailed(format!(
                 "Bundle file not found: {}",
                 bundle_path
             )));
@@ -331,12 +331,12 @@ pub async fn bundle_unbundle(path: String, bundle_path: String) -> Result<Vec<Bu
             .arg(&bundle_path)
             .output()
             .map_err(|e| {
-                GitnadoError::OperationFailed(format!("Failed to verify bundle: {}", e))
+                GitdudaError::OperationFailed(format!("Failed to verify bundle: {}", e))
             })?;
 
         if !verify_output.status.success() {
             let stderr = String::from_utf8_lossy(&verify_output.stderr);
-            return Err(GitnadoError::OperationFailed(format!(
+            return Err(GitdudaError::OperationFailed(format!(
                 "Bundle verification failed: {}. The repository may be missing prerequisite commits.",
                 stderr
             )));
@@ -354,7 +354,7 @@ pub async fn bundle_unbundle(path: String, bundle_path: String) -> Result<Vec<Bu
             .stderr(Stdio::piped())
             .stdout(Stdio::piped())
             .output()
-            .map_err(|e| GitnadoError::OperationFailed(format!("Failed to unbundle: {}", e)))?;
+            .map_err(|e| GitdudaError::OperationFailed(format!("Failed to unbundle: {}", e)))?;
 
         // git fetch from bundle may fail with "*:*" on some versions, try alternative approach
         if !output.status.success() {
@@ -366,12 +366,12 @@ pub async fn bundle_unbundle(path: String, bundle_path: String) -> Result<Vec<Bu
                 .arg(&bundle_path)
                 .output()
                 .map_err(|e| {
-                    GitnadoError::OperationFailed(format!("Failed to list bundle heads: {}", e))
+                    GitdudaError::OperationFailed(format!("Failed to list bundle heads: {}", e))
                 })?;
 
             if !list_output.status.success() {
                 let stderr = String::from_utf8_lossy(&list_output.stderr);
-                return Err(GitnadoError::OperationFailed(format!(
+                return Err(GitdudaError::OperationFailed(format!(
                     "Failed to list bundle heads: {}",
                     stderr
                 )));
@@ -451,14 +451,14 @@ pub async fn bundle_unbundle(path: String, bundle_path: String) -> Result<Vec<Bu
                     })
                     .collect::<Vec<_>>()
                     .join("; ");
-                return Err(GitnadoError::OperationFailed(format!(
+                return Err(GitdudaError::OperationFailed(format!(
                     "Some refs from the bundle could not be updated: {}. This usually means the branch is currently checked out or the update was not a fast-forward.",
                     detail
                 )));
             }
 
             if fetched_refs.is_empty() {
-                return Err(GitnadoError::OperationFailed(
+                return Err(GitdudaError::OperationFailed(
                     "Failed to fetch any refs from bundle".to_string(),
                 ));
             }

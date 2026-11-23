@@ -65,7 +65,7 @@ export const workspaceStore = createStore<WorkspaceState>()(
       reset: () => set(defaultState),
     }),
     {
-      name: 'gitnado-workspaces',
+      name: 'gitduda-workspaces',
       version: 1,
       partialize: (state) => ({ activeWorkspaceId: state.activeWorkspaceId }),
     }

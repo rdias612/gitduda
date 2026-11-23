@@ -15,7 +15,7 @@
 //! and every interval thereafter, which is why the scheduled loop treats a
 //! refusal differently from a failure: see [`classify_tick`].
 
-use crate::error::{GitnadoError, Result};
+use crate::error::{GitdudaError, Result};
 use std::sync::Arc;
 use std::time::Duration;
 use tauri::Emitter;
@@ -135,7 +135,7 @@ fn gated_updater(app: &tauri::AppHandle) -> Result<tauri_plugin_updater::Updater
     guard_update_network(app)?;
     app.updater_builder().build().map_err(|e| {
         tracing::error!("Failed to build updater: {}", e);
-        GitnadoError::OperationFailed(format!("Failed to build updater: {}", e))
+        GitdudaError::OperationFailed(format!("Failed to build updater: {}", e))
     })
 }
 
@@ -171,7 +171,7 @@ pub(crate) enum TickReport {
 pub(crate) fn classify_tick(result: Result<()>) -> TickReport {
     match result {
         Ok(()) => TickReport::Silent,
-        Err(GitnadoError::NetworkBlocked(reason)) => TickReport::Skipped(reason),
+        Err(GitdudaError::NetworkBlocked(reason)) => TickReport::Skipped(reason),
         Err(e) => TickReport::Failed(e.to_string()),
     }
 }
@@ -258,7 +258,7 @@ impl UpdateService {
 
 /// Check for updates and install if available (fully automatic).
 ///
-/// Returns [`crate::error::GitnadoError`] rather than a `String` so a refusal
+/// Returns [`crate::error::GitdudaError`] rather than a `String` so a refusal
 /// from the network gate keeps its `NetworkBlocked` identity all the way to the
 /// frontend, where it reads as `BLOCKED` like every other refusal — and so the
 /// scheduled loop can tell a refusal apart from a failure.
@@ -357,7 +357,7 @@ async fn check_and_install_update(app: &tauri::AppHandle) -> Result<()> {
                 )
                 .await
                 .map_err(|e| {
-                    GitnadoError::OperationFailed(format!(
+                    GitdudaError::OperationFailed(format!(
                         "Failed to download/install update: {}",
                         e
                     ))
@@ -391,7 +391,7 @@ async fn check_and_install_update(app: &tauri::AppHandle) -> Result<()> {
                 "check_and_install_update: Update check failed with error: {}",
                 e
             );
-            Err(GitnadoError::OperationFailed(format!(
+            Err(GitdudaError::OperationFailed(format!(
                 "Update check failed: {}",
                 e
             )))
@@ -408,7 +408,7 @@ async fn check_and_install_update(app: &tauri::AppHandle) -> Result<()> {
 pub async fn check_for_update_manual(app: &tauri::AppHandle) -> Result<UpdateCheckEvent> {
     #[cfg(feature = "msix-store")]
     {
-        return Err(GitnadoError::OperationFailed(
+        return Err(GitdudaError::OperationFailed(
             "Updates are managed by Microsoft Store.".to_string(),
         ));
     }
@@ -439,7 +439,7 @@ pub async fn check_for_update_manual(app: &tauri::AppHandle) -> Result<UpdateChe
             latest_version: None,
             release_notes: None,
         }),
-        Err(e) => Err(GitnadoError::OperationFailed(format!(
+        Err(e) => Err(GitdudaError::OperationFailed(format!(
             "Update check failed: {}",
             e
         ))),
@@ -451,7 +451,7 @@ pub async fn check_for_update_manual(app: &tauri::AppHandle) -> Result<UpdateChe
 pub async fn install_update(app: &tauri::AppHandle) -> Result<()> {
     #[cfg(feature = "msix-store")]
     {
-        return Err(GitnadoError::OperationFailed(
+        return Err(GitdudaError::OperationFailed(
             "Updates are managed by Microsoft Store.".to_string(),
         ));
     }
@@ -624,19 +624,19 @@ mod tests {
     #[test]
     fn a_binary_url_the_manifest_names_has_to_pass_the_allowlist_too() {
         let _guard = test_support::allowlist(&["github.com"]);
-        guard_update_download("https://github.com/o/r/releases/download/v1/Gitnado.AppImage")
+        guard_update_download("https://github.com/o/r/releases/download/v1/Gitduda.AppImage")
             .expect("a binary served from the allowlisted host is permitted");
         // The manifest picks this URL, not `plugins.updater.endpoints`. A
         // `latest.json` on github.com naming a binary on cdn.example.net used
         // to pass the endpoint gate and then download and RUN that binary.
-        guard_update_download("https://cdn.example.net/Gitnado.AppImage")
+        guard_update_download("https://cdn.example.net/Gitduda.AppImage")
             .expect_err("a binary from an unlisted host must not be downloaded");
     }
 
     #[test]
     fn offline_mode_refuses_the_binary_download_too() {
         let _guard = test_support::offline();
-        guard_update_download("https://github.com/o/r/Gitnado.AppImage")
+        guard_update_download("https://github.com/o/r/Gitduda.AppImage")
             .expect_err("offline mode refuses the download, not just the check");
     }
 
@@ -646,7 +646,7 @@ mod tests {
         // toast, and the 24-hour timer kept alive.
         let _guard = test_support::allowlist(&["github.com"]);
         match classify_tick(guard_update_download(
-            "https://cdn.example.net/Gitnado.AppImage",
+            "https://cdn.example.net/Gitduda.AppImage",
         )) {
             TickReport::Skipped(reason) => assert!(reason.contains("allowlist")),
             other => panic!("a refused download must be Skipped, got {:?}", other),
@@ -716,14 +716,14 @@ mod tests {
         // `Skipped` is what keeps the 24-hour timer alive and the toast away:
         // the loop emits `update-error` only for `Failed`.
         assert_eq!(
-            classify_tick(Err(GitnadoError::NetworkBlocked("offline".to_string()))),
+            classify_tick(Err(GitdudaError::NetworkBlocked("offline".to_string()))),
             TickReport::Skipped("offline".to_string())
         );
     }
 
     #[test]
     fn a_real_failure_is_still_reported() {
-        match classify_tick(Err(GitnadoError::OperationFailed("boom".to_string()))) {
+        match classify_tick(Err(GitdudaError::OperationFailed("boom".to_string()))) {
             TickReport::Failed(message) => assert!(message.contains("boom")),
             other => panic!("a real failure must still reach the user, got {:?}", other),
         }

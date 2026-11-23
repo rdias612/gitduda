@@ -17,7 +17,7 @@ use serde::Serialize;
 use tauri::command;
 
 use crate::commands::ai::detect_secrets;
-use crate::error::{GitnadoError, Result};
+use crate::error::{GitdudaError, Result};
 use crate::services::ai::{AnalysisFinding, RiskLevel, Severity};
 use crate::utils::create_command;
 
@@ -43,7 +43,7 @@ fn git(repo: &str, args: &[&str]) -> Result<std::process::Output> {
         .arg(repo)
         .args(args)
         .output()
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to run git: {e}")))
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to run git: {e}")))
 }
 
 /// Only file headers and added lines, in a shape `detect_secrets` can attribute
@@ -78,12 +78,12 @@ fn risk_of(findings: &[AnalysisFinding]) -> RiskLevel {
 
 pub fn scan_outgoing_in(repo: &str, branch: &str) -> Result<OutgoingScan> {
     if branch.starts_with('-') {
-        return Err(GitnadoError::OperationFailed(
+        return Err(GitdudaError::OperationFailed(
             "Branch name must not start with '-'".into(),
         ));
     }
     if !Path::new(repo).exists() {
-        return Err(GitnadoError::RepositoryNotFound(repo.to_string()));
+        return Err(GitdudaError::RepositoryNotFound(repo.to_string()));
     }
     let refname = format!("refs/heads/{branch}");
 
@@ -92,7 +92,7 @@ pub fn scan_outgoing_in(repo: &str, branch: &str) -> Result<OutgoingScan> {
         &["rev-list", "--count", &refname, "--not", "--remotes"],
     )?;
     if !count.status.success() {
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "Could not list the commits to push: {}",
             String::from_utf8_lossy(&count.stderr).trim()
         )));
@@ -125,7 +125,7 @@ pub fn scan_outgoing_in(repo: &str, branch: &str) -> Result<OutgoingScan> {
         ],
     )?;
     if !log.status.success() {
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "Could not read the commits to push: {}",
             String::from_utf8_lossy(&log.stderr).trim()
         )));

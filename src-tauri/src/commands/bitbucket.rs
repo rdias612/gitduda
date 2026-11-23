@@ -4,7 +4,7 @@
 //! Credential storage is handled by the frontend credential service (OS keyring).
 //! All API functions accept optional credentials from the frontend.
 
-use crate::error::{GitnadoError, Result};
+use crate::error::{GitdudaError, Result};
 use crate::models::{ProviderRepository, ProviderRepositoryPage, ProviderUserStatus};
 use crate::services::provider_http;
 use serde::{Deserialize, Serialize};
@@ -204,7 +204,7 @@ fn get_auth_header_with_token(
     // Fall back to username/password
     match (username, app_password) {
         (Some(u), Some(p)) if !u.is_empty() && !p.is_empty() => Ok(get_auth_header(u, p)),
-        _ => Err(GitnadoError::OperationFailed(
+        _ => Err(GitdudaError::OperationFailed(
             "Bitbucket credentials not configured".to_string(),
         )),
     }
@@ -240,7 +240,7 @@ pub async fn check_bitbucket_connection(
         )
         .send()
         .await
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to check connection: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to check connection: {}", e)))?;
 
     if !response.status().is_success() {
         return Ok(BitbucketConnectionStatus {
@@ -270,7 +270,7 @@ pub async fn check_bitbucket_connection(
     let api_user: ApiUser = response
         .json()
         .await
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to parse user data: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to parse user data: {}", e)))?;
 
     Ok(BitbucketConnectionStatus {
         connected: true,
@@ -305,7 +305,7 @@ pub async fn check_bitbucket_connection_with_token(
         .header("Authorization", build_token_auth_header(&token))
         .send()
         .await
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to check connection: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to check connection: {}", e)))?;
 
     if !response.status().is_success() {
         return Ok(BitbucketConnectionStatus {
@@ -335,7 +335,7 @@ pub async fn check_bitbucket_connection_with_token(
     let api_user: ApiUser = response
         .json()
         .await
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to parse user data: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to parse user data: {}", e)))?;
 
     Ok(BitbucketConnectionStatus {
         connected: true,
@@ -353,12 +353,12 @@ pub async fn check_bitbucket_connection_with_token(
 pub async fn detect_bitbucket_repo(path: String) -> Result<Option<DetectedBitbucketRepo>> {
     crate::utils::blocking_git(move || {
         let repo = git2::Repository::open(&path).map_err(|e| {
-            GitnadoError::OperationFailed(format!("Failed to open repository: {}", e))
+            GitdudaError::OperationFailed(format!("Failed to open repository: {}", e))
         })?;
 
         let remotes = repo
             .remotes()
-            .map_err(|e| GitnadoError::OperationFailed(format!("Failed to get remotes: {}", e)))?;
+            .map_err(|e| GitdudaError::OperationFailed(format!("Failed to get remotes: {}", e)))?;
 
         for remote_name in remotes.iter().flatten().flatten() {
             if let Ok(remote) = repo.find_remote(remote_name) {
@@ -463,7 +463,7 @@ pub async fn list_bitbucket_pull_requests(
         .send()
         .await
         .map_err(|e| {
-            GitnadoError::OperationFailed(format!("Failed to fetch pull requests: {}", e))
+            GitdudaError::OperationFailed(format!("Failed to fetch pull requests: {}", e))
         })?;
 
     let response = provider_http::check_provider_response(response, "Bitbucket").await?;
@@ -520,7 +520,7 @@ pub async fn list_bitbucket_pull_requests(
     }
 
     let data: ApiResponse = response.json().await.map_err(|e| {
-        GitnadoError::OperationFailed(format!("Failed to parse pull requests: {}", e))
+        GitdudaError::OperationFailed(format!("Failed to parse pull requests: {}", e))
     })?;
 
     Ok(data
@@ -573,7 +573,7 @@ pub async fn get_bitbucket_pull_request(
         .send()
         .await
         .map_err(|e| {
-            GitnadoError::OperationFailed(format!("Failed to fetch pull request: {}", e))
+            GitdudaError::OperationFailed(format!("Failed to fetch pull request: {}", e))
         })?;
     let response = provider_http::check_provider_response(response, "Bitbucket").await?;
 
@@ -624,7 +624,7 @@ pub async fn get_bitbucket_pull_request(
     }
 
     let pr: ApiPullRequest = response.json().await.map_err(|e| {
-        GitnadoError::OperationFailed(format!("Failed to parse pull request: {}", e))
+        GitdudaError::OperationFailed(format!("Failed to parse pull request: {}", e))
     })?;
 
     Ok(BitbucketPullRequest {
@@ -740,7 +740,7 @@ fn map_bitbucket_comment(item: BitbucketCommentItem) -> BitbucketPrComment {
 
 fn parse_bitbucket_pr_comments(json: &str) -> Result<Vec<BitbucketPrComment>> {
     let list: BitbucketCommentsListResponse = serde_json::from_str(json).map_err(|e| {
-        GitnadoError::OperationFailed(format!("Failed to parse Bitbucket PR comments: {}", e))
+        GitdudaError::OperationFailed(format!("Failed to parse Bitbucket PR comments: {}", e))
     })?;
     Ok(list
         .values
@@ -752,7 +752,7 @@ fn parse_bitbucket_pr_comments(json: &str) -> Result<Vec<BitbucketPrComment>> {
 
 fn parse_bitbucket_pr_comment_item(json: &str) -> Result<BitbucketPrComment> {
     let item: BitbucketCommentItem = serde_json::from_str(json).map_err(|e| {
-        GitnadoError::OperationFailed(format!("Failed to parse Bitbucket PR comment: {}", e))
+        GitdudaError::OperationFailed(format!("Failed to parse Bitbucket PR comment: {}", e))
     })?;
     Ok(map_bitbucket_comment(item))
 }
@@ -804,20 +804,20 @@ pub async fn get_bitbucket_pr_comments(
         .send()
         .await
         .map_err(|e| {
-            GitnadoError::OperationFailed(format!("Failed to fetch Bitbucket PR comments: {}", e))
+            GitdudaError::OperationFailed(format!("Failed to fetch Bitbucket PR comments: {}", e))
         })?;
 
     if !response.status().is_success() {
         let status = response.status();
         let body = response.text().await.unwrap_or_default();
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "Failed to fetch Bitbucket PR comments ({}): {}",
             status, body
         )));
     }
 
     let body = response.text().await.map_err(|e| {
-        GitnadoError::OperationFailed(format!("Failed to read Bitbucket PR comments: {}", e))
+        GitdudaError::OperationFailed(format!("Failed to read Bitbucket PR comments: {}", e))
     })?;
 
     parse_bitbucket_pr_comments(&body)
@@ -852,20 +852,20 @@ pub async fn add_bitbucket_pr_comment(
         .send()
         .await
         .map_err(|e| {
-            GitnadoError::OperationFailed(format!("Failed to post Bitbucket PR comment: {}", e))
+            GitdudaError::OperationFailed(format!("Failed to post Bitbucket PR comment: {}", e))
         })?;
 
     if !response.status().is_success() {
         let status = response.status();
         let body = response.text().await.unwrap_or_default();
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "Failed to post Bitbucket PR comment ({}): {}",
             status, body
         )));
     }
 
     let body = response.text().await.map_err(|e| {
-        GitnadoError::OperationFailed(format!(
+        GitdudaError::OperationFailed(format!(
             "Failed to read Bitbucket PR comment response: {}",
             e
         ))
@@ -941,7 +941,7 @@ pub async fn create_bitbucket_pull_request(
         .send()
         .await
         .map_err(|e| {
-            GitnadoError::OperationFailed(format!("Failed to create pull request: {}", e))
+            GitdudaError::OperationFailed(format!("Failed to create pull request: {}", e))
         })?;
     let response = provider_http::check_provider_response(response, "Bitbucket").await?;
 
@@ -992,7 +992,7 @@ pub async fn create_bitbucket_pull_request(
     }
 
     let pr: ApiPullRequest = response.json().await.map_err(|e| {
-        GitnadoError::OperationFailed(format!("Failed to parse pull request: {}", e))
+        GitdudaError::OperationFailed(format!("Failed to parse pull request: {}", e))
     })?;
 
     Ok(BitbucketPullRequest {
@@ -1052,7 +1052,7 @@ pub async fn list_bitbucket_issues(
         .header("Authorization", auth_header)
         .send()
         .await
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to fetch issues: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to fetch issues: {}", e)))?;
 
     if !response.status().is_success() {
         // A 404 means the issue tracker is not enabled for this repo — treat as empty.
@@ -1063,7 +1063,7 @@ pub async fn list_bitbucket_issues(
         }
         let status = response.status();
         let body = response.text().await.unwrap_or_default();
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "Bitbucket API error {}: {}",
             status, body
         )));
@@ -1180,7 +1180,7 @@ pub async fn create_bitbucket_issue(
         .json(&body)
         .send()
         .await
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to create issue: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to create issue: {}", e)))?;
     let response = provider_http::check_provider_response(response, "Bitbucket").await?;
 
     #[derive(Deserialize)]
@@ -1228,7 +1228,7 @@ pub async fn create_bitbucket_issue(
     let issue: ApiIssue = response
         .json()
         .await
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to parse issue: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to parse issue: {}", e)))?;
 
     Ok(BitbucketIssue {
         id: issue.id,
@@ -1321,7 +1321,7 @@ pub async fn list_bitbucket_pipelines(
         .header("Authorization", auth_header)
         .send()
         .await
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to fetch pipelines: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to fetch pipelines: {}", e)))?;
 
     if !response.status().is_success() {
         // A 404 means Pipelines is not enabled for this repo — treat as empty.
@@ -1332,7 +1332,7 @@ pub async fn list_bitbucket_pipelines(
         }
         let status = response.status();
         let body = response.text().await.unwrap_or_default();
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "Bitbucket API error {}: {}",
             status, body
         )));
@@ -1421,7 +1421,7 @@ const REPOSITORIES_DEFAULT_PAGELEN: u32 = 30;
 /// A 401 means the account's stored credential is dead — reported as
 /// `AUTH_REQUIRED` so the picker can offer "reconnect this account" instead of
 /// a raw API string. Anything else keeps the module's usual message shape.
-fn map_repository_list_error(status: reqwest::StatusCode, body: &str) -> GitnadoError {
+fn map_repository_list_error(status: reqwest::StatusCode, body: &str) -> GitdudaError {
     provider_http::map_repository_list_api_error("Bitbucket", status, body, false)
 }
 
@@ -1478,7 +1478,7 @@ struct ApiLinkHref {
 /// arithmetic are testable without a network.
 fn parse_bitbucket_repository_page(body: &str, page: u32) -> Result<ProviderRepositoryPage> {
     let data: ApiRepoListResponse = serde_json::from_str(body).map_err(|e| {
-        GitnadoError::OperationFailed(format!("Failed to parse repositories: {}", e))
+        GitdudaError::OperationFailed(format!("Failed to parse repositories: {}", e))
     })?;
 
     // Bitbucket states the next page itself, so page length is not consulted.
@@ -1573,7 +1573,7 @@ pub async fn list_bitbucket_repositories(
         .send()
         .await
         .map_err(|e| {
-            GitnadoError::OperationFailed(format!("Failed to fetch repositories: {}", e))
+            GitdudaError::OperationFailed(format!("Failed to fetch repositories: {}", e))
         })?;
 
     if !response.status().is_success() {
@@ -1583,7 +1583,7 @@ pub async fn list_bitbucket_repositories(
     }
 
     let body = response.text().await.map_err(|e| {
-        GitnadoError::OperationFailed(format!("Failed to read repositories: {}", e))
+        GitdudaError::OperationFailed(format!("Failed to read repositories: {}", e))
     })?;
 
     parse_bitbucket_repository_page(&body, page)
@@ -1617,7 +1617,7 @@ fn parse_bitbucket_members_status(
     author_email: Option<&str>,
 ) -> Result<ProviderUserStatus> {
     let data: ApiBitbucketMembersResponse = serde_json::from_str(body)
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to parse members: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to parse members: {}", e)))?;
 
     let target_name = author_name.map(str::trim).filter(|s| !s.is_empty());
     let email_local = author_email
@@ -1717,7 +1717,7 @@ pub async fn check_bitbucket_user_exists(
         .send()
         .await
         .map_err(|e| {
-            GitnadoError::OperationFailed(format!("Failed to check Bitbucket members: {}", e))
+            GitdudaError::OperationFailed(format!("Failed to check Bitbucket members: {}", e))
         })?;
 
     if !response.status().is_success() {
@@ -1728,7 +1728,7 @@ pub async fn check_bitbucket_user_exists(
     }
 
     let body = response.text().await.map_err(|e| {
-        GitnadoError::OperationFailed(format!("Failed to read Bitbucket members: {}", e))
+        GitdudaError::OperationFailed(format!("Failed to read Bitbucket members: {}", e))
     })?;
 
     parse_bitbucket_members_status(&body, name_clean, email_clean)
@@ -1788,7 +1788,7 @@ pub async fn update_bitbucket_pull_request(
         .send()
         .await
         .map_err(|e| {
-            GitnadoError::OperationFailed(format!("Failed to update pull request: {}", e))
+            GitdudaError::OperationFailed(format!("Failed to update pull request: {}", e))
         })?;
     provider_http::check_provider_response(response, "Bitbucket").await?;
     Ok(())
@@ -1836,8 +1836,8 @@ mod tests {
         "values": [
             {
                 "uuid": "{abc}",
-                "name": "gitnado",
-                "full_name": "team/gitnado",
+                "name": "gitduda",
+                "full_name": "team/gitduda",
                 "description": "A git client",
                 "is_private": true,
                 "updated_on": "2024-05-01T10:00:00Z",
@@ -1845,10 +1845,10 @@ mod tests {
                 "workspace": { "slug": "team" },
                 "links": {
                     "clone": [
-                        { "name": "https", "href": "https://bitbucket.org/team/gitnado.git" },
-                        { "name": "ssh", "href": "git@bitbucket.org:team/gitnado.git" }
+                        { "name": "https", "href": "https://bitbucket.org/team/gitduda.git" },
+                        { "name": "ssh", "href": "git@bitbucket.org:team/gitduda.git" }
                     ],
-                    "html": { "href": "https://bitbucket.org/team/gitnado" }
+                    "html": { "href": "https://bitbucket.org/team/gitduda" }
                 }
             }
         ],
@@ -1862,12 +1862,12 @@ mod tests {
         assert_eq!(page.repositories.len(), 1);
         let repo = &page.repositories[0];
         assert_eq!(repo.id, "{abc}");
-        assert_eq!(repo.name, "gitnado");
+        assert_eq!(repo.name, "gitduda");
         assert_eq!(repo.owner, "team");
-        assert_eq!(repo.full_name, "team/gitnado");
+        assert_eq!(repo.full_name, "team/gitduda");
         assert!(repo.is_private);
         // The HTTPS clone link is the one the clone dialog can authenticate.
-        assert_eq!(repo.clone_url, "https://bitbucket.org/team/gitnado.git");
+        assert_eq!(repo.clone_url, "https://bitbucket.org/team/gitduda.git");
         assert_eq!(repo.default_branch.as_deref(), Some("main"));
         assert_eq!(repo.last_pushed_at.as_deref(), Some("2024-05-01T10:00:00Z"));
         // Bitbucket states the next page itself.
@@ -1906,10 +1906,10 @@ mod tests {
     #[test]
     fn test_map_repository_list_error_auth() {
         let err = map_repository_list_error(reqwest::StatusCode::UNAUTHORIZED, "unauthorized");
-        assert!(matches!(err, GitnadoError::AuthenticationRequired));
+        assert!(matches!(err, GitdudaError::AuthenticationRequired));
 
         let other = map_repository_list_error(reqwest::StatusCode::NOT_FOUND, "no such workspace");
-        assert!(matches!(other, GitnadoError::OperationFailed(_)));
+        assert!(matches!(other, GitdudaError::OperationFailed(_)));
         assert!(other.to_string().contains("no such workspace"));
     }
 
@@ -2603,7 +2603,7 @@ mod tests {
         )
         .await
         .expect_err("offline mode should block get_bitbucket_pr_comments");
-        assert!(matches!(get_err, GitnadoError::NetworkBlocked(_)));
+        assert!(matches!(get_err, GitdudaError::NetworkBlocked(_)));
 
         let post_err = add_bitbucket_pr_comment(
             "my-workspace".to_string(),
@@ -2616,6 +2616,6 @@ mod tests {
         )
         .await
         .expect_err("offline mode should block add_bitbucket_pr_comment");
-        assert!(matches!(post_err, GitnadoError::NetworkBlocked(_)));
+        assert!(matches!(post_err, GitdudaError::NetworkBlocked(_)));
     }
 }

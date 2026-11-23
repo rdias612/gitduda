@@ -8,7 +8,7 @@ use std::fs;
 use std::path::Path;
 use tauri::command;
 
-use crate::error::{GitnadoError, Result};
+use crate::error::{GitdudaError, Result};
 use crate::utils::{apply_token_credential_helper, create_command};
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -220,7 +220,7 @@ pub async fn prune_remote_tracking_branches(
 
     // Verify the repository exists
     if !repo_path.join(".git").exists() && !repo_path.join("HEAD").exists() {
-        return Err(GitnadoError::RepositoryNotFound(path));
+        return Err(GitdudaError::RepositoryNotFound(path));
     }
 
     // Every remote in the gesture is checked before any of them is contacted,
@@ -238,7 +238,7 @@ pub async fn prune_remote_tracking_branches(
         // First, do a dry-run to see what would be pruned
         let dry_run_output = prune_command(&path, &remote_name, remote_url.as_deref(), token, true)
             .output()
-            .map_err(|e| GitnadoError::OperationFailed(format!("Failed to prune remote: {}", e)))?;
+            .map_err(|e| GitdudaError::OperationFailed(format!("Failed to prune remote: {}", e)))?;
 
         // Parse dry-run output to get branch names
         let dry_run_text = String::from_utf8_lossy(&dry_run_output.stdout);
@@ -264,11 +264,11 @@ pub async fn prune_remote_tracking_branches(
         // Actually perform the prune
         let output = prune_command(&path, &remote_name, remote_url.as_deref(), token, false)
             .output()
-            .map_err(|e| GitnadoError::OperationFailed(format!("Failed to prune remote: {}", e)))?;
+            .map_err(|e| GitdudaError::OperationFailed(format!("Failed to prune remote: {}", e)))?;
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(GitnadoError::OperationFailed(format!(
+            return Err(GitdudaError::OperationFailed(format!(
                 "Failed to prune remote {}: {}",
                 remote_name,
                 stderr.trim()
@@ -291,7 +291,7 @@ pub async fn get_repo_size_info(path: String) -> Result<RepoSizeInfo> {
 
     // Verify the repository exists
     if !repo_path.join(".git").exists() && !repo_path.join("HEAD").exists() {
-        return Err(GitnadoError::RepositoryNotFound(path));
+        return Err(GitdudaError::RepositoryNotFound(path));
     }
 
     let git_dir = if repo_path.join(".git").exists() {
@@ -338,7 +338,7 @@ pub async fn run_gc(
     let repo_path = Path::new(&path);
 
     if !repo_path.exists() {
-        return Err(GitnadoError::RepositoryNotFound(path));
+        return Err(GitdudaError::RepositoryNotFound(path));
     }
 
     // Verify it's a git repository
@@ -368,7 +368,7 @@ pub async fn run_gc(
     // Run the command
     let output = cmd
         .output()
-        .map_err(|e| GitnadoError::Custom(format!("Failed to run git gc: {}", e)))?;
+        .map_err(|e| GitdudaError::Custom(format!("Failed to run git gc: {}", e)))?;
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
@@ -385,7 +385,7 @@ pub async fn run_gc(
             message,
         })
     } else {
-        Err(GitnadoError::Custom(format!(
+        Err(GitdudaError::Custom(format!(
             "Garbage collection failed: {}",
             stderr
         )))
@@ -400,7 +400,7 @@ pub async fn run_fsck(path: String, full: Option<bool>) -> Result<MaintenanceRes
     let repo_path = Path::new(&path);
 
     if !repo_path.exists() {
-        return Err(GitnadoError::RepositoryNotFound(path));
+        return Err(GitdudaError::RepositoryNotFound(path));
     }
 
     // Verify it's a git repository
@@ -418,7 +418,7 @@ pub async fn run_fsck(path: String, full: Option<bool>) -> Result<MaintenanceRes
     // Run the command
     let output = cmd
         .output()
-        .map_err(|e| GitnadoError::Custom(format!("Failed to run git fsck: {}", e)))?;
+        .map_err(|e| GitdudaError::Custom(format!("Failed to run git fsck: {}", e)))?;
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
@@ -438,7 +438,7 @@ pub async fn run_fsck(path: String, full: Option<bool>) -> Result<MaintenanceRes
             message,
         })
     } else {
-        Err(GitnadoError::Custom(format!(
+        Err(GitdudaError::Custom(format!(
             "Repository check failed: {}",
             combined_output
         )))
@@ -451,7 +451,7 @@ pub async fn run_prune(path: String, dry_run: Option<bool>) -> Result<Maintenanc
     let repo_path = Path::new(&path);
 
     if !repo_path.exists() {
-        return Err(GitnadoError::RepositoryNotFound(path));
+        return Err(GitdudaError::RepositoryNotFound(path));
     }
 
     // Verify it's a git repository
@@ -469,7 +469,7 @@ pub async fn run_prune(path: String, dry_run: Option<bool>) -> Result<Maintenanc
     // Run the command
     let output = cmd
         .output()
-        .map_err(|e| GitnadoError::Custom(format!("Failed to run git prune: {}", e)))?;
+        .map_err(|e| GitdudaError::Custom(format!("Failed to run git prune: {}", e)))?;
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
@@ -486,7 +486,7 @@ pub async fn run_prune(path: String, dry_run: Option<bool>) -> Result<Maintenanc
             message,
         })
     } else {
-        Err(GitnadoError::Custom(format!("Prune failed: {}", stderr)))
+        Err(GitdudaError::Custom(format!("Prune failed: {}", stderr)))
     }
 }
 
@@ -496,7 +496,7 @@ pub async fn get_repository_stats(path: String) -> Result<RepositoryStats> {
     let repo_path = Path::new(&path);
 
     if !repo_path.exists() {
-        return Err(GitnadoError::RepositoryNotFound(path));
+        return Err(GitdudaError::RepositoryNotFound(path));
     }
 
     // Verify it's a git repository
@@ -583,7 +583,7 @@ pub async fn get_pack_info(path: String) -> Result<PackInfo> {
     let repo_path = Path::new(&path);
 
     if !repo_path.exists() {
-        return Err(GitnadoError::RepositoryNotFound(path));
+        return Err(GitdudaError::RepositoryNotFound(path));
     }
 
     // Open the repository

@@ -1,19 +1,19 @@
-# Gitnado
+# Gitduda
 
-[![Build & Release](https://github.com/hegsie/gitnado/actions/workflows/build.yml/badge.svg)](https://github.com/hegsie/gitnado/actions/workflows/build.yml)
-[![CI](https://github.com/hegsie/gitnado/actions/workflows/ci.yml/badge.svg)](https://github.com/hegsie/gitnado/actions/workflows/ci.yml)
+[![Build & Release](https://github.com/rdias612/gitdudaactions/workflows/build.yml/badge.svg)](https://github.com/rdias612/gitdudaactions/workflows/build.yml)
+[![CI](https://github.com/rdias612/gitdudaactions/workflows/ci.yml/badge.svg)](https://github.com/rdias612/gitdudaactions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![GitHub release](https://img.shields.io/github/v/release/hegsie/gitnado)](https://github.com/hegsie/gitnado/releases)
-[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey)](https://github.com/hegsie/gitnado/releases)
+[![GitHub release](https://img.shields.io/github/v/release/rdias612/gitduda)](https://github.com/rdias612/gitdudareleases)
+[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey)](https://github.com/rdias612/gitdudareleases)
 
-A modern, cross-platform Git GUI client built with Tauri, Lit, and Rust. **Website: [gitnado.dev](https://gitnado.dev)**
+A modern, cross-platform Git GUI client built with Tauri, Lit, and Rust. **Website: [gitduda.dev](https://gitduda.dev)**
 
-Gitnado aims to be a fast, privacy-first alternative to existing Git clients like GitHub Desktop, GitKraken, and Sourcetree. It runs entirely offline with no telemetry, account requirements, or cloud dependencies.
+Gitduda aims to be a fast, privacy-first alternative to existing Git clients like GitHub Desktop, GitKraken, and Sourcetree. It runs entirely offline with no telemetry, account requirements, or cloud dependencies.
 
 ## Table of Contents
 
 - [Screenshots](#screenshots)
-- [Why Gitnado?](#why-gitnado)
+- [Why Gitduda?](#why-gitduda)
 - [Features](#features)
 - [System Requirements](#system-requirements)
 - [Installation](#installation)
@@ -29,9 +29,9 @@ Gitnado aims to be a fast, privacy-first alternative to existing Git clients lik
 - [License](#license)
 - [Acknowledgments](#acknowledgments)
 
-## Why Gitnado?
+## Why Gitduda?
 
-Gitnado is built for developers who value **privacy, performance, and control**:
+Gitduda is built for developers who value **privacy, performance, and control**:
 
 - **🔒 Privacy-First**: No telemetry, no analytics, no cloud dependencies. Your code and workflow stay on your machine. The only third-party lookup is the opt-in "Show Avatars" setting, which sends an MD5 hash of each commit author's email address to gravatar.com; it is off by default and is blocked by Offline Mode and by the remote allowlist.
 - **⚡ Performance**: Built with Rust and native Git libraries for blazing-fast operations, even with large repositories (100k+ commits).
@@ -43,7 +43,7 @@ Gitnado is built for developers who value **privacy, performance, and control**:
 
 ### How is it Different?
 
-| Feature | Gitnado | GitHub Desktop | GitKraken | Sourcetree |
+| Feature | Gitduda | GitHub Desktop | GitKraken | Sourcetree |
 |---------|-----------|----------------|-----------|------------|
 | Privacy (no telemetry) | ✅ | ❌ | ❌ | ❌ |
 | No account required | ✅ | ✅ | ❌ (free tier limit) | ❌ |
@@ -227,18 +227,18 @@ Gitnado is built for developers who value **privacy, performance, and control**:
 
 ### Download
 
-Pre-built binaries are available from the [Releases](https://github.com/hegsie/gitnado/releases) page:
+Pre-built binaries are available from the [Releases](https://github.com/rdias612/gitdudareleases) page:
 
 | Platform | Download |
 |----------|----------|
 | macOS (Apple Silicon) | `.dmg` |
 | Windows | `.msi` or `.exe` |
 | Linux | `.deb` or `.AppImage` |
-| Arch Linux | [AUR](https://aur.archlinux.org/packages/gitnado-bin) (community) |
+| Arch Linux | [AUR](https://aur.archlinux.org/packages/gitduda-bin) (community) |
 
 On Linux, saved credentials use keyutils backed by Secret Service. A running and
 unlocked Secret Service provider, such as GNOME Keyring or KWallet, is required
-to save and retrieve credentials; Gitnado reports an error if one is unavailable.
+to save and retrieve credentials; Gitduda reports an error if one is unavailable.
 
 ### Package Managers
 
@@ -248,36 +248,36 @@ New releases are published to package managers automatically (see
 #### Windows (winget)
 
 ```powershell
-winget install hegsie.Gitnado
+winget install rdias612.Gitduda
 ```
 
 #### Windows (Scoop)
 
 ```powershell
-scoop install https://raw.githubusercontent.com/hegsie/gitnado/main/packaging/scoop/gitnado.json
+scoop install https://raw.githubusercontent.com/rdias612/gitduda/main/packaging/scoop/gitduda.json
 ```
 
 #### macOS (Homebrew, Apple Silicon)
 
 ```bash
-brew install --cask hegsie/gitnado/gitnado
+brew install --cask rdias612/gitduda/gitduda
 ```
 
 ### Arch Linux (AUR)
 
-A community package is available on the AUR as [`gitnado-bin`](https://aur.archlinux.org/packages/gitnado-bin), repackaged from the official `.deb` release:
+A community package is available on the AUR as [`gitduda-bin`](https://aur.archlinux.org/packages/gitduda-bin), repackaged from the official `.deb` release:
 
 ```bash
 # Using an AUR helper
-yay -S gitnado-bin
+yay -S gitduda-bin
 
 # Or manually
-git clone https://aur.archlinux.org/gitnado-bin.git
-cd gitnado-bin
+git clone https://aur.archlinux.org/gitduda-bin.git
+cd gitduda-bin
 makepkg -si
 ```
 
-This package is community-maintained and is not an official Gitnado release channel.
+This package is community-maintained and is not an official Gitduda release channel.
 
 ### Build from Source
 
@@ -315,8 +315,8 @@ Install [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cp
 
 ```bash
 # Clone the repository
-git clone https://github.com/hegsie/gitnado.git
-cd Gitnado
+git clone https://github.com/rdias612/gitduda.git
+cd Gitduda
 
 # Install dependencies
 npm install
@@ -334,7 +334,7 @@ Production builds are output to `src-tauri/target/release/bundle/`.
 
 ### First Time Setup
 
-1. **Download and Install**: Get the latest release for your platform from the [Releases](https://github.com/hegsie/gitnado/releases) page.
+1. **Download and Install**: Get the latest release for your platform from the [Releases](https://github.com/rdias612/gitdudareleases) page.
 
 2. **Open a Repository**: 
    - Click **"Open Repository"** or press `Cmd/Ctrl+O`
@@ -410,7 +410,7 @@ Press `Cmd/Ctrl+P` to open the command palette and quickly access any feature wi
 ### Project Structure
 
 ```
-gitnado/
+gitduda/
 ├── src/                    # Frontend (TypeScript/Lit)
 │   ├── components/         # UI components
 │   │   ├── common/         # Shared components
@@ -441,7 +441,7 @@ gitnado/
 
 ### Architecture
 
-Gitnado uses a **multi-process architecture** powered by Tauri:
+Gitduda uses a **multi-process architecture** powered by Tauri:
 
 - **Frontend Process**: Web-based UI built with Lit web components, running in a WebView
 - **Backend Process**: Rust application handling Git operations via libgit2 and system Git
@@ -543,7 +543,7 @@ it, or add a locale.
 
 ## Testing
 
-Gitnado has a comprehensive testing strategy covering unit tests, integration tests, and end-to-end tests.
+Gitduda has a comprehensive testing strategy covering unit tests, integration tests, and end-to-end tests.
 
 ### Running Tests
 
@@ -621,24 +621,24 @@ See [ROADMAP.md](ROADMAP.md) for planned features including:
 
 ### AI Commit Message Generation
 
-Gitnado supports multiple AI providers for commit message generation. By default, it uses an embedded LLM that runs locally on your machine. On first use, it downloads a ~2GB model file. You can also configure local providers (Ollama, LM Studio) or cloud providers (OpenAI, Anthropic, GitHub Copilot) in Settings > AI Providers.
+Gitduda supports multiple AI providers for commit message generation. By default, it uses an embedded LLM that runs locally on your machine. On first use, it downloads a ~2GB model file. You can also configure local providers (Ollama, LM Studio) or cloud providers (OpenAI, Anthropic, GitHub Copilot) in Settings > AI Providers.
 
 **macOS GPU Issues**: If the app crashes when generating commit messages, you may need to adjust GPU settings:
 
 ```bash
 # Run with CPU-only inference (slower but stable)
-GITNADO_GPU_LAYERS=0 /Applications/Gitnado.app/Contents/MacOS/Gitnado
+GITNADO_GPU_LAYERS=0 /Applications/Gitduda.app/Contents/MacOS/Gitduda
 
 # Or reduce GPU layers (try 16, 8, etc.)
-GITNADO_GPU_LAYERS=16 /Applications/Gitnado.app/Contents/MacOS/Gitnado
+GITNADO_GPU_LAYERS=16 /Applications/Gitduda.app/Contents/MacOS/Gitduda
 ```
 
 This is a known issue with Metal GPU buffer allocation on some macOS configurations. See [llama.cpp#16266](https://github.com/ggml-org/llama.cpp/issues/16266) for details.
 
 **Model Storage**: The AI model is stored in:
-- macOS: `~/Library/Application Support/io.github.hegsie.gitnado/models/`
-- Windows: `%APPDATA%\io.github.hegsie.gitnado\models\`
-- Linux: `~/.config/io.github.hegsie.gitnado/models/`
+- macOS: `~/Library/Application Support/io.github.rdias612.gitduda/models/`
+- Windows: `%APPDATA%\io.github.rdias612.gitduda\models\`
+- Linux: `~/.config/io.github.rdias612.gitduda/models/`
 
 You can delete the model folder to re-download or free up space.
 
@@ -646,42 +646,42 @@ You can delete the model folder to re-download or free up space.
 
 ### General Questions
 
-**Q: Is Gitnado really free?**  
-A: Yes! Gitnado is open source under the MIT license. There are no subscription fees, account requirements, or feature paywalls.
+**Q: Is Gitduda really free?**  
+A: Yes! Gitduda is open source under the MIT license. There are no subscription fees, account requirements, or feature paywalls.
 
-**Q: Does Gitnado send any data to external servers?**  
-A: No. Gitnado has zero telemetry and no analytics. The only network requests are Git operations (push/pull/fetch), optional integrations (GitHub, GitLab, etc.) that you explicitly configure, and — if you turn on the "Show Avatars" setting, which is off by default — author avatar images from gravatar.com, each request carrying an MD5 hash of that commit author's email address. Offline Mode and the remote allowlist block all of them.
+**Q: Does Gitduda send any data to external servers?**  
+A: No. Gitduda has zero telemetry and no analytics. The only network requests are Git operations (push/pull/fetch), optional integrations (GitHub, GitLab, etc.) that you explicitly configure, and — if you turn on the "Show Avatars" setting, which is off by default — author avatar images from gravatar.com, each request carrying an MD5 hash of that commit author's email address. Offline Mode and the remote allowlist block all of them.
 
-**Q: Can I use Gitnado offline?**  
-A: Absolutely. Gitnado works perfectly offline. All features work locally, including AI commit message generation (after initial model download).
+**Q: Can I use Gitduda offline?**  
+A: Absolutely. Gitduda works perfectly offline. All features work locally, including AI commit message generation (after initial model download).
 
-**Q: How does Gitnado compare to other Git clients?**  
-A: See the [comparison table](#why-gitnado) above. Gitnado focuses on privacy, performance, and being fully open source.
+**Q: How does Gitduda compare to other Git clients?**  
+A: See the [comparison table](#why-gitduda) above. Gitduda focuses on privacy, performance, and being fully open source.
 
 ### Technical Questions
 
 **Q: Which Git operations use libgit2 vs system Git?**  
-A: Gitnado uses libgit2 for most operations (staging, commits, branches, status, diffs) for speed and portability. Complex operations like interactive rebase and submodules use system Git for compatibility.
+A: Gitduda uses libgit2 for most operations (staging, commits, branches, status, diffs) for speed and portability. Complex operations like interactive rebase and submodules use system Git for compatibility.
 
-**Q: Does Gitnado support Git LFS?**  
-A: Yes! Gitnado has built-in support for Git LFS including tracking patterns, pull/fetch/prune operations.
+**Q: Does Gitduda support Git LFS?**  
+A: Yes! Gitduda has built-in support for Git LFS including tracking patterns, pull/fetch/prune operations.
 
-**Q: Can I use Gitnado with large repositories (monorepos)?**  
-A: Yes. Gitnado is optimized for large repositories with features like virtual scrolling, lazy loading, and background indexing. It's been tested with repositories containing 100,000+ commits.
+**Q: Can I use Gitduda with large repositories (monorepos)?**  
+A: Yes. Gitduda is optimized for large repositories with features like virtual scrolling, lazy loading, and background indexing. It's been tested with repositories containing 100,000+ commits.
 
-**Q: Does Gitnado work with my Git hosting provider?**  
-A: Gitnado works with any Git remote (GitHub, GitLab, Bitbucket, Azure DevOps, self-hosted, etc.). It also has native integrations for viewing PRs, issues, and CI/CD status for major platforms.
+**Q: Does Gitduda work with my Git hosting provider?**  
+A: Gitduda works with any Git remote (GitHub, GitLab, Bitbucket, Azure DevOps, self-hosted, etc.). It also has native integrations for viewing PRs, issues, and CI/CD status for major platforms.
 
 ### AI Features
 
 **Q: How does the AI commit message generation work?**  
-A: Gitnado supports multiple AI providers. By default, it uses an embedded local LLM ([Tavernari/git-commit-message](https://huggingface.co/Tavernari/git-commit-message)) that runs entirely on your machine. You can also configure local providers (Ollama, LM Studio) or cloud providers (OpenAI, Anthropic, GitHub Copilot). The AI analyzes your staged changes and generates [conventional commit messages](https://www.conventionalcommits.org/) (e.g., `feat:`, `fix:`, `docs:`). The embedded model (~2GB) downloads once on first use.
+A: Gitduda supports multiple AI providers. By default, it uses an embedded local LLM ([Tavernari/git-commit-message](https://huggingface.co/Tavernari/git-commit-message)) that runs entirely on your machine. You can also configure local providers (Ollama, LM Studio) or cloud providers (OpenAI, Anthropic, GitHub Copilot). The AI analyzes your staged changes and generates [conventional commit messages](https://www.conventionalcommits.org/) (e.g., `feat:`, `fix:`, `docs:`). The embedded model (~2GB) downloads once on first use.
 
 **Q: Do I need an internet connection for AI features?**  
 A: It depends on which AI provider you use. The embedded model and local providers (Ollama, LM Studio) work completely offline after the initial model download (~2GB for embedded model). Cloud-based providers (OpenAI, Anthropic, GitHub Copilot) require an active internet connection.
 
 **Q: Can I use my own AI backend (Ollama, LM Studio)?**  
-A: Yes! Gitnado supports multiple AI providers including local providers (Ollama, LM Studio) and cloud-based providers (OpenAI, Anthropic, GitHub Copilot). The application auto-detects local providers and allows you to configure them in settings.
+A: Yes! Gitduda supports multiple AI providers including local providers (Ollama, LM Studio) and cloud-based providers (OpenAI, Anthropic, GitHub Copilot). The application auto-detects local providers and allows you to configure them in settings.
 
 **Q: Why does AI generation crash on my Mac?**  
 A: This is a known issue with Metal GPU buffer allocation on some macOS configurations. See [Troubleshooting](#troubleshooting) for workarounds (CPU-only mode or reduced GPU layers).
@@ -694,36 +694,36 @@ A: All data is stored locally on your machine:
 - App settings: Platform-specific config directories (see [Troubleshooting](#troubleshooting))
 - AI models: Local app data directory (~2GB)
 
-**Q: Is Gitnado audited for security?**  
-A: Gitnado is open source, so the code is publicly auditable. We use Rust for memory safety and follow security best practices. If you find security issues, please report them via GitHub Security Advisories.
+**Q: Is Gitduda audited for security?**  
+A: Gitduda is open source, so the code is publicly auditable. We use Rust for memory safety and follow security best practices. If you find security issues, please report them via GitHub Security Advisories.
 
-**Q: Does Gitnado support GPG commit signing?**  
-A: Yes! Gitnado has full support for GPG signing of commits and tags, including key management, signature verification, and trust levels.
+**Q: Does Gitduda support GPG commit signing?**  
+A: Yes! Gitduda has full support for GPG signing of commits and tags, including key management, signature verification, and trust levels.
 
 ### Platform-Specific
 
 **Q: Why isn't there an installer for my Linux distribution?**  
-A: Gitnado provides `.deb` packages (Debian/Ubuntu) and `.AppImage` (universal). Additional formats (Flatpak, Snap, RPM) are on the roadmap.
+A: Gitduda provides `.deb` packages (Debian/Ubuntu) and `.AppImage` (universal). Additional formats (Flatpak, Snap, RPM) are on the roadmap.
 
-**Q: Does Gitnado work on Apple Silicon (M1/M2/M3)?**  
-A: Yes! Gitnado builds are Apple Silicon (ARM64) only — Metal GPU acceleration for AI features works out of the box. There is no Intel or universal build, and none is planned: Apple is winding down Intel support across macOS.
+**Q: Does Gitduda work on Apple Silicon (M1/M2/M3)?**  
+A: Yes! Gitduda builds are Apple Silicon (ARM64) only — Metal GPU acceleration for AI features works out of the box. There is no Intel or universal build, and none is planned: Apple is winding down Intel support across macOS.
 
-**Q: Can I install Gitnado on Windows ARM?**  
-A: Not currently. Gitnado only supports x64 Windows. ARM64 Windows support may be added in the future.
+**Q: Can I install Gitduda on Windows ARM?**  
+A: Not currently. Gitduda only supports x64 Windows. ARM64 Windows support may be added in the future.
 
 ## Community & Support
 
 ### Getting Help
 
-- **GitHub Issues**: Report bugs or request features at [github.com/hegsie/gitnado/issues](https://github.com/hegsie/gitnado/issues)
-- **GitHub Discussions**: Ask questions, share tips, or discuss the project at [github.com/hegsie/gitnado/discussions](https://github.com/hegsie/gitnado/discussions)
+- **GitHub Issues**: Report bugs or request features at [github.com/rdias612/gitduda/issues](https://github.com/rdias612/gitduda/issues)
+- **GitHub Discussions**: Ask questions, share tips, or discuss the project at [github.com/rdias612/gitduda/discussions](https://github.com/rdias612/gitduda/discussions)
 - **Documentation**: Check the [docs/](docs/) folder for guides and technical documentation
 
 ### Reporting Issues
 
 When reporting bugs, please include:
 
-1. **Version**: Your Gitnado version (from Help → About)
+1. **Version**: Your Gitduda version (from Help → About)
 2. **Platform**: OS version (e.g., "macOS 14.2", "Windows 11", "Ubuntu 22.04")
 3. **Steps to reproduce**: Clear steps to trigger the issue
 4. **Expected vs actual behavior**: What you expected vs what happened
@@ -741,12 +741,12 @@ Have an idea for a new feature? Check the [ROADMAP.md](ROADMAP.md) first to see 
 ### Stay Updated
 
 - **Watch the Repository**: Click "Watch" on GitHub to get notified of releases
-- **Releases**: Check the [Releases](https://github.com/hegsie/gitnado/releases) page for new versions
+- **Releases**: Check the [Releases](https://github.com/rdias612/gitdudareleases) page for new versions
 - **Changelog**: See release notes for detailed changes in each version
 
 ## Contributing
 
-Contributions are welcome! Gitnado is built by the community, for the community.
+Contributions are welcome! Gitduda is built by the community, for the community.
 
 ### Ways to Contribute
 
@@ -754,7 +754,7 @@ Contributions are welcome! Gitnado is built by the community, for the community.
 - **Documentation**: Improve README, docs, or code comments
 - **Testing**: Report bugs, test pre-releases, or add test coverage
 - **Design**: Suggest UI/UX improvements or create mockups
-- **Translations**: Help translate Gitnado (i18n coming soon)
+- **Translations**: Help translate Gitduda (i18n coming soon)
 - **Community**: Help others in Discussions or answer issues
 
 ### Development Setup
@@ -762,8 +762,8 @@ Contributions are welcome! Gitnado is built by the community, for the community.
 1. **Fork the repository**
 2. **Clone your fork**:
    ```bash
-   git clone https://github.com/YOUR_USERNAME/Gitnado.git
-   cd Gitnado
+   git clone https://github.com/YOUR_USERNAME/Gitduda.git
+   cd Gitduda
    ```
 3. **Install dependencies**:
    ```bash
@@ -809,7 +809,7 @@ Contributions are welcome! Gitnado is built by the community, for the community.
    ```
 
 6. **Open a Pull Request**:
-   - Go to the [Gitnado repository](https://github.com/hegsie/gitnado)
+   - Go to the [Gitduda repository](https://github.com/rdias612/gitduda)
    - Click "Pull Requests" → "New Pull Request"
    - Select your fork and branch
    - Fill in the PR template with details
@@ -838,7 +838,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Acknowledgments
 
-Gitnado stands on the shoulders of giants. We're grateful to these projects and communities:
+Gitduda stands on the shoulders of giants. We're grateful to these projects and communities:
 
 - **[libgit2](https://libgit2.org/)** - The Git library powering core operations
 - **[Tauri](https://tauri.app/)** - For making cross-platform desktop apps accessible with Rust and web technologies
@@ -848,10 +848,10 @@ Gitnado stands on the shoulders of giants. We're grateful to these projects and 
 - **[Rust](https://www.rust-lang.org/)** & **[TypeScript](https://www.typescriptlang.org/)** - Languages that make this project possible
 - The **open source community** for inspiration, feedback, and contributions
 
-Special thanks to all contributors who have helped make Gitnado better!
+Special thanks to all contributors who have helped make Gitduda better!
 
 ---
 
-**Made with ❤️ by the Gitnado community**
+**Made with ❤️ by the Gitduda community**
 
-*Gitnado: A privacy-first Git GUI for the modern developer*
+*Gitduda: A privacy-first Git GUI for the modern developer*

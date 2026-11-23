@@ -37,9 +37,9 @@ export default tseslint.config(
     // Every component, not just dialogs: gn-toolbar owns a document capture
     // Escape handler that stopPropagation()s, and sat outside the old glob.
     files: ['src/components/**/*.ts'],
-    plugins: { gitnado: { rules: { 'overlay-stack-membership': overlayStackMembership } } },
+    plugins: { gitduda: { rules: { 'overlay-stack-membership': overlayStackMembership } } },
     rules: {
-      'gitnado/overlay-stack-membership': 'error',
+      'gitduda/overlay-stack-membership': 'error',
     },
   },
   {

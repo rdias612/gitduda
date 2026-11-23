@@ -9,9 +9,9 @@
 
 ## 1. O Desejo (Objetivo e Porquê)
 
-Reestruturar a arquitetura de layout do frontend do Gitnado (atualmente baseada em 3 colunas com `<gn-graph-canvas>` central permanente, `<gn-context-dashboard>` separado e `<gn-right-panel>` fixo) para o modelo de **workspace em 2 painéis** definido no mockup `opcao_2_dashboard_v2.html`, priorizando o fluxo diário de *working tree* (Changes + Diff em tela cheia), histórico compacto com expansão sob demanda para o grafo completo, inspeção unificada de refs e ferramentas de desenvolvimento em gaveta inferior.
+Reestruturar a arquitetura de layout do frontend do Gitduda (atualmente baseada em 3 colunas com `<gn-graph-canvas>` central permanente, `<gn-context-dashboard>` separado e `<gn-right-panel>` fixo) para o modelo de **workspace em 2 painéis** definido no mockup `opcao_2_dashboard_v2.html`, priorizando o fluxo diário de *working tree* (Changes + Diff em tela cheia), histórico compacto com expansão sob demanda para o grafo completo, inspeção unificada de refs e ferramentas de desenvolvimento em gaveta inferior.
 
-O objetivo é reduzir o ruído visual e a fragmentação entre painéis, preservando integralmente as funcionalidades já implementadas no Gitnado (staging por linha/hunk, IA, providers, diálogos avançados, multi-repo e paleta de temas existente).
+O objetivo é reduzir o ruído visual e a fragmentação entre painéis, preservando integralmente as funcionalidades já implementadas no Gitduda (staging por linha/hunk, IA, providers, diálogos avançados, multi-repo e paleta de temas existente).
 
 ---
 
@@ -20,7 +20,7 @@ O objetivo é reduzir o ruído visual e a fragmentação entre painéis, preserv
 ### Decisões do Usuário (Estrutura e Fluxo)
 - **Layout 2 Painéis + Triple Action Bar + Bottom Drawer**:
   - Substituir o layout de 3 colunas (`left-panel` + `center-panel` + `right-panel`) por uma **Sidebar Esquerda** redimensionável (3 abas: `Changes`, `History`, `Branches & Refs`) e um **Main Pane** contextual à direita, além de uma **Status Bar** com **Bottom Drawer** colapsável.
-  - **Não** alterar a paleta de cores nem os design tokens atuais de `src/styles/tokens.css` (manter temas dark/light existentes do Gitnado).
+  - **Não** alterar a paleta de cores nem os design tokens atuais de `src/styles/tokens.css` (manter temas dark/light existentes do Gitduda).
 - **Menus Nativos do SO Preservados + Faixa Superior na WebView**:
   - Manter a barra de título e os menus nativos do Tauri (`src/services/app-menu.service.ts`), sem janela *frameless* nem botões `─ □ ✕` HTML e sem duplicar o menu `File/Edit/View...` dentro da WebView.
   - A faixa superior da WebView passa a ter dois níveis:
@@ -52,7 +52,7 @@ O objetivo é reduzir o ruído visual e a fragmentação entre painéis, preserv
 ### Regras de Negócio e Casos de Borda
 - **Troca de Aba de Repositório**: ao trocar o repositório ativo na barra superior ou no `Current repository` picker, a aba selecionada da sidebar, filtros e estado de seleção devem respeitar o repositório ativo sem vazar dados do repositório anterior (mantendo cancelamento por geração e `sweepRepoScopedDialogs`).
 - **Último Repositório Fechado**: retorna imediatamente para `<gn-welcome>` e fecha overlays *repo-scoped* via `dialogs.closeRepoScoped()`.
-- **Pilha de Overlays (`overlay-stack.ts`) e ESLint**: todos os novos popovers (Repo Picker, Unified Ref Switcher, Remote Split Menu, Filter Status, Profile Popover, Diff Gear) devem gerenciar fechamento com `Escape` respeitando `overlay-stack.ts` e a regra `gitnado/overlay-stack-membership`.
+- **Pilha de Overlays (`overlay-stack.ts`) e ESLint**: todos os novos popovers (Repo Picker, Unified Ref Switcher, Remote Split Menu, Filter Status, Profile Popover, Diff Gear) devem gerenciar fechamento com `Escape` respeitando `overlay-stack.ts` e a regra `gitduda/overlay-stack-membership`.
 - **Acessibilidade e Movimento Reduzido**: novos componentes Lit devem importar `sharedStyles` primeiro em `static styles` (herdando `focusRingStyles` e `reducedMotionStyles`).
 
 ### Padrões Assumidos pelo Agente (Revise se discordar)
@@ -107,7 +107,7 @@ O objetivo é reduzir o ruído visual e a fragmentação entre painéis, preserv
   - Alterações em comandos Rust (`src-tauri/`) que não sejam estritamente necessárias para suportar consultas já existentes.
 - **Anti-Goals (O que evitar)**:
   - Não perder funcionalidades existentes (multi-seleção de commits no grafo, banner de merge/rebase/bisect, Analytics, AI staging/review, Blame, File History).
-  - Não quebrar a regra de ESLint `gitnado/overlay-stack-membership`, testes de contrato (`npm run test:contract`) ou a responsividade de troca de abas de repositório em sessões multi-repo.
+  - Não quebrar a regra de ESLint `gitduda/overlay-stack-membership`, testes de contrato (`npm run test:contract`) ou a responsividade de troca de abas de repositório em sessões multi-repo.
   - Não exigir mais cliques do que hoje para operações centrais (stage de arquivo/hunk/linha, commit, checkout de branch, fetch/pull/push).
 
 ---

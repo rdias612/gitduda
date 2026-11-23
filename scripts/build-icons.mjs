@@ -25,8 +25,8 @@
  *   src-tauri/icons/icon.ico                                     Windows
  *   src-tauri/icons/icon.icns                                    macOS
  *   site/assets/{favicon-64,icon-256,icon-512}.png               website
- *   src/assets/mascot/gitnado-400.png                            welcome screen
- * The Android and iOS sets are left to `tauri icon`; Gitnado ships no mobile
+ *   src/assets/mascot/gitduda-400.png                            welcome screen
+ * The Android and iOS sets are left to `tauri icon`; Gitduda ships no mobile
  * build and those hosts composite their own shape.
  *
  * Run `node scripts/build-icons.mjs` after changing the master or any
@@ -41,7 +41,7 @@ import { fileURLToPath } from 'node:url';
 import { REPO_ROOT, channelOf, decodePng, encodePng } from './png.mjs';
 export const ICONS_DIR = 'src-tauri/icons';
 export const SITE_ASSETS_DIR = 'site/assets';
-export const MASCOT_PATH = 'src/assets/mascot/gitnado-400.png';
+export const MASCOT_PATH = 'src/assets/mascot/gitduda-400.png';
 export const SOURCE = `${ICONS_DIR}/icon-source.png`;
 
 /** Apple's icon grid: an 824x824 body centred on a 1024x1024 canvas. */

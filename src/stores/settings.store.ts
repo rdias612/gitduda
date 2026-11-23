@@ -217,7 +217,7 @@ const defaultSettings = {
   showNativeNotifications: true,
 };
 
-const LEGACY_DIFF_WORD_WRAP_KEY = 'gitnado-diff-word-wrap';
+const LEGACY_DIFF_WORD_WRAP_KEY = 'gitduda-diff-word-wrap';
 
 /**
  * The diff view used to keep word wrap in its own localStorage key, and its
@@ -418,7 +418,7 @@ export const settingsStore = createStore<SettingsState>()(
       },
     }),
     {
-      name: 'gitnado-settings',
+      name: 'gitduda-settings',
       version: 8,
       // Changing a default only affects installs with no persisted state.
       // zustand's default merge is a shallow `{...defaults, ...persisted}`, and

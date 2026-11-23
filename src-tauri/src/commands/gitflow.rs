@@ -6,7 +6,7 @@ use std::path::Path;
 use sha2::{Digest, Sha256};
 use tauri::command;
 
-use crate::error::{GitnadoError, Result};
+use crate::error::{GitdudaError, Result};
 use crate::models::Branch;
 
 /// Git Flow configuration
@@ -124,7 +124,7 @@ pub async fn init_gitflow(
                     .find_branch(&requested, git2::BranchType::Local)
                     .is_err()
                 {
-                    return Err(GitnadoError::BranchNotFound(requested));
+                    return Err(GitdudaError::BranchNotFound(requested));
                 }
                 requested
             }
@@ -133,7 +133,7 @@ pub async fn init_gitflow(
                 .find(|name| repo.find_branch(name, git2::BranchType::Local).is_ok())
                 .map(str::to_string)
                 .ok_or_else(|| {
-                    GitnadoError::OperationFailed(
+                    GitdudaError::OperationFailed(
                         "Cannot find a main or master branch to base Git Flow on".to_string(),
                     )
                 })?,
@@ -148,7 +148,7 @@ pub async fn init_gitflow(
             // Create develop from the resolved master
             let base = repo
                 .find_branch(&master, git2::BranchType::Local)
-                .map_err(|_| GitnadoError::BranchNotFound(master.clone()))?;
+                .map_err(|_| GitdudaError::BranchNotFound(master.clone()))?;
             let commit = base.get().peel_to_commit()?;
             repo.branch(&develop, &commit, false)?;
             created_develop = true;
@@ -247,7 +247,7 @@ pub async fn gitflow_start_feature(path: String, name: String) -> Result<Branch>
         // Create branch from develop
         let develop_branch = repo
             .find_branch(&develop, git2::BranchType::Local)
-            .map_err(|_| GitnadoError::BranchNotFound(develop.clone()))?;
+            .map_err(|_| GitdudaError::BranchNotFound(develop.clone()))?;
 
         let commit = develop_branch.get().peel_to_commit()?;
         let branch = repo.branch(&branch_name, &commit, false)?;
@@ -274,7 +274,7 @@ pub async fn gitflow_start_feature(path: String, name: String) -> Result<Branch>
             let obj = reference.peel(git2::ObjectType::Commit)?;
             repo.checkout_tree(&obj, None)?;
             repo.set_head(reference.name().map_err(|_| {
-                GitnadoError::OperationFailed("Invalid UTF-8 in branch reference name".to_string())
+                GitdudaError::OperationFailed("Invalid UTF-8 in branch reference name".to_string())
             })?)?;
             Ok(())
         })();
@@ -497,20 +497,20 @@ pub async fn gitflow_finish_feature(
         // Get feature branch commit
         let feature_branch = repo
             .find_branch(&branch_name, git2::BranchType::Local)
-            .map_err(|_| GitnadoError::BranchNotFound(branch_name.clone()))?;
+            .map_err(|_| GitdudaError::BranchNotFound(branch_name.clone()))?;
         let feature_commit = feature_branch.get().peel_to_commit()?;
 
         // Checkout develop
         let develop_branch = repo
             .find_branch(&develop, git2::BranchType::Local)
-            .map_err(|_| GitnadoError::BranchNotFound(develop.clone()))?;
+            .map_err(|_| GitdudaError::BranchNotFound(develop.clone()))?;
         let develop_obj = develop_branch.get().peel(git2::ObjectType::Commit)?;
         // libgit2 runs no hooks; canonical `git flow` shells out to git checkout,
         // so post-checkout fires there. branch.rs fires it for every checkout.
         let old_head = crate::commands::hooks::head_oid_string(&repo);
         repo.checkout_tree(&develop_obj, None)?;
         repo.set_head(develop_branch.get().name().map_err(|_| {
-            GitnadoError::OperationFailed("Invalid UTF-8 in branch reference name".to_string())
+            GitdudaError::OperationFailed("Invalid UTF-8 in branch reference name".to_string())
         })?)?;
         let new_head = crate::commands::hooks::head_oid_string(&repo);
         crate::commands::hooks::run_post_checkout(&repo, &old_head, &new_head, true);
@@ -524,7 +524,7 @@ pub async fn gitflow_finish_feature(
             // deletion so the user can resolve them.
             //
             // An ancestry check handles externally completed merges. The marker
-            // handles Gitnado's own squash commit because a squash never makes
+            // handles Gitduda's own squash commit because a squash never makes
             // the feature tip an ancestor of develop, and develop may have moved
             // before the user retries failed branch cleanup.
             let develop_commit = develop_branch.get().peel_to_commit()?;
@@ -538,7 +538,7 @@ pub async fn gitflow_finish_feature(
             if !squash_already_finished && !analysis.is_up_to_date() {
                 repo.merge(&[&annotated_commit], None, None)?;
                 if repo.index()?.has_conflicts() {
-                    return Err(GitnadoError::MergeConflict);
+                    return Err(GitdudaError::MergeConflict);
                 }
                 let mut index = repo.index()?;
                 let tree_oid = index.write_tree()?;
@@ -585,7 +585,7 @@ pub async fn gitflow_finish_feature(
                 // conflict-resolution flow) instead of silently skipping the
                 // commit and deleting the branch below.
                 if repo.index()?.has_conflicts() {
-                    return Err(GitnadoError::MergeConflict);
+                    return Err(GitdudaError::MergeConflict);
                 }
 
                 // Auto-commit merge
@@ -647,12 +647,12 @@ pub async fn gitflow_record_squash_finish(path: String, name: String) -> Result<
 
         let feature_commit = repo
             .find_branch(&branch_name, git2::BranchType::Local)
-            .map_err(|_| GitnadoError::BranchNotFound(branch_name.clone()))?
+            .map_err(|_| GitdudaError::BranchNotFound(branch_name.clone()))?
             .get()
             .peel_to_commit()?;
         let develop_commit = repo
             .find_branch(&develop, git2::BranchType::Local)
-            .map_err(|_| GitnadoError::BranchNotFound(develop.clone()))?
+            .map_err(|_| GitdudaError::BranchNotFound(develop.clone()))?
             .get()
             .peel_to_commit()?;
 
@@ -691,7 +691,7 @@ pub async fn gitflow_start_release(path: String, version: String) -> Result<Bran
 
         let develop_branch = repo
             .find_branch(&develop, git2::BranchType::Local)
-            .map_err(|_| GitnadoError::BranchNotFound(develop))?;
+            .map_err(|_| GitdudaError::BranchNotFound(develop))?;
 
         let commit = develop_branch.get().peel_to_commit()?;
         let branch = repo.branch(&branch_name, &commit, false)?;
@@ -704,7 +704,7 @@ pub async fn gitflow_start_release(path: String, version: String) -> Result<Bran
             let obj = reference.peel(git2::ObjectType::Commit)?;
             repo.checkout_tree(&obj, None)?;
             repo.set_head(reference.name().map_err(|_| {
-                GitnadoError::OperationFailed("Invalid UTF-8 in branch reference name".to_string())
+                GitdudaError::OperationFailed("Invalid UTF-8 in branch reference name".to_string())
             })?)?;
             Ok(())
         })();
@@ -799,7 +799,7 @@ async fn finish_release_like(
 
         let release_branch = repo
             .find_branch(&branch_name, git2::BranchType::Local)
-            .map_err(|_| GitnadoError::BranchNotFound(branch_name.clone()))?;
+            .map_err(|_| GitdudaError::BranchNotFound(branch_name.clone()))?;
         let release_commit = release_branch.get().peel_to_commit()?;
 
         // A version tag left behind by an EARLIER pass of this same finish is
@@ -823,7 +823,7 @@ async fn finish_release_like(
                 Err(_) => false,
             };
             if !from_this_finish {
-                return Err(GitnadoError::OperationFailed(format!(
+                return Err(GitdudaError::OperationFailed(format!(
                     "Tag '{}' already exists and does not contain '{}'. \
                      Delete or rename the tag, or finish with a different version.",
                     tag_name, branch_name
@@ -834,13 +834,13 @@ async fn finish_release_like(
         // Merge into master
         let master_branch = repo
             .find_branch(&master, git2::BranchType::Local)
-            .map_err(|_| GitnadoError::BranchNotFound(master.clone()))?;
+            .map_err(|_| GitdudaError::BranchNotFound(master.clone()))?;
         let master_obj = master_branch.get().peel(git2::ObjectType::Commit)?;
         // post-checkout — see gitflow_finish_feature.
         let old_head = crate::commands::hooks::head_oid_string(&repo);
         repo.checkout_tree(&master_obj, None)?;
         repo.set_head(master_branch.get().name().map_err(|_| {
-            GitnadoError::OperationFailed("Invalid UTF-8 in branch reference name".to_string())
+            GitdudaError::OperationFailed("Invalid UTF-8 in branch reference name".to_string())
         })?)?;
         let new_head = crate::commands::hooks::head_oid_string(&repo);
         crate::commands::hooks::run_post_checkout(&repo, &old_head, &new_head, true);
@@ -861,7 +861,7 @@ async fn finish_release_like(
             // Conflicts must abort the finish here — proceeding would tag nothing,
             // check out develop over a conflicted tree, and delete the branch.
             if repo.index()?.has_conflicts() {
-                return Err(GitnadoError::MergeConflict);
+                return Err(GitdudaError::MergeConflict);
             }
 
             let mut index = repo.index()?;
@@ -902,14 +902,14 @@ async fn finish_release_like(
         // Merge into develop
         let develop_branch = repo
             .find_branch(&develop, git2::BranchType::Local)
-            .map_err(|_| GitnadoError::BranchNotFound(develop.clone()))?;
+            .map_err(|_| GitdudaError::BranchNotFound(develop.clone()))?;
         let develop_obj = develop_branch.get().peel(git2::ObjectType::Commit)?;
         // post-checkout for the develop-side switch too. The master switch above
         // got it and this one did not — the same sibling-missed pattern.
         let old_head_develop = crate::commands::hooks::head_oid_string(&repo);
         repo.checkout_tree(&develop_obj, None)?;
         repo.set_head(develop_branch.get().name().map_err(|_| {
-            GitnadoError::OperationFailed("Invalid UTF-8 in branch reference name".to_string())
+            GitdudaError::OperationFailed("Invalid UTF-8 in branch reference name".to_string())
         })?)?;
         let new_head_develop = crate::commands::hooks::head_oid_string(&repo);
         crate::commands::hooks::run_post_checkout(
@@ -922,7 +922,7 @@ async fn finish_release_like(
         // Re-read release commit from the new HEAD context
         let release_branch2 = repo
             .find_branch(&branch_name, git2::BranchType::Local)
-            .map_err(|_| GitnadoError::BranchNotFound(branch_name.clone()))?;
+            .map_err(|_| GitdudaError::BranchNotFound(branch_name.clone()))?;
         let release_commit2 = release_branch2.get().peel_to_commit()?;
         let annotated2 = repo.find_annotated_commit(release_commit2.id())?;
         let (develop_analysis, _) = repo.merge_analysis(&[&annotated2])?;
@@ -936,7 +936,7 @@ async fn finish_release_like(
             // Same as the master merge: a conflicted develop merge must be surfaced
             // (and the branch NOT deleted) so the user can resolve it.
             if repo.index()?.has_conflicts() {
-                return Err(GitnadoError::MergeConflict);
+                return Err(GitdudaError::MergeConflict);
             }
 
             let mut index = repo.index()?;
@@ -990,7 +990,7 @@ pub async fn gitflow_start_hotfix(path: String, version: String) -> Result<Branc
 
         let master_branch = repo
             .find_branch(&master, git2::BranchType::Local)
-            .map_err(|_| GitnadoError::BranchNotFound(master))?;
+            .map_err(|_| GitdudaError::BranchNotFound(master))?;
 
         let commit = master_branch.get().peel_to_commit()?;
         let branch = repo.branch(&branch_name, &commit, false)?;
@@ -1003,7 +1003,7 @@ pub async fn gitflow_start_hotfix(path: String, version: String) -> Result<Branc
             let obj = reference.peel(git2::ObjectType::Commit)?;
             repo.checkout_tree(&obj, None)?;
             repo.set_head(reference.name().map_err(|_| {
-                GitnadoError::OperationFailed("Invalid UTF-8 in branch reference name".to_string())
+                GitdudaError::OperationFailed("Invalid UTF-8 in branch reference name".to_string())
             })?)?;
             Ok(())
         })();
@@ -1776,7 +1776,7 @@ mod tests {
                 .await;
 
         // Must surface the conflict, NOT report success
-        assert!(matches!(result, Err(GitnadoError::MergeConflict)));
+        assert!(matches!(result, Err(GitdudaError::MergeConflict)));
 
         // Branch must NOT have been deleted, and the merge state must be
         // intact for the conflict-resolution flow
@@ -2147,7 +2147,7 @@ mod tests {
                     Some(true),
                 )
                 .await,
-                Err(GitnadoError::MergeConflict)
+                Err(GitdudaError::MergeConflict)
             ),
             "the squash merge must conflict before any commit is made"
         );
@@ -2197,7 +2197,7 @@ mod tests {
 
         let result = gitflow_record_squash_finish(repo.path_str(), "missing".to_string()).await;
 
-        assert!(matches!(result, Err(GitnadoError::BranchNotFound(_))));
+        assert!(matches!(result, Err(GitdudaError::BranchNotFound(_))));
     }
 
     #[tokio::test]
@@ -2243,7 +2243,7 @@ mod tests {
 
         let result =
             gitflow_finish_release(repo.path_str(), "2.0.0".to_string(), None, Some(true)).await;
-        assert!(matches!(result, Err(GitnadoError::MergeConflict)));
+        assert!(matches!(result, Err(GitdudaError::MergeConflict)));
 
         // Branch kept, no tag created, merge state intact for resolution
         let git_repo = repo.repo();
@@ -2290,7 +2290,7 @@ mod tests {
         // First finish: master merge conflicts, no tag yet.
         let result =
             gitflow_finish_release(repo.path_str(), "2.0.0".to_string(), None, Some(true)).await;
-        assert!(matches!(result, Err(GitnadoError::MergeConflict)));
+        assert!(matches!(result, Err(GitdudaError::MergeConflict)));
         assert!(repo.repo().find_reference("refs/tags/v2.0.0").is_err());
 
         // Resolve the master conflict and complete the merge (HEAD is on master).
@@ -2640,7 +2640,7 @@ mod tests {
         // First finish: master merges + tags cleanly, develop merge conflicts.
         let result =
             gitflow_finish_release(repo.path_str(), "3.0.0".to_string(), None, Some(true)).await;
-        assert!(matches!(result, Err(GitnadoError::MergeConflict)));
+        assert!(matches!(result, Err(GitdudaError::MergeConflict)));
 
         {
             let git_repo = repo.repo();
@@ -2721,7 +2721,7 @@ mod tests {
             gitflow_finish_release(repo.path_str(), "2.0.0".to_string(), None, Some(true)).await;
 
         match &result {
-            Err(GitnadoError::OperationFailed(msg)) => {
+            Err(GitdudaError::OperationFailed(msg)) => {
                 assert!(
                     msg.contains("v2.0.0") && msg.contains("release/2.0.0"),
                     "error must name the colliding tag and branch: {}",
@@ -2797,7 +2797,7 @@ mod tests {
             gitflow_finish_hotfix(repo.path_str(), "1.0.1".to_string(), None, Some(true)).await;
 
         match &result {
-            Err(GitnadoError::OperationFailed(msg)) => {
+            Err(GitdudaError::OperationFailed(msg)) => {
                 assert!(
                     msg.contains("v1.0.1") && msg.contains("hotfix/1.0.1"),
                     "error must name the colliding tag and branch: {}",
@@ -2857,7 +2857,7 @@ mod tests {
 
         let result =
             gitflow_finish_release(repo.path_str(), "3.0.0".to_string(), None, Some(true)).await;
-        assert!(matches!(result, Err(GitnadoError::MergeConflict)));
+        assert!(matches!(result, Err(GitdudaError::MergeConflict)));
 
         let tag_before = repo
             .repo()

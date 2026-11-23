@@ -308,7 +308,7 @@ pub fn build_target_prompt(
             build_branch_compare_explain_prompt(repo, base, target_id, file_path)
         }
         "working_tree" => build_working_tree_explain_prompt(repo, file_path),
-        other => Err(crate::error::GitnadoError::OperationFailed(format!(
+        other => Err(crate::error::GitdudaError::OperationFailed(format!(
             "Unsupported explain target_type: '{}'",
             other
         ))),
@@ -436,7 +436,7 @@ fn build_working_tree_explain_prompt(
     let (files_summary, patch_text) =
         collect_working_tree_diff(repo, file_path, false, MAX_DIFF_BYTES)?;
     if files_summary.is_empty() && patch_text.trim().is_empty() {
-        return Err(crate::error::GitnadoError::OperationFailed(
+        return Err(crate::error::GitdudaError::OperationFailed(
             "Working tree has no changes to explain".to_string(),
         ));
     }
@@ -460,7 +460,7 @@ fn build_branch_name_prompt(
     let has_issue = issue_context.map(|s| !s.trim().is_empty()).unwrap_or(false);
 
     if files_summary.is_empty() && patch_text.trim().is_empty() && !has_issue {
-        return Err(crate::error::GitnadoError::OperationFailed(
+        return Err(crate::error::GitdudaError::OperationFailed(
             "No working tree changes found to suggest a branch name from".to_string(),
         ));
     }
@@ -495,7 +495,7 @@ fn build_stash_message_prompt(
         collect_working_tree_diff(repo, None, include_untracked, MAX_DIFF_BYTES)?;
 
     if files_summary.is_empty() && patch_text.trim().is_empty() {
-        return Err(crate::error::GitnadoError::OperationFailed(
+        return Err(crate::error::GitdudaError::OperationFailed(
             "No working tree changes to generate a stash message for".to_string(),
         ));
     }

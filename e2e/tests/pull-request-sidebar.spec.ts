@@ -31,7 +31,7 @@ const PR_FIXTURE = {
   baseRef: 'main',
   draft: false,
   mergeable: true,
-  htmlUrl: 'https://github.com/octo/gitnado/pull/42',
+  htmlUrl: 'https://github.com/octo/gitduda/pull/42',
   additions: 10,
   deletions: 2,
   changedFiles: 1,
@@ -46,7 +46,7 @@ async function openWithGitHub(
   await page.goto('/');
   await page.waitForLoadState('domcontentloaded');
   await startCommandCaptureWithMocks(page, {
-    detect_github_repo: { owner: 'octo', repo: 'gitnado', remoteName: 'origin' },
+    detect_github_repo: { owner: 'octo', repo: 'gitduda', remoteName: 'origin' },
     ...overrides,
   });
   await initializeRepositoryStore(page);

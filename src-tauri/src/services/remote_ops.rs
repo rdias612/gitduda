@@ -18,7 +18,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, MutexGuard};
 
-use crate::error::{GitnadoError, Result};
+use crate::error::{GitdudaError, Result};
 
 /// The remote operations that share one per-repository slot.
 ///
@@ -92,7 +92,7 @@ impl RemoteOpRegistry {
             // out for themselves: after a network timeout the app looks idle
             // — every spinner and lock was released — while the abandoned
             // blocking task is still talking to the remote.
-            return Err(GitnadoError::RemoteOperationInFlight(format!(
+            return Err(GitdudaError::RemoteOperationInFlight(format!(
                 "A {} is already running for this repository. Wait for it to \
                  finish and try again — an operation that timed out can still \
                  be finishing in the background.",
@@ -171,7 +171,7 @@ where
 {
     spawn_holding(slot, work)
         .await
-        .map_err(|e| GitnadoError::Custom(format!("{} task failed: {}", op.task_label(), e)))?
+        .map_err(|e| GitdudaError::Custom(format!("{} task failed: {}", op.task_label(), e)))?
 }
 
 /// The same claim-carrying spawn as `run_holding`, but handing back the

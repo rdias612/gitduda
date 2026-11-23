@@ -8,7 +8,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
 use std::time::Duration;
 
-use crate::error::{GitnadoError, Result};
+use crate::error::{GitdudaError, Result};
 use crate::services::loopback_server::{CancelHandle, LoopbackServer};
 use crate::services::oauth::{
     generate_state, OAuthConfig, OAuthProvider, OAuthTokenResponse, PKCEChallenge,
@@ -72,11 +72,11 @@ fn unregister_wait(port: u16, id: u64) {
 async fn release_loopback_port(port: u16) -> Result<bool> {
     let parked = PENDING_SERVERS
         .lock()
-        .map_err(|e| GitnadoError::OAuth(format!("Failed to access server storage: {}", e)))?
+        .map_err(|e| GitdudaError::OAuth(format!("Failed to access server storage: {}", e)))?
         .remove(&port);
     let in_flight = ACTIVE_WAITS
         .lock()
-        .map_err(|e| GitnadoError::OAuth(format!("Failed to access OAuth waits: {}", e)))?
+        .map_err(|e| GitdudaError::OAuth(format!("Failed to access OAuth waits: {}", e)))?
         .remove(&port);
 
     if parked.is_none() && in_flight.is_none() {
@@ -92,7 +92,7 @@ async fn release_loopback_port(port: u16) -> Result<bool> {
         }
     })
     .await
-    .map_err(|e| GitnadoError::OAuth(format!("Task join error: {}", e)))?;
+    .map_err(|e| GitdudaError::OAuth(format!("Task join error: {}", e)))?;
 
     tracing::debug!("Released OAuth loopback server on port {}", port);
     Ok(true)
@@ -189,7 +189,7 @@ impl OAuthState {
         let mut pending = self
             .pending
             .lock()
-            .map_err(|e| GitnadoError::OAuth(format!("Failed to store OAuth flow: {}", e)))?;
+            .map_err(|e| GitdudaError::OAuth(format!("Failed to store OAuth flow: {}", e)))?;
         cleanup_expired_flows(&mut pending);
         pending.insert(state, flow);
         Ok(())
@@ -203,7 +203,7 @@ impl OAuthState {
         let mut pending = self
             .pending
             .lock()
-            .map_err(|e| GitnadoError::OAuth(format!("Failed to access OAuth flow: {}", e)))?;
+            .map_err(|e| GitdudaError::OAuth(format!("Failed to access OAuth flow: {}", e)))?;
         cleanup_expired_flows(&mut pending);
         Ok(pending.remove(state))
     }
@@ -259,7 +259,7 @@ pub async fn oauth_get_authorize_url(
 ) -> Result<StartOAuthResponse> {
     let provider_enum: OAuthProvider = provider
         .parse()
-        .map_err(|e: String| GitnadoError::OAuth(e))?;
+        .map_err(|e: String| GitdudaError::OAuth(e))?;
 
     // Generate PKCE challenge
     let pkce = PKCEChallenge::new();
@@ -276,7 +276,7 @@ pub async fn oauth_get_authorize_url(
             // Cleanup expired servers, then store for later retrieval
             let mut servers = PENDING_SERVERS
                 .lock()
-                .map_err(|e| GitnadoError::OAuth(format!("Failed to store server: {}", e)))?;
+                .map_err(|e| GitdudaError::OAuth(format!("Failed to store server: {}", e)))?;
             cleanup_expired_pending_servers(&mut servers);
             servers.insert(
                 port,
@@ -297,7 +297,7 @@ pub async fn oauth_get_authorize_url(
             // Cleanup expired servers, then store for later retrieval
             let mut servers = PENDING_SERVERS
                 .lock()
-                .map_err(|e| GitnadoError::OAuth(format!("Failed to store server: {}", e)))?;
+                .map_err(|e| GitdudaError::OAuth(format!("Failed to store server: {}", e)))?;
             cleanup_expired_pending_servers(&mut servers);
             servers.insert(
                 port,
@@ -319,7 +319,7 @@ pub async fn oauth_get_authorize_url(
 
             let mut servers = PENDING_SERVERS
                 .lock()
-                .map_err(|e| GitnadoError::OAuth(format!("Failed to store server: {}", e)))?;
+                .map_err(|e| GitdudaError::OAuth(format!("Failed to store server: {}", e)))?;
             cleanup_expired_pending_servers(&mut servers);
             servers.insert(
                 port,
@@ -359,7 +359,7 @@ pub async fn oauth_get_authorize_url(
             // Cleanup expired servers, then store for later retrieval
             let mut servers = PENDING_SERVERS
                 .lock()
-                .map_err(|e| GitnadoError::OAuth(format!("Failed to store server: {}", e)))?;
+                .map_err(|e| GitdudaError::OAuth(format!("Failed to store server: {}", e)))?;
             cleanup_expired_pending_servers(&mut servers);
             servers.insert(
                 port,
@@ -374,12 +374,12 @@ pub async fn oauth_get_authorize_url(
         OAuthProvider::Oidc => {
             // OIDC: instance_url is the issuer URL — discover endpoints
             let issuer_url = instance_url.as_deref().ok_or_else(|| {
-                GitnadoError::OAuth("OIDC requires an issuer URL (pass as instanceUrl)".to_string())
+                GitdudaError::OAuth("OIDC requires an issuer URL (pass as instanceUrl)".to_string())
             })?;
 
             let discovery = crate::services::oauth::discover_oidc_config(issuer_url)
                 .await
-                .map_err(GitnadoError::OAuth)?;
+                .map_err(GitdudaError::OAuth)?;
 
             let server = LoopbackServer::new()?;
             let port = server.port();
@@ -399,7 +399,7 @@ pub async fn oauth_get_authorize_url(
             // Cleanup expired servers, then store for later retrieval
             let mut servers = PENDING_SERVERS
                 .lock()
-                .map_err(|e| GitnadoError::OAuth(format!("Failed to store server: {}", e)))?;
+                .map_err(|e| GitdudaError::OAuth(format!("Failed to store server: {}", e)))?;
             cleanup_expired_pending_servers(&mut servers);
             servers.insert(
                 port,
@@ -466,7 +466,7 @@ pub async fn oauth_exchange_code(
     // Look up (and consume) the pending flow for this state. A missing entry
     // means the state is unknown/expired/replayed — reject the exchange.
     let flow = OAUTH_FLOWS.take_pending(&state)?.ok_or_else(|| {
-        GitnadoError::OAuth("OAuth state did not match any pending flow".to_string())
+        GitdudaError::OAuth("OAuth state did not match any pending flow".to_string())
     })?;
 
     let provider_enum = flow.provider.clone();
@@ -497,10 +497,10 @@ pub async fn oauth_exchange_code(
             // For OIDC, discover the token endpoint from the issuer URL
             let issuer = instance_url
                 .as_deref()
-                .ok_or_else(|| GitnadoError::OAuth("OIDC requires issuer URL".to_string()))?;
+                .ok_or_else(|| GitdudaError::OAuth("OIDC requires issuer URL".to_string()))?;
             let discovery = crate::services::oauth::discover_oidc_config(issuer)
                 .await
-                .map_err(GitnadoError::OAuth)?;
+                .map_err(GitdudaError::OAuth)?;
             discovery.token_endpoint
         }
     };
@@ -530,7 +530,7 @@ pub async fn oauth_exchange_code(
         .form(&params)
         .send()
         .await
-        .map_err(|e| GitnadoError::OAuth(format!("Token request failed: {}", e)))?;
+        .map_err(|e| GitdudaError::OAuth(format!("Token request failed: {}", e)))?;
 
     let status = response.status();
     let text = response.text().await.unwrap_or_default();
@@ -544,7 +544,7 @@ pub async fn oauth_exchange_code(
             status,
             text.len()
         );
-        return Err(GitnadoError::OAuth(format!(
+        return Err(GitdudaError::OAuth(format!(
             "Token request failed with status {}",
             status
         )));
@@ -557,7 +557,7 @@ pub async fn oauth_exchange_code(
                 .get("error_description")
                 .and_then(|d| d.as_str())
                 .unwrap_or("Unknown error");
-            return Err(GitnadoError::OAuth(format!("{}: {}", error, description)));
+            return Err(GitdudaError::OAuth(format!("{}: {}", error, description)));
         }
     }
 
@@ -565,7 +565,7 @@ pub async fn oauth_exchange_code(
     // access_token / refresh_token / id_token in plaintext.
     tracing::debug!("Token exchange response received ({} bytes)", text.len());
     let tokens: OAuthTokenResponse = serde_json::from_str(&text)
-        .map_err(|e| GitnadoError::OAuth(format!("Failed to parse token response: {}", e)))?;
+        .map_err(|e| GitdudaError::OAuth(format!("Failed to parse token response: {}", e)))?;
 
     tracing::info!(
         "Parsed token - has access_token: {}",
@@ -604,7 +604,7 @@ pub async fn oauth_refresh_token(
 ) -> Result<OAuthTokenResponse> {
     let provider_enum: OAuthProvider = provider
         .parse()
-        .map_err(|e: String| GitnadoError::OAuth(e))?;
+        .map_err(|e: String| GitdudaError::OAuth(e))?;
 
     // Build token URL based on provider
     let token_url = match provider_enum {
@@ -618,10 +618,10 @@ pub async fn oauth_refresh_token(
         OAuthProvider::Oidc => {
             let issuer = instance_url
                 .as_deref()
-                .ok_or_else(|| GitnadoError::OAuth("OIDC requires issuer URL".to_string()))?;
+                .ok_or_else(|| GitdudaError::OAuth("OIDC requires issuer URL".to_string()))?;
             let discovery = crate::services::oauth::discover_oidc_config(issuer)
                 .await
-                .map_err(GitnadoError::OAuth)?;
+                .map_err(GitdudaError::OAuth)?;
             discovery.token_endpoint
         }
     };
@@ -640,7 +640,7 @@ pub async fn oauth_refresh_token(
         .form(&params)
         .send()
         .await
-        .map_err(|e| GitnadoError::OAuth(format!("Refresh request failed: {}", e)))?;
+        .map_err(|e| GitdudaError::OAuth(format!("Refresh request failed: {}", e)))?;
 
     if !response.status().is_success() {
         let status = response.status();
@@ -653,7 +653,7 @@ pub async fn oauth_refresh_token(
             status,
             body_len
         );
-        return Err(GitnadoError::OAuth(format!(
+        return Err(GitdudaError::OAuth(format!(
             "Refresh request failed with status {}",
             status
         )));
@@ -662,7 +662,7 @@ pub async fn oauth_refresh_token(
     let tokens: OAuthTokenResponse = response
         .json()
         .await
-        .map_err(|e| GitnadoError::OAuth(format!("Failed to parse token response: {}", e)))?;
+        .map_err(|e| GitdudaError::OAuth(format!("Failed to parse token response: {}", e)))?;
 
     Ok(tokens)
 }
@@ -690,9 +690,9 @@ pub async fn oauth_wait_for_callback(port: u16) -> Result<CallbackResponse> {
     // Retrieve the stored server for this port
     let mut pending = PENDING_SERVERS
         .lock()
-        .map_err(|e| GitnadoError::OAuth(format!("Failed to access server storage: {}", e)))?
+        .map_err(|e| GitdudaError::OAuth(format!("Failed to access server storage: {}", e)))?
         .remove(&port)
-        .ok_or_else(|| GitnadoError::OAuth(format!("No server found for port {}", port)))?;
+        .ok_or_else(|| GitdudaError::OAuth(format!("No server found for port {}", port)))?;
 
     // Detach a cancel handle BEFORE the server is consumed by the wait, and
     // register it so `oauth_cancel_flow` can free the port if the user abandons
@@ -701,7 +701,7 @@ pub async fn oauth_wait_for_callback(port: u16) -> Result<CallbackResponse> {
     if let Some(cancel) = pending.server.take_cancel_handle() {
         ACTIVE_WAITS
             .lock()
-            .map_err(|e| GitnadoError::OAuth(format!("Failed to access OAuth waits: {}", e)))?
+            .map_err(|e| GitdudaError::OAuth(format!("Failed to access OAuth waits: {}", e)))?
             .insert(
                 port,
                 ActiveWait {
@@ -722,7 +722,7 @@ pub async fn oauth_wait_for_callback(port: u16) -> Result<CallbackResponse> {
     // clears its registry entry.
     unregister_wait(port, wait_id);
 
-    let callback = joined.map_err(|e| GitnadoError::OAuth(format!("Task join error: {}", e)))??;
+    let callback = joined.map_err(|e| GitdudaError::OAuth(format!("Task join error: {}", e)))??;
 
     // Validate the returned `state` against an in-flight flow. We only PEEK here
     // (the flow is consumed later by `oauth_exchange_code`), so confirm a match
@@ -741,7 +741,7 @@ fn validate_callback_state(state: &str) -> Result<()> {
     let mut pending = OAUTH_FLOWS
         .pending
         .lock()
-        .map_err(|e| GitnadoError::OAuth(format!("Failed to access OAuth flow: {}", e)))?;
+        .map_err(|e| GitdudaError::OAuth(format!("Failed to access OAuth flow: {}", e)))?;
     // Evict expired flows first so this peek stays consistent with the later
     // consume in `oauth_exchange_code` (which also cleans up). Otherwise an
     // expired state could validate here only to fail at exchange time.
@@ -749,7 +749,7 @@ fn validate_callback_state(state: &str) -> Result<()> {
     if pending.contains_key(state) {
         Ok(())
     } else {
-        Err(GitnadoError::OAuth(
+        Err(GitdudaError::OAuth(
             "OAuth callback state did not match any pending flow".to_string(),
         ))
     }
@@ -1720,7 +1720,7 @@ pub async fn discover_oidc_provider(
 ) -> Result<crate::services::oauth::OidcDiscovery> {
     crate::services::oauth::discover_oidc_config(&issuer_url)
         .await
-        .map_err(GitnadoError::OperationFailed)
+        .map_err(GitdudaError::OperationFailed)
 }
 
 /// Decode an OIDC ID token to extract user identity
@@ -1728,5 +1728,5 @@ pub async fn discover_oidc_provider(
 pub async fn decode_oidc_id_token(
     id_token: String,
 ) -> Result<crate::services::oauth::OidcUserInfo> {
-    crate::services::oauth::decode_id_token(&id_token).map_err(GitnadoError::OperationFailed)
+    crate::services::oauth::decode_id_token(&id_token).map_err(GitdudaError::OperationFailed)
 }

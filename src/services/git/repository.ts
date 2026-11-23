@@ -1139,7 +1139,7 @@ export async function getCommitMessageRules(
 
 /**
  * Set the commit message rules for a repository.
- * Rules are stored in .git/gitnado/commit_rules.json.
+ * Rules are stored in .git/gitduda/commit_rules.json.
  *
  * @param path - Repository path
  * @param rules - The rules to set

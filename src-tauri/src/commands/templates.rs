@@ -1,6 +1,6 @@
 //! Commit template commands
 
-use crate::error::{GitnadoError, Result};
+use crate::error::{GitdudaError, Result};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
@@ -29,7 +29,7 @@ thread_local! {
 ///
 /// Tests point this at a `TempDir` (see `TemplatesSandbox`). Without an
 /// override, `data_dir()` resolves the REAL user data directory — it
-/// `create_dir_all`s `~/.local/share/gitnado` — so a plain `cargo test`
+/// `create_dir_all`s `~/.local/share/gitduda` — so a plain `cargo test`
 /// would read-modify-write the developer's own templates file from several
 /// threads at once.
 fn templates_dir() -> Result<PathBuf> {
@@ -54,7 +54,7 @@ fn load_templates() -> Result<Vec<CommitTemplate>> {
     }
 
     let content = fs::read_to_string(&path).map_err(|e| {
-        GitnadoError::OperationFailed(format!("Failed to read templates file: {}", e))
+        GitdudaError::OperationFailed(format!("Failed to read templates file: {}", e))
     })?;
 
     // Handle empty or whitespace-only files gracefully
@@ -64,7 +64,7 @@ fn load_templates() -> Result<Vec<CommitTemplate>> {
     }
 
     serde_json::from_str(trimmed).map_err(|e| {
-        GitnadoError::OperationFailed(format!("Failed to parse templates file: {}", e))
+        GitdudaError::OperationFailed(format!("Failed to parse templates file: {}", e))
     })
 }
 
@@ -73,11 +73,11 @@ fn save_templates(templates: &[CommitTemplate]) -> Result<()> {
     let path = get_templates_path()?;
 
     let content = serde_json::to_string_pretty(templates).map_err(|e| {
-        GitnadoError::OperationFailed(format!("Failed to serialize templates: {}", e))
+        GitdudaError::OperationFailed(format!("Failed to serialize templates: {}", e))
     })?;
 
     fs::write(&path, content).map_err(|e| {
-        GitnadoError::OperationFailed(format!("Failed to write templates file: {}", e))
+        GitdudaError::OperationFailed(format!("Failed to write templates file: {}", e))
     })?;
 
     Ok(())
@@ -87,11 +87,11 @@ fn save_templates(templates: &[CommitTemplate]) -> Result<()> {
 #[command]
 pub async fn get_commit_template(path: String) -> Result<Option<String>> {
     let repo = git2::Repository::open(&path)
-        .map_err(|e| GitnadoError::OperationFailed(e.message().to_string()))?;
+        .map_err(|e| GitdudaError::OperationFailed(e.message().to_string()))?;
 
     let config = repo
         .config()
-        .map_err(|e| GitnadoError::OperationFailed(e.message().to_string()))?;
+        .map_err(|e| GitdudaError::OperationFailed(e.message().to_string()))?;
 
     // Try to get commit.template from git config
     if let Ok(template_path) = config.get_string("commit.template") {
@@ -110,7 +110,7 @@ pub async fn get_commit_template(path: String) -> Result<Option<String>> {
 
         if template_path.exists() {
             let content = fs::read_to_string(&template_path).map_err(|e| {
-                GitnadoError::OperationFailed(format!("Failed to read template file: {}", e))
+                GitdudaError::OperationFailed(format!("Failed to read template file: {}", e))
             })?;
             return Ok(Some(content));
         }
@@ -120,7 +120,7 @@ pub async fn get_commit_template(path: String) -> Result<Option<String>> {
     let gitmessage_path = PathBuf::from(&path).join(".gitmessage");
     if gitmessage_path.exists() {
         let content = fs::read_to_string(&gitmessage_path).map_err(|e| {
-            GitnadoError::OperationFailed(format!("Failed to read .gitmessage: {}", e))
+            GitdudaError::OperationFailed(format!("Failed to read .gitmessage: {}", e))
         })?;
         return Ok(Some(content));
     }
@@ -130,7 +130,7 @@ pub async fn get_commit_template(path: String) -> Result<Option<String>> {
         let global_gitmessage = home.join(".gitmessage");
         if global_gitmessage.exists() {
             let content = fs::read_to_string(&global_gitmessage).map_err(|e| {
-                GitnadoError::OperationFailed(format!("Failed to read global .gitmessage: {}", e))
+                GitdudaError::OperationFailed(format!("Failed to read global .gitmessage: {}", e))
             })?;
             return Ok(Some(content));
         }
@@ -249,7 +249,7 @@ mod tests {
     /// The suite must never read or write the developer's own templates.
     ///
     /// `get_templates_path` resolves through `app_paths::data_dir()`, which
-    /// `create_dir_all`s the real `~/.local/share/gitnado`. Three tests
+    /// `create_dir_all`s the real `~/.local/share/gitduda`. Three tests
     /// reached it, two of them read-modify-WRITING the real
     /// `commit-templates.json` with no lock between them — so a plain
     /// `cargo test` could drop the user's own template entries.

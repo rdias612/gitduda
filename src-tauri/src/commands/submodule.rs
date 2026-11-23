@@ -4,7 +4,7 @@
 use std::path::Path;
 use tauri::command;
 
-use crate::error::{GitnadoError, Result};
+use crate::error::{GitdudaError, Result};
 use crate::utils::cli_safety::reject_flag_like;
 use crate::utils::{apply_token_credential_helper, create_command, GitCommand};
 
@@ -123,7 +123,7 @@ fn run_git_command_in(
 ) -> Result<String> {
     let output = submodule_command_in(cwd, token_repo, args, token, token_remote)
         .output()
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to run git: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to run git: {}", e)))?;
 
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
     let stderr = String::from_utf8_lossy(&output.stderr).to_string();
@@ -131,7 +131,7 @@ fn run_git_command_in(
     if output.status.success() {
         Ok(stdout.trim().to_string())
     } else {
-        Err(GitnadoError::OperationFailed(
+        Err(GitdudaError::OperationFailed(
             if stderr.is_empty() { stdout } else { stderr }
                 .trim()
                 .to_string(),
@@ -480,7 +480,7 @@ fn update_nested_submodules(
     depth: usize,
 ) -> Result<()> {
     if depth > MAX_SUBMODULE_DEPTH {
-        return Err(GitnadoError::OperationFailed(format!(
+        return Err(GitdudaError::OperationFailed(format!(
             "Submodules nested more than {} levels deep under {}; not recursing further",
             MAX_SUBMODULE_DEPTH,
             parent.display()
@@ -787,14 +787,14 @@ mod tests {
 
     fn blocked_message<T: std::fmt::Debug>(result: Result<T>) -> String {
         match result {
-            Err(GitnadoError::NetworkBlocked(message)) => message,
+            Err(GitdudaError::NetworkBlocked(message)) => message,
             other => panic!("expected a NetworkBlocked refusal, got {:?}", other),
         }
     }
 
     fn assert_not_blocked<T: std::fmt::Debug>(result: &Result<T>, what: &str) {
         assert!(
-            !matches!(result, Err(GitnadoError::NetworkBlocked(_))),
+            !matches!(result, Err(GitdudaError::NetworkBlocked(_))),
             "{} must not be refused by the gate, got {:?}",
             what,
             result

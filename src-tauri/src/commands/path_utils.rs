@@ -5,7 +5,7 @@
 
 use std::path::{Component, Path, PathBuf};
 
-use crate::error::{GitnadoError, Result};
+use crate::error::{GitdudaError, Result};
 
 /// Validate that a file path stays within the repository directory.
 ///
@@ -19,7 +19,7 @@ use crate::error::{GitnadoError, Result};
 pub fn validate_path_within_repo(repo_path: &Path, file_path: &str) -> Result<PathBuf> {
     let rel = Path::new(file_path);
     if rel.is_absolute() || rel.components().any(|c| matches!(c, Component::ParentDir)) {
-        return Err(GitnadoError::InvalidPath(
+        return Err(GitdudaError::InvalidPath(
             "File path must be relative and cannot contain '..'".to_string(),
         ));
     }
@@ -28,7 +28,7 @@ pub fn validate_path_within_repo(repo_path: &Path, file_path: &str) -> Result<Pa
 
     // Canonicalize the repo path as our trust boundary
     let canonical_repo = repo_path.canonicalize().map_err(|e| {
-        GitnadoError::OperationFailed(format!("Failed to resolve repo path: {}", e))
+        GitdudaError::OperationFailed(format!("Failed to resolve repo path: {}", e))
     })?;
 
     // Resolve the deepest existing entry and check where it actually lands. A
@@ -36,7 +36,7 @@ pub fn validate_path_within_repo(repo_path: &Path, file_path: &str) -> Result<Pa
     // is still accepted while one pointing outside the repository is refused.
     let resolved = resolve_existing_prefix(&abs_path, 0)?;
     if !resolved.starts_with(&canonical_repo) {
-        return Err(GitnadoError::InvalidPath(
+        return Err(GitdudaError::InvalidPath(
             "File path resolves to outside the repository".to_string(),
         ));
     }
@@ -75,9 +75,9 @@ const MAX_SYMLINK_DEPTH: u8 = 32;
 /// target. Relative targets are based at the canonical parent so `..`
 /// components resolve through symlinked parents before containment is checked.
 fn resolve_existing_prefix(path: &Path, depth: u8) -> Result<PathBuf> {
-    let unresolvable = || GitnadoError::InvalidPath("Cannot resolve file path".to_string());
+    let unresolvable = || GitdudaError::InvalidPath("Cannot resolve file path".to_string());
     if depth > MAX_SYMLINK_DEPTH {
-        return Err(GitnadoError::InvalidPath(
+        return Err(GitdudaError::InvalidPath(
             "Too many levels of symbolic links".to_string(),
         ));
     }
@@ -89,7 +89,7 @@ fn resolve_existing_prefix(path: &Path, depth: u8) -> Result<PathBuf> {
             Ok(meta) => {
                 let mut base = if meta.file_type().is_symlink() && current.canonicalize().is_err() {
                     let target = std::fs::read_link(&current).map_err(|e| {
-                        GitnadoError::InvalidPath(format!("Cannot resolve file path: {}", e))
+                        GitdudaError::InvalidPath(format!("Cannot resolve file path: {}", e))
                     })?;
                     let target = if target.is_absolute() {
                         target
@@ -99,7 +99,7 @@ fn resolve_existing_prefix(path: &Path, depth: u8) -> Result<PathBuf> {
                             .ok_or_else(unresolvable)?
                             .canonicalize()
                             .map_err(|e| {
-                                GitnadoError::InvalidPath(format!(
+                                GitdudaError::InvalidPath(format!(
                                     "Cannot resolve file path: {}",
                                     e
                                 ))
@@ -109,7 +109,7 @@ fn resolve_existing_prefix(path: &Path, depth: u8) -> Result<PathBuf> {
                     resolve_existing_prefix(&target, depth + 1)?
                 } else {
                     current.canonicalize().map_err(|e| {
-                        GitnadoError::InvalidPath(format!("Cannot resolve file path: {}", e))
+                        GitdudaError::InvalidPath(format!("Cannot resolve file path: {}", e))
                     })?
                 };
                 for part in tail.iter().rev() {
@@ -141,19 +141,19 @@ pub fn resolve_path_within_repo(repo_path: &Path, file_path: &str) -> Result<Pat
     }
 
     let canonical_repo = repo_path.canonicalize().map_err(|e| {
-        GitnadoError::OperationFailed(format!("Failed to resolve repo path: {}", e))
+        GitdudaError::OperationFailed(format!("Failed to resolve repo path: {}", e))
     })?;
     let rel = given
         .strip_prefix(repo_path)
         .or_else(|_| given.strip_prefix(&canonical_repo))
         .map_err(|_| {
-            GitnadoError::InvalidPath("File path is outside the repository".to_string())
+            GitdudaError::InvalidPath("File path is outside the repository".to_string())
         })?;
     let rel = rel
         .to_str()
-        .ok_or_else(|| GitnadoError::InvalidPath("File path is not valid UTF-8".to_string()))?;
+        .ok_or_else(|| GitdudaError::InvalidPath("File path is not valid UTF-8".to_string()))?;
     if rel.is_empty() {
-        return Err(GitnadoError::InvalidPath(
+        return Err(GitdudaError::InvalidPath(
             "File path must name a file inside the repository".to_string(),
         ));
     }

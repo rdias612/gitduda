@@ -26,7 +26,7 @@
 use std::path::Path;
 use tauri::command;
 
-use crate::error::{GitnadoError, Result};
+use crate::error::{GitdudaError, Result};
 use crate::utils::{apply_token_credential_helper, create_command};
 
 /// LFS file tracking pattern
@@ -106,7 +106,7 @@ impl LfsConfig {
         // libgit2 parses config from a file, so a committed `.lfsconfig` is
         // materialised in a private temp file for as long as this is alive.
         let mut file = tempfile::Builder::new()
-            .prefix("gitnado-lfsconfig-")
+            .prefix("gitduda-lfsconfig-")
             .tempfile()
             .ok()?;
         std::io::Write::write_all(&mut file, &bytes).ok()?;
@@ -543,7 +543,7 @@ fn run_lfs_command_with_token(
 fn finish_lfs_command(mut command: crate::utils::GitCommand) -> Result<String> {
     let output = command
         .output()
-        .map_err(|e| GitnadoError::OperationFailed(format!("Failed to run git-lfs: {}", e)))?;
+        .map_err(|e| GitdudaError::OperationFailed(format!("Failed to run git-lfs: {}", e)))?;
 
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
     let stderr = String::from_utf8_lossy(&output.stderr).to_string();
@@ -551,7 +551,7 @@ fn finish_lfs_command(mut command: crate::utils::GitCommand) -> Result<String> {
     if output.status.success() {
         Ok(stdout.trim().to_string())
     } else {
-        Err(GitnadoError::OperationFailed(
+        Err(GitdudaError::OperationFailed(
             if stderr.is_empty() { stdout } else { stderr }
                 .trim()
                 .to_string(),
@@ -823,7 +823,7 @@ pub async fn init_lfs(path: String) -> Result<()> {
     let repo_path = Path::new(&path);
 
     if !is_lfs_installed() {
-        return Err(GitnadoError::OperationFailed(
+        return Err(GitdudaError::OperationFailed(
             "Git LFS is not installed. Please install it first.".to_string(),
         ));
     }
@@ -864,7 +864,7 @@ pub async fn lfs_untrack(path: String, pattern: String) -> Result<()> {
     // "No longer tracking ..." over a pattern that is still there.
     if let Ok(output) = run_lfs_command(repo_path, &["track"]) {
         if lists_pattern(&output, &pattern) {
-            return Err(GitnadoError::OperationFailed(format!(
+            return Err(GitdudaError::OperationFailed(format!(
                 "{} is still tracked. Remove it from the .gitattributes that defines it.",
                 pattern
             )));
@@ -1669,14 +1669,14 @@ mod tests {
 
     fn blocked_message<T: std::fmt::Debug>(result: Result<T>) -> String {
         match result {
-            Err(GitnadoError::NetworkBlocked(message)) => message,
+            Err(GitdudaError::NetworkBlocked(message)) => message,
             other => panic!("expected a NetworkBlocked refusal, got {:?}", other),
         }
     }
 
     fn assert_not_blocked<T: std::fmt::Debug>(result: &Result<T>, what: &str) {
         assert!(
-            !matches!(result, Err(GitnadoError::NetworkBlocked(_))),
+            !matches!(result, Err(GitdudaError::NetworkBlocked(_))),
             "{} must not be refused by the gate, got {:?}",
             what,
             result
@@ -1739,7 +1739,7 @@ mod tests {
     fn the_materialised_lfsconfig_temp_file_is_named_for_this_app() {
         // A committed `.lfsconfig` is written to a private temp file, and the
         // prefix is all that identifies one left behind in the system temp
-        // directory. It has to carry the current app name (`gitnado-lfsconfig-`).
+        // directory. It has to carry the current app name (`gitduda-lfsconfig-`).
         let repo = TestRepo::with_initial_commit();
         repo.create_commit("committed .lfsconfig", &[(".lfsconfig", HOSTILE_LFSCONFIG)]);
         std::fs::remove_file(repo.path.join(".lfsconfig")).unwrap();
@@ -1755,7 +1755,7 @@ mod tests {
             .to_string_lossy()
             .into_owned();
         assert!(
-            name.starts_with("gitnado-lfsconfig-"),
+            name.starts_with("gitduda-lfsconfig-"),
             "the temp file should be named for this app, got {name}"
         );
     }
