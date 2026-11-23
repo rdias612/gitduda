@@ -178,6 +178,7 @@ import {
   stopGitCommandLogging,
 } from './services/git-output.service.ts';
 import { showToast, notifyWarning } from './services/notification.service.ts';
+import { handleOpenEditorFailure } from './services/open-location.service.ts';
 import { emitSecuritySettings } from './services/security-sync.service.ts';
 import { showErrorWithSuggestion } from './services/error-suggestion.service.ts';
 import { runFetch, runPull, runPush } from './services/remote-operations.service.ts';
@@ -5986,10 +5987,7 @@ export class AppShell extends LitElement {
       e.detail.path,
     );
     if (!result.success || !result.data?.success) {
-      const message =
-        result.data?.message || result.error?.message || 'Failed to open file in editor';
-      log.error('Failed to open file in editor:', message);
-      showToast(message, 'error');
+      handleOpenEditorFailure(result, 'Failed to open file in editor');
     } else if (result.data.notice) {
       showToast(result.data.notice, 'info');
     }

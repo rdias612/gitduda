@@ -961,6 +961,7 @@ pub fn run() {
             commands::file::open_in_configured_editor,
             commands::file::get_editor_config,
             commands::file::set_editor_config,
+            commands::file::get_available_editors,
             // File encoding detection and conversion
             commands::encoding::detect_file_encoding,
             commands::encoding::convert_file_encoding,

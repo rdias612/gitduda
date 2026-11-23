@@ -32,6 +32,7 @@ import { expect } from '@open-wc/testing';
 import type { AppShell } from '../app-shell.ts';
 import '../app-shell.ts';
 import { uiStore, repositoryStore } from '../stores/index.ts';
+import { dialogs } from '../stores/dialog.store.ts';
 import type { Repository } from '../types/git.types.ts';
 
 function mockRepo(path: string, name: string): Repository {
@@ -63,6 +64,7 @@ describe('app-shell command palette: open the repository elsewhere', () => {
     for (const k of Object.keys(mockResponses)) delete mockResponses[k];
     for (const k of Object.keys(failures)) delete failures[k];
     uiStore.setState({ toasts: [] });
+    dialogs.reset();
     repositoryStore.getState().reset();
     mockResponses['open_in_configured_editor'] = () => ({
       success: true,
@@ -71,6 +73,7 @@ describe('app-shell command palette: open the repository elsewhere', () => {
   });
 
   afterEach(() => {
+    dialogs.reset();
     repositoryStore.getState().reset();
   });
 
@@ -177,7 +180,7 @@ describe('app-shell command palette: open the repository elsewhere', () => {
   it('an editor that resolves with success:false is still reported', async () => {
     mockResponses['open_in_configured_editor'] = () => ({
       success: false,
-      message: 'No editor configured',
+      message: 'The configured editor (vim) requires a terminal',
     });
     const el = shellOnRepo();
 
@@ -186,7 +189,45 @@ describe('app-shell command palette: open the repository elsewhere', () => {
 
     const errors = errorToasts();
     expect(errors, 'OpenResult.success === false must be reported').to.have.lengthOf(1);
-    expect(errors[0].message).to.contain('No editor configured');
+    expect(errors[0].message).to.contain('requires a terminal');
+  });
+
+  it('when no editor is configured, shows a warning toast with Configure Editor action', async () => {
+    mockResponses['open_in_configured_editor'] = () => ({
+      success: false,
+      notConfigured: true,
+      message: 'No editor is configured (e.g., VS Code). Configure an editor in Settings.',
+    });
+    const el = shellOnRepo();
+
+    paletteCommand(el, 'open-in-editor').action();
+    await settle();
+
+    expect(errorToasts()).to.have.lengthOf(0);
+    const warnings = uiStore.getState().toasts.filter((t) => t.type === 'warning');
+    expect(warnings).to.have.lengthOf(1);
+    expect(warnings[0].message).to.contain('No editor is configured');
+    expect(warnings[0].action?.label).to.equal('Configure Editor');
+
+    warnings[0].action!.callback();
+    expect(dialogs.isOpen('settings')).to.be.true;
+    expect(dialogs.context('settings')).to.deep.equal({ focusSection: 'external-tools' });
+  });
+
+  it('a rejected open_in_configured_editor shows an error toast without Configure Editor action', async () => {
+    failures['open_in_configured_editor'] = {
+      code: 'OPERATION_FAILED',
+      message: "Configured editor executable 'code' could not be found.",
+    };
+    const el = shellOnRepo();
+
+    paletteCommand(el, 'open-in-editor').action();
+    await settle();
+
+    const errors = errorToasts();
+    expect(errors).to.have.lengthOf(1);
+    expect(errors[0].message).to.contain("Configured editor executable 'code'");
+    expect(uiStore.getState().toasts.filter((t) => t.type === 'warning')).to.have.lengthOf(0);
   });
 
   it('with no repository open nothing is invoked and the guard warns', async () => {

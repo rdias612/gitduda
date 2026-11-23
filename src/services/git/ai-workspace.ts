@@ -39,12 +39,22 @@ export interface OpenResult {
   message?: string;
   /** Set when the open succeeded via a fallback the user should know about. */
   notice?: string;
+  /** Set when no editor is configured so the UI can guide the user to Settings. */
+  notConfigured?: boolean;
 }
 
 /** Editor configuration from git config */
 export interface EditorConfig {
   editor?: string;
   visual?: string;
+}
+
+/** Information about a code editor preset and its availability */
+export interface EditorInfo {
+  id: string;
+  displayName: string;
+  command: string;
+  available: boolean;
 }
 
 /**
@@ -118,6 +128,15 @@ export async function setEditorConfig(
     editor,
     global,
   });
+}
+
+/**
+ * Get a list of commonly available code editors for the current OS
+ */
+export async function getAvailableEditors(): Promise<
+  CommandResult<EditorInfo[]>
+> {
+  return invokeCommand<EditorInfo[]>("get_available_editors");
 }
 
 

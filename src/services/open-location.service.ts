@@ -16,6 +16,9 @@
 
 import * as gitService from './git.service.ts';
 import { showToast } from './notification.service.ts';
+import { dialogs } from '../stores/dialog.store.ts';
+import type { CommandResult } from '../types/api.types.ts';
+import type { OpenResult } from './git/ai-workspace.ts';
 import { loggers } from '../utils/logger.ts';
 
 const log = loggers.git;
@@ -26,6 +29,31 @@ function reportFailure(fallback: string, message?: string): false {
   log.error(fallback, text);
   showToast(text, 'error');
   return false;
+}
+
+/**
+ * Surface an `openInConfiguredEditor` failure to the user.
+ * When no editor is configured (`notConfigured === true`), shows a warning
+ * toast with an action button to jump directly to Settings → External Tools.
+ */
+export function handleOpenEditorFailure(
+  result: CommandResult<OpenResult>,
+  fallbackMessage: string,
+): false {
+  const message = result.data?.message ?? result.error?.message;
+  const text = message && message.trim().length > 0 ? message : fallbackMessage;
+
+  if (result.data?.notConfigured === true) {
+    showToast(text, 'warning', 8000, {
+      label: 'Configure Editor',
+      callback: () => {
+        dialogs.open('settings', { focusSection: 'external-tools' });
+      },
+    });
+    return false;
+  }
+
+  return reportFailure(fallbackMessage, message);
 }
 
 /**
@@ -70,10 +98,7 @@ export async function openRepositoryInEditor(repoPath: string): Promise<boolean>
   // The command resolves with an OpenResult that carries its own success flag,
   // so a resolved call is not proof the editor opened.
   if (!result.success || !result.data?.success) {
-    return reportFailure(
-      'Failed to open editor',
-      result.data?.message ?? result.error?.message,
-    );
+    return handleOpenEditorFailure(result, 'Failed to open editor');
   }
   if (result.data.notice) showToast(result.data.notice, 'info');
   return true;

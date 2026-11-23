@@ -22,6 +22,7 @@ import {
   openInConfiguredEditor,
   getEditorConfig,
   setEditorConfig,
+  getAvailableEditors,
 } from "../git.service.ts";
 
 describe("git.service - File operations", () => {
@@ -182,6 +183,38 @@ describe("git.service - File operations", () => {
         });
 
       const result = await setEditorConfig("/nonexistent/repo", "code");
+      expect(result.success).to.be.false;
+    });
+  });
+
+  describe("getAvailableEditors", () => {
+    it("invokes get_available_editors command", async () => {
+      mockInvoke = () =>
+        Promise.resolve([
+          { id: "vscode", displayName: "VS Code", command: "code", available: true },
+          { id: "cursor", displayName: "Cursor", command: "cursor", available: false },
+        ]);
+
+      const result = await getAvailableEditors();
+      expect(lastInvokedCommand).to.equal("get_available_editors");
+      expect(result.success).to.be.true;
+      expect(result.data).to.have.lengthOf(2);
+      expect(result.data?.[0]).to.deep.equal({
+        id: "vscode",
+        displayName: "VS Code",
+        command: "code",
+        available: true,
+      });
+    });
+
+    it("handles command error", async () => {
+      mockInvoke = () =>
+        Promise.reject({
+          code: "OPERATION_FAILED",
+          message: "Failed to detect editors",
+        });
+
+      const result = await getAvailableEditors();
       expect(result.success).to.be.false;
     });
   });

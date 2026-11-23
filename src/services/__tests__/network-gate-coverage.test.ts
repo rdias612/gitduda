@@ -321,7 +321,7 @@ const LOCAL_COMMANDS = new Set([
   'enable_sparse_checkout', 'erase_credentials', 'execute_interactive_rebase',
   'execute_unified_profiles_migration', 'filter_commits', 'fixup_commit', 'generate_ssh_key',
   'get_aliases', 'get_all_git_config', 'get_archive_files',
-  'get_assigned_unified_profile', 'get_available_helpers', 'get_available_merge_tools',
+  'get_assigned_unified_profile', 'get_available_editors', 'get_available_helpers', 'get_available_merge_tools',
   'get_avatar_url', 'get_avatar_urls', 'get_bisect_status', 'get_blob_content',
   'get_bookmarks', 'get_branch_diff_commits', 'get_branch_rules', 'get_branch_tracking_info',
   'clear_branch_parent', 'get_branches', 'get_cleanable_files', 'get_cleanup_candidates', 'scan_outgoing_changes', 'get_stacks', 'preview_restack', 'restack', 'set_branch_parent', 'get_recompose_source', 'apply_recompose', 'get_last_recompose', 'undo_recompose', 'get_clone_filter_info',

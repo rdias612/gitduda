@@ -150,6 +150,10 @@ export interface ProfileManagerContext {
   initialView: '' | 'accounts';
 }
 
+export interface SettingsDialogContext {
+  focusSection?: 'external-tools';
+}
+
 /**
  * Open-time payloads, by dialog.
  *
@@ -159,6 +163,7 @@ export interface ProfileManagerContext {
  * time, so they are not open-time context.
  */
 export interface DialogContexts {
+  settings: SettingsDialogContext;
   conflict: ConflictDialogContext;
   fileHistory: FileHistoryContext;
   search: SearchDialogContext;

@@ -32,6 +32,9 @@ pub struct OpenResult {
     /// that a fallback app was used instead of the configured editor.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub notice: Option<String>,
+    /// Whether no editor is configured so the UI can guide the user to Settings.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub not_configured: Option<bool>,
 }
 
 /// Editor configuration from git config
@@ -42,6 +45,16 @@ pub struct EditorConfig {
     pub editor: Option<String>,
     /// GIT_VISUAL or core.visual setting
     pub visual: Option<String>,
+}
+
+/// Information about a code editor preset and its availability on the current OS
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EditorInfo {
+    pub id: String,
+    pub display_name: String,
+    pub command: String,
+    pub available: bool,
 }
 
 #[cfg(target_os = "windows")]
@@ -77,6 +90,15 @@ fn windows_reveal_command(target: &Path) -> std::process::Command {
 
 /// Run git config command to get a value
 fn get_git_config_value(repo_path: Option<&Path>, key: &str, global: bool) -> Option<String> {
+    get_git_config_value_with(repo_path, key, global, None)
+}
+
+fn get_git_config_value_with(
+    repo_path: Option<&Path>,
+    key: &str,
+    global: bool,
+    global_config_override: Option<&Path>,
+) -> Option<String> {
     let mut cmd = create_command("git");
 
     if let Some(path) = repo_path {
@@ -85,7 +107,11 @@ fn get_git_config_value(repo_path: Option<&Path>, key: &str, global: bool) -> Op
 
     cmd.arg("config");
     if global {
-        cmd.arg("--global");
+        if let Some(cfg_path) = global_config_override {
+            cmd.arg("--file").arg(cfg_path);
+        } else {
+            cmd.arg("--global");
+        }
     }
     cmd.arg("--get");
     cmd.arg(key);
@@ -104,11 +130,12 @@ fn get_git_config_value(repo_path: Option<&Path>, key: &str, global: bool) -> Op
 }
 
 /// Run git config command to set a value
-fn set_git_config_value(
+fn set_git_config_value_with(
     repo_path: Option<&Path>,
     key: &str,
     value: &str,
     global: bool,
+    global_config_override: Option<&Path>,
 ) -> Result<()> {
     let mut cmd = create_command("git");
 
@@ -118,7 +145,11 @@ fn set_git_config_value(
 
     cmd.arg("config");
     if global {
-        cmd.arg("--global");
+        if let Some(cfg_path) = global_config_override {
+            cmd.arg("--file").arg(cfg_path);
+        } else {
+            cmd.arg("--global");
+        }
     } else {
         cmd.arg("--local");
     }
@@ -190,6 +221,7 @@ pub async fn reveal_in_file_manager(path: String) -> Result<OpenResult> {
         success: true,
         message: None,
         notice: None,
+        not_configured: None,
     })
 }
 
@@ -261,7 +293,111 @@ pub async fn open_in_default_app(path: String) -> Result<OpenResult> {
         success: true,
         message: None,
         notice: None,
+        not_configured: None,
     })
+}
+
+#[cfg(target_os = "windows")]
+fn has_windows_executable_extension(path: &Path) -> bool {
+    path.extension()
+        .and_then(|e| e.to_str())
+        .map(|e| {
+            matches!(
+                e.to_ascii_lowercase().as_str(),
+                "exe" | "com" | "cmd" | "bat"
+            )
+        })
+        .unwrap_or(false)
+}
+
+#[cfg(any(target_os = "windows", test))]
+fn select_windows_where_candidate_with(
+    stdout: &str,
+    is_file: impl Fn(&Path) -> bool,
+) -> Option<String> {
+    let mut fallback_script: Option<String> = None;
+
+    for raw_line in stdout.lines() {
+        let line = raw_line.trim();
+        if line.is_empty() {
+            continue;
+        }
+        let candidate = Path::new(line);
+        if !is_file(candidate) {
+            continue;
+        }
+        let ext = candidate
+            .extension()
+            .and_then(|e| e.to_str())
+            .map(|e| e.to_ascii_lowercase());
+        match ext.as_deref() {
+            Some("exe") | Some("com") => return Some(line.to_string()),
+            Some("cmd") | Some("bat") if fallback_script.is_none() => {
+                fallback_script = Some(line.to_string());
+            }
+            _ => {}
+        }
+    }
+
+    fallback_script
+}
+
+fn resolve_direct_path(trimmed: &str) -> Option<String> {
+    let path = Path::new(trimmed);
+    if path.is_file() {
+        return Some(trimmed.to_string());
+    }
+
+    #[cfg(target_os = "windows")]
+    if !has_windows_executable_extension(path) {
+        for ext in ["exe", "com", "cmd", "bat"] {
+            let candidate = std::path::PathBuf::from(format!("{trimmed}.{ext}"));
+            if candidate.is_file() {
+                return Some(candidate.to_string_lossy().into_owned());
+            }
+        }
+    }
+
+    None
+}
+
+/// Resolve an editor command or path to an existing executable.
+fn resolve_editor_executable(executable: &str) -> Option<String> {
+    let trimmed = executable.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+
+    if trimmed.contains('/') || trimmed.contains('\\') || Path::new(trimmed).is_absolute() {
+        return resolve_direct_path(trimmed);
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        let output = create_command("where").arg(trimmed).output().ok()?;
+        if !output.status.success() {
+            return None;
+        }
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        select_windows_where_candidate_with(&stdout, |p| p.is_file())
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        let output = create_command("which").arg(trimmed).output().ok()?;
+        if !output.status.success() {
+            return None;
+        }
+        String::from_utf8_lossy(&output.stdout)
+            .lines()
+            .map(str::trim)
+            .find(|line| !line.is_empty() && Path::new(line).is_file())
+            .map(|line| line.to_string())
+    }
+}
+
+fn is_editor_executable_available(executable: &str) -> bool {
+    resolve_editor_executable(executable).is_some()
 }
 
 /// Open a file in the configured editor with optional line number
@@ -271,11 +407,30 @@ pub async fn open_in_configured_editor(
     #[allow(non_snake_case)] filePath: String,
     line: Option<u32>,
 ) -> Result<OpenResult> {
+    open_in_configured_editor_with_deps(
+        path,
+        filePath,
+        line,
+        None,
+        |name| std::env::var(name).ok(),
+        resolve_editor_executable,
+    )
+    .await
+}
+
+async fn open_in_configured_editor_with_deps(
+    path: String,
+    file_path: String,
+    line: Option<u32>,
+    global_config_override: Option<&Path>,
+    env_var: impl Fn(&str) -> Option<String>,
+    resolve_executable: impl Fn(&str) -> Option<String>,
+) -> Result<OpenResult> {
     let repo_path = Path::new(&path);
     let canonical_repo = repo_path.canonicalize().map_err(|e| {
         GitdudaError::OperationFailed(format!("Failed to resolve repo path: {}", e))
     })?;
-    let requested_path = Path::new(&filePath);
+    let requested_path = Path::new(&file_path);
     let target_path = if requested_path == repo_path || requested_path == canonical_repo.as_path() {
         if repo_path.is_absolute() {
             repo_path.to_path_buf()
@@ -283,7 +438,7 @@ pub async fn open_in_configured_editor(
             canonical_repo
         }
     } else {
-        resolve_path_within_repo(repo_path, &filePath)?
+        resolve_path_within_repo(repo_path, &file_path)?
     };
     let target_file = target_path.to_string_lossy().to_string();
 
@@ -294,10 +449,10 @@ pub async fn open_in_configured_editor(
 
     // Get editor from git config (local first, then global)
     let editor = get_git_config_value(Some(repo_path), "core.editor", false)
-        .or_else(|| get_git_config_value(None, "core.editor", true))
-        .or_else(|| std::env::var("GIT_EDITOR").ok())
-        .or_else(|| std::env::var("VISUAL").ok())
-        .or_else(|| std::env::var("EDITOR").ok());
+        .or_else(|| get_git_config_value_with(None, "core.editor", true, global_config_override))
+        .or_else(|| env_var("GIT_EDITOR").filter(|v| !v.trim().is_empty()))
+        .or_else(|| env_var("VISUAL").filter(|v| !v.trim().is_empty()))
+        .or_else(|| env_var("EDITOR").filter(|v| !v.trim().is_empty()));
 
     match editor {
         Some(editor_cmd) if is_terminal_editor(&editor_cmd) && target.is_dir() => {
@@ -315,35 +470,65 @@ pub async fn open_in_configured_editor(
         Some(editor_cmd) => {
             // Parse the editor command and add line number support
             let (cmd, args) = parse_editor_command(&editor_cmd, &target_file, line);
+            let Some(resolved_cmd) = resolve_executable(&cmd) else {
+                return Err(GitdudaError::OperationFailed(format!(
+                    "Configured editor executable '{}' could not be found. Verify it is installed and on your PATH or update Settings → External Tools.",
+                    cmd
+                )));
+            };
 
-            std::process::Command::new(&cmd)
+            let mut command = std::process::Command::new(&resolved_cmd);
+            command
                 .args(&args)
                 .current_dir(repo_path)
-                .spawn()
-                .map_err(|e| {
-                    GitdudaError::OperationFailed(format!(
-                        "Failed to open editor '{}': {}",
-                        editor_cmd, e
-                    ))
-                })?;
+                .stdin(std::process::Stdio::null())
+                .stdout(std::process::Stdio::null())
+                .stderr(std::process::Stdio::null());
+
+            #[cfg(target_os = "windows")]
+            {
+                use std::os::windows::process::CommandExt;
+                // CREATE_NO_WINDOW = 0x08000000 prevents console flash for .cmd/.bat shims.
+                command.creation_flags(0x08000000);
+            }
+
+            command.spawn().map_err(|e| {
+                GitdudaError::OperationFailed(format!(
+                    "Failed to open editor '{}': {}",
+                    editor_cmd, e
+                ))
+            })?;
 
             Ok(OpenResult {
                 success: true,
                 message: Some(format!("Opened in {}", cmd)),
                 notice: None,
+                not_configured: None,
             })
         }
-        None if target.is_dir() => open_in_default_app(target_file).await,
+        None if target.is_dir() => Ok(OpenResult {
+            success: false,
+            message: Some(
+                "No editor is configured (e.g., VS Code). Configure an editor in Settings."
+                    .to_string(),
+            ),
+            notice: None,
+            not_configured: Some(true),
+        }),
         // Do not hand repository files to the OS default handler, which may
-        // execute them; directories above can still open in the file manager.
+        // execute them; and do not fall back to the file manager for directories
+        // when the user explicitly asked to open in an editor.
         None => Ok(no_editor_configured_for_file()),
     }
 }
 
 fn no_editor_configured_for_file() -> OpenResult {
-    editor_unavailable(
-        "No editor is configured. Configure a GUI editor in Git settings to open files.",
-    )
+    OpenResult {
+        not_configured: Some(true),
+        ..editor_unavailable(
+            "No editor is configured. Configure a GUI editor in Git settings to open files.",
+        )
+    }
 }
 
 fn editor_unavailable(message: impl Into<String>) -> OpenResult {
@@ -351,6 +536,7 @@ fn editor_unavailable(message: impl Into<String>) -> OpenResult {
         success: false,
         message: Some(message.into()),
         notice: None,
+        not_configured: None,
     }
 }
 
@@ -529,14 +715,22 @@ fn parse_editor_command(
 /// Get the configured editor settings
 #[command]
 pub async fn get_editor_config(path: String, global: bool) -> Result<EditorConfig> {
-    let repo_path = Path::new(&path);
+    get_editor_config_with(path, global, None)
+}
 
+fn get_editor_config_with(
+    path: String,
+    global: bool,
+    global_config_override: Option<&Path>,
+) -> Result<EditorConfig> {
     let editor = if global {
-        get_git_config_value(None, "core.editor", true)
+        get_git_config_value_with(None, "core.editor", true, global_config_override)
     } else {
+        let repo_path = Path::new(&path);
         // Try local first, then global as fallback
-        get_git_config_value(Some(repo_path), "core.editor", false)
-            .or_else(|| get_git_config_value(None, "core.editor", true))
+        get_git_config_value_with(Some(repo_path), "core.editor", false, None).or_else(|| {
+            get_git_config_value_with(None, "core.editor", true, global_config_override)
+        })
     };
 
     let visual = std::env::var("VISUAL")
@@ -549,28 +743,110 @@ pub async fn get_editor_config(path: String, global: bool) -> Result<EditorConfi
 /// Set the configured editor
 #[command]
 pub async fn set_editor_config(path: String, editor: String, global: bool) -> Result<OpenResult> {
-    let repo_path = Path::new(&path);
+    set_editor_config_with(path, editor, global, None)
+}
 
-    if !global && git2::Repository::open(repo_path).is_err() {
-        return Err(GitdudaError::RepositoryNotFound(path));
+fn set_editor_config_with(
+    path: String,
+    editor: String,
+    global: bool,
+    global_config_override: Option<&Path>,
+) -> Result<OpenResult> {
+    let repo_path = if global {
+        None
+    } else {
+        let p = Path::new(&path);
+        if git2::Repository::open(p).is_err() {
+            return Err(GitdudaError::RepositoryNotFound(path));
+        }
+        Some(p)
+    };
+
+    let trimmed = editor.trim();
+    if trimmed.is_empty() {
+        if global {
+            if let Some(cfg_path) = global_config_override {
+                let cfg_str = cfg_path.to_string_lossy();
+                super::config::run_git_config_unset(
+                    None,
+                    &["--file", cfg_str.as_ref(), "--unset", "core.editor"],
+                )?;
+            } else {
+                super::config::run_git_config_unset(None, &["--global", "--unset", "core.editor"])?;
+            }
+        } else {
+            super::config::run_git_config_unset(repo_path, &["--local", "--unset", "core.editor"])?;
+        }
+
+        return Ok(OpenResult {
+            success: true,
+            message: Some(format!(
+                "Editor cleared ({})",
+                if global { "global" } else { "local" }
+            )),
+            notice: None,
+            not_configured: None,
+        });
     }
 
-    set_git_config_value(
-        if global { None } else { Some(repo_path) },
+    set_git_config_value_with(
+        repo_path,
         "core.editor",
-        &editor,
+        trimmed,
         global,
+        global_config_override,
     )?;
 
     Ok(OpenResult {
         success: true,
         message: Some(format!(
             "Editor set to '{}' ({})",
-            editor,
+            trimmed,
             if global { "global" } else { "local" }
         )),
         notice: None,
+        not_configured: None,
     })
+}
+
+fn editor_presets_for_os() -> Vec<(&'static str, &'static str, &'static str)> {
+    let mut presets = vec![
+        ("vscode", "VS Code", "code"),
+        ("cursor", "Cursor", "cursor"),
+        ("zed", "Zed", "zed"),
+        ("sublime", "Sublime Text", "subl"),
+    ];
+
+    if cfg!(target_os = "windows") {
+        presets.push(("notepad++", "Notepad++", "notepad++"));
+    } else if cfg!(target_os = "macos") {
+        presets.push(("textmate", "TextMate", "mate"));
+    } else if cfg!(target_os = "linux") {
+        presets.push(("kate", "Kate", "kate"));
+        presets.push(("gedit", "Gedit", "gedit"));
+    }
+
+    presets
+}
+
+fn detect_available_editors_with(probe: impl Fn(&str) -> bool) -> Vec<EditorInfo> {
+    editor_presets_for_os()
+        .into_iter()
+        .map(|(id, display_name, command)| EditorInfo {
+            id: id.to_string(),
+            display_name: display_name.to_string(),
+            command: command.to_string(),
+            available: probe(command),
+        })
+        .collect()
+}
+
+/// Get a list of commonly available code editors for the current OS
+#[command]
+pub async fn get_available_editors() -> Result<Vec<EditorInfo>> {
+    Ok(detect_available_editors_with(
+        is_editor_executable_available,
+    ))
 }
 
 #[cfg(test)]
@@ -656,6 +932,7 @@ mod tests {
         let result = no_editor_configured_for_file();
 
         assert!(!result.success);
+        assert_eq!(result.not_configured, Some(true));
         assert!(result
             .message
             .as_deref()
@@ -812,5 +1089,210 @@ mod tests {
         let result =
             set_editor_config("/nonexistent/repo".to_string(), "code".to_string(), false).await;
         assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_open_in_configured_editor_dir_without_editor_returns_not_configured() {
+        let repo = TestRepo::with_initial_commit();
+
+        let result = open_in_configured_editor_with_deps(
+            repo.path_str(),
+            repo.path_str(),
+            None,
+            None,
+            |_| None,
+            |_| None,
+        )
+        .await
+        .unwrap();
+
+        assert!(!result.success);
+        assert_eq!(result.not_configured, Some(true));
+        assert!(result
+            .message
+            .as_deref()
+            .unwrap()
+            .contains("No editor is configured"));
+    }
+
+    #[tokio::test]
+    async fn test_open_in_configured_editor_ignores_empty_env_vars() {
+        let repo = TestRepo::with_initial_commit();
+
+        let result = open_in_configured_editor_with_deps(
+            repo.path_str(),
+            repo.path_str(),
+            None,
+            None,
+            |_| Some("   ".to_string()),
+            |_| None,
+        )
+        .await
+        .unwrap();
+
+        assert!(!result.success);
+        assert_eq!(result.not_configured, Some(true));
+    }
+
+    #[tokio::test]
+    async fn test_open_in_configured_editor_rejects_missing_executable_before_spawn() {
+        let repo = TestRepo::with_initial_commit();
+
+        let err = open_in_configured_editor_with_deps(
+            repo.path_str(),
+            repo.path_str(),
+            None,
+            None,
+            |name| {
+                if name == "EDITOR" {
+                    Some("nonexistent-editor-bin --wait".to_string())
+                } else {
+                    None
+                }
+            },
+            |_| None,
+        )
+        .await
+        .unwrap_err();
+
+        match err {
+            GitdudaError::OperationFailed(msg) => {
+                assert!(msg.contains("nonexistent-editor-bin"), "{msg}");
+                assert!(msg.contains("could not be found"), "{msg}");
+            }
+            other => panic!("Expected OperationFailed, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_resolve_editor_executable_direct_path() {
+        let dir = tempfile::tempdir().unwrap();
+        let bin_path = dir.path().join("my-editor");
+        std::fs::write(&bin_path, "stub").unwrap();
+
+        let resolved = resolve_editor_executable(&bin_path.to_string_lossy());
+        assert_eq!(
+            resolved.as_deref(),
+            Some(bin_path.to_string_lossy().as_ref())
+        );
+
+        let missing = dir.path().join("missing-editor");
+        assert!(resolve_editor_executable(&missing.to_string_lossy()).is_none());
+    }
+
+    #[cfg(target_os = "windows")]
+    #[test]
+    fn test_resolve_editor_executable_direct_path_windows_cmd_extension() {
+        let dir = tempfile::tempdir().unwrap();
+        let shim_path = dir.path().join("code.cmd");
+        std::fs::write(&shim_path, "@echo off").unwrap();
+
+        let without_ext = dir.path().join("code");
+        let resolved = resolve_editor_executable(&without_ext.to_string_lossy());
+        assert_eq!(
+            resolved.as_deref(),
+            Some(shim_path.to_string_lossy().as_ref())
+        );
+    }
+
+    #[test]
+    fn test_select_windows_where_candidate_ignores_posix_shim_and_prioritizes_exe() {
+        let dir = tempfile::tempdir().unwrap();
+        let posix_shim = dir.path().join("code");
+        let cmd_shim = dir.path().join("code.cmd");
+        let exe_bin = dir.path().join("Code.exe");
+        std::fs::write(&posix_shim, "#!/bin/sh").unwrap();
+        std::fs::write(&cmd_shim, "@echo off").unwrap();
+        std::fs::write(&exe_bin, "MZ").unwrap();
+
+        // When only POSIX shim + .cmd exist, ignores POSIX shim and selects .cmd
+        let stdout_cmd = format!("{}\r\n{}\r\n", posix_shim.display(), cmd_shim.display());
+        let selected_cmd = select_windows_where_candidate_with(&stdout_cmd, |p| p.is_file());
+        assert_eq!(
+            selected_cmd.as_deref(),
+            Some(cmd_shim.to_string_lossy().as_ref())
+        );
+
+        // When .cmd appears before .exe, prioritizes .exe
+        let stdout_exe = format!(
+            "{}\r\n{}\r\n{}\r\n",
+            posix_shim.display(),
+            cmd_shim.display(),
+            exe_bin.display()
+        );
+        let selected_exe = select_windows_where_candidate_with(&stdout_exe, |p| p.is_file());
+        assert_eq!(
+            selected_exe.as_deref(),
+            Some(exe_bin.to_string_lossy().as_ref())
+        );
+    }
+
+    #[test]
+    fn test_detect_available_editors_with_marks_availability_and_os_presets() {
+        let editors = detect_available_editors_with(|cmd| cmd == "code" || cmd == "zed");
+
+        let code = editors.iter().find(|e| e.command == "code").unwrap();
+        assert_eq!(code.display_name, "VS Code");
+        assert!(code.available);
+
+        let zed = editors.iter().find(|e| e.command == "zed").unwrap();
+        assert!(zed.available);
+
+        let cursor = editors.iter().find(|e| e.command == "cursor").unwrap();
+        assert!(!cursor.available);
+
+        assert!(editors.iter().any(|e| e.command == "subl"));
+
+        if cfg!(target_os = "windows") {
+            assert!(editors.iter().any(|e| e.command == "notepad++"));
+            assert!(!editors.iter().any(|e| e.command == "mate"));
+        } else if cfg!(target_os = "macos") {
+            assert!(editors.iter().any(|e| e.command == "mate"));
+            assert!(!editors.iter().any(|e| e.command == "notepad++"));
+        } else if cfg!(target_os = "linux") {
+            assert!(editors.iter().any(|e| e.command == "kate"));
+            assert!(editors.iter().any(|e| e.command == "gedit"));
+            assert!(!editors.iter().any(|e| e.command == "notepad++"));
+        }
+    }
+
+    #[test]
+    fn test_global_editor_config_works_without_repo_and_unsets_on_empty() {
+        let dir = tempfile::tempdir().unwrap();
+        let cfg_path = dir.path().join("gitconfig");
+        std::fs::write(&cfg_path, "").unwrap();
+
+        let set_res = set_editor_config_with(
+            String::new(),
+            "code --wait".to_string(),
+            true,
+            Some(&cfg_path),
+        )
+        .unwrap();
+        assert!(set_res.success);
+
+        let got = get_editor_config_with(String::new(), true, Some(&cfg_path)).unwrap();
+        assert_eq!(got.editor.as_deref(), Some("code --wait"));
+
+        let clear_res =
+            set_editor_config_with(String::new(), "   ".to_string(), true, Some(&cfg_path))
+                .unwrap();
+        assert!(clear_res.success);
+
+        let after_clear = get_editor_config_with(String::new(), true, Some(&cfg_path)).unwrap();
+        assert_eq!(after_clear.editor, None);
+    }
+
+    #[test]
+    fn test_local_editor_config_unsets_on_empty() {
+        let repo = TestRepo::with_initial_commit();
+
+        set_editor_config_with(repo.path_str(), "subl".to_string(), false, None).unwrap();
+        let got = get_editor_config_with(repo.path_str(), false, None).unwrap();
+        assert_eq!(got.editor.as_deref(), Some("subl"));
+
+        set_editor_config_with(repo.path_str(), String::new(), false, None).unwrap();
+        let after_clear = get_editor_config_with(repo.path_str(), false, None).unwrap();
+        assert_eq!(after_clear.editor, None);
     }
 }

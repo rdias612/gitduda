@@ -371,6 +371,7 @@ describe("git service domain modules", () => {
       "openInConfiguredEditor",
       "getEditorConfig",
       "setEditorConfig",
+      "getAvailableEditors",
       "getAvatarUrl",
       "getAvatarUrls",
       "getBookmarks",
