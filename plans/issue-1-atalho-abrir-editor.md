@@ -1,7 +1,7 @@
 # Plano de Desenvolvimento: Atalho Configurável para Abrir Repositório no Editor de Código
 
 - **Data**: 2026-11-23
-- **Status**: [ ] Em Execução
+- **Status**: [x] Concluído
 - **Debate Técnico**: Validado e revisado
 - **Arquivo de Controle**: `plans/issue-1-atalho-abrir-editor.md`
 - **Issue**: `#1` ([rdias612/gitduda#1](https://github.com/rdias612/gitduda/issues/1))
@@ -27,7 +27,7 @@
 - [x] Etapa 1: Backend de Detecção e Resolução de Editores, Contrato `OpenResult`/`DialogContexts` e Toast de Ação
 - [x] Etapa 2: Navegação Direta para Settings (`app-shell.ts` / `focus.ts`), Campo Editor em `gn-settings-dialog.ts` e Sincronização i18n
 - [x] Etapa 3: Atalho Global `Ctrl+Shift+A` (com Guard contra `e.repeat`), Badge na Paleta de Comandos e Wiring no `app-shell.ts`
-- [ ] Etapa 4: Mocks E2E, Testes Playwright e Validação Global Final
+- [x] Etapa 4: Mocks E2E, Testes Playwright e Validação Global Final
 
 ---
 

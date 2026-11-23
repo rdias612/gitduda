@@ -205,6 +205,7 @@ export const defaultMockData = {
  * Tauri command handler that returns mock data
  */
 export function createMockHandler(mocks: typeof defaultMockData) {
+  let configuredEditor: string | null = null;
   return (command: string, args?: Record<string, unknown>): unknown => {
     switch (command) {
       // Repository commands
@@ -732,6 +733,27 @@ export function createMockHandler(mocks: typeof defaultMockData) {
       case 'get_agent_attribution':
         return null;
 
+      // External editor commands
+      case 'get_available_editors':
+        return [
+          { id: 'vscode', displayName: 'VS Code', command: 'code', available: true },
+          { id: 'cursor', displayName: 'Cursor', command: 'cursor', available: true },
+          { id: 'zed', displayName: 'Zed', command: 'zed', available: false },
+          { id: 'sublime', displayName: 'Sublime Text', command: 'subl', available: false },
+        ];
+      case 'get_editor_config':
+        return { editor: configuredEditor, visual: null };
+      case 'set_editor_config': {
+        const editor = ((args?.editor as string) ?? '').trim();
+        configuredEditor = editor || null;
+        return {
+          success: true,
+          message: configuredEditor ? `Editor set to ${configuredEditor}` : 'Editor cleared',
+        };
+      }
+      case 'open_in_configured_editor':
+        return { success: true, message: 'Opened in editor' };
+
       // Default - log unmocked commands
       default:
         console.warn(`[Tauri Mock] Unmocked command: ${command}`, args);
@@ -782,6 +804,8 @@ export async function setupTauriMocks(
           }
         }
       };
+
+      let configuredEditor: string | null = null;
 
       const commandHandler = (command: string, args?: Record<string, unknown>): unknown => {
         switch (command) {
@@ -1344,6 +1368,27 @@ export async function setupTauriMocks(
             return { installed: false, partial: false, settingsPath: '/tmp/test-repo/.claude/settings.local.json', scriptPath: '/tmp/test-repo/.git/gitduda/agent-checkpoint.sh' };
           case 'get_agent_attribution':
             return null;
+
+          // External editor commands
+          case 'get_available_editors':
+            return [
+              { id: 'vscode', displayName: 'VS Code', command: 'code', available: true },
+              { id: 'cursor', displayName: 'Cursor', command: 'cursor', available: true },
+              { id: 'zed', displayName: 'Zed', command: 'zed', available: false },
+              { id: 'sublime', displayName: 'Sublime Text', command: 'subl', available: false },
+            ];
+          case 'get_editor_config':
+            return { editor: configuredEditor, visual: null };
+          case 'set_editor_config': {
+            const editor = (((args as { editor?: string })?.editor) ?? '').trim();
+            configuredEditor = editor || null;
+            return {
+              success: true,
+              message: configuredEditor ? `Editor set to ${configuredEditor}` : 'Editor cleared',
+            };
+          }
+          case 'open_in_configured_editor':
+            return { success: true, message: 'Opened in editor' };
 
           default:
             console.warn(`[Tauri Mock] Unmocked command: ${command}`, args);

@@ -1,8 +1,10 @@
 import { test, expect, type Page, type Locator } from '@playwright/test';
-import { setupOpenRepository } from '../fixtures/tauri-mock';
+import { setupOpenRepository, setupTauriMocks, emptyRepository } from '../fixtures/tauri-mock';
 import {
+  startCommandCapture,
   startCommandCaptureWithMocks,
   injectCommandError,
+  injectCommandMock,
   findCommand,
   waitForCommand,
 } from '../fixtures/test-helpers';
@@ -332,5 +334,113 @@ test.describe('Settings - clearing the external merge/diff tool', () => {
     ]);
     // The diff tool is untouched and stays on its configured value.
     await expect(toolSelect(page, 'Diff Tool')).toHaveValue('vscode');
+  });
+});
+
+test.describe('Settings Dialog — External Editor', () => {
+  test('displays available detected editors without None and saves selected editor globally', async ({
+    page,
+  }) => {
+    await setupOpenRepository(page);
+    await startCommandCapture(page);
+    await openSettings(page);
+
+    const select = page.locator('gn-settings-dialog #external-editor-select');
+    await expect(select).toBeVisible();
+    await expect(select).toBeEnabled();
+
+    await expect(select.locator('option', { hasText: 'None' })).toHaveCount(0);
+    await expect(select.locator('option[value=""]')).toBeDisabled();
+    await expect(select.locator('option[value="code"]')).toHaveCount(1);
+    await expect(select.locator('option[value="cursor"]')).toHaveCount(1);
+    await expect(select.locator('option[value="zed"]')).toHaveCount(0);
+    await expect(select.locator('option[value="__custom__"]')).toHaveCount(1);
+
+    await select.selectOption('code');
+    await waitForCommand(page, 'set_editor_config');
+
+    const calls = await findCommand(page, 'set_editor_config');
+    expect(calls).toHaveLength(1);
+    expect(calls[0].args).toMatchObject({ editor: 'code', global: true });
+    await expect(select).toHaveValue('code');
+    await expect(errorToast(page)).toHaveCount(0);
+  });
+
+  test('saves Custom... editor command globally without an open repository and preserves it on reopen', async ({
+    page,
+  }) => {
+    await setupTauriMocks(page, emptyRepository());
+    await page.goto('/');
+    await page.waitForLoadState('domcontentloaded');
+    await expect(page.locator('gn-welcome')).toBeVisible();
+    await startCommandCapture(page);
+
+    await openSettings(page);
+
+    const select = page.locator('gn-settings-dialog #external-editor-select');
+    await expect(select).toBeVisible();
+    await expect(select).toBeEnabled();
+
+    await select.selectOption('__custom__');
+    const customInput = page.locator('gn-settings-dialog #external-editor-custom-input');
+    await expect(customInput).toBeVisible();
+    await expect(customInput).toBeFocused();
+
+    await customInput.fill('nvim --wait');
+    await customInput.blur();
+    await waitForCommand(page, 'set_editor_config');
+
+    const calls = await findCommand(page, 'set_editor_config');
+    expect(calls).toHaveLength(1);
+    expect(calls[0].args).toMatchObject({ path: '', editor: 'nvim --wait', global: true });
+
+    await page.locator('gn-settings-dialog button:has-text("Done")').click();
+    await expect(page.locator('gn-settings-dialog')).toHaveCount(0);
+
+    await openSettings(page);
+    await expect(page.locator('gn-settings-dialog #external-editor-select')).toHaveValue('__custom__');
+    await expect(page.locator('gn-settings-dialog #external-editor-custom-input')).toHaveValue(
+      'nvim --wait'
+    );
+  });
+
+  test('a failed editor selection save reverts the select and shows an error toast', async ({
+    page,
+  }) => {
+    await setupOpenRepository(page);
+    await injectCommandMock(page, {
+      get_editor_config: { editor: 'code', visual: null },
+    });
+    await injectCommandError(page, 'set_editor_config', WRITE_ERROR);
+    await openSettings(page);
+
+    const select = page.locator('gn-settings-dialog #external-editor-select');
+    await expect(select).toHaveValue('code');
+
+    await select.selectOption('cursor');
+
+    await expect(errorToast(page)).toContainText('Failed to save editor');
+    await expect(errorToast(page)).toContainText('Permission denied');
+    await expect(select).toHaveValue('code');
+  });
+
+  test('a failed custom editor command save reverts the input and shows an error toast', async ({
+    page,
+  }) => {
+    await setupOpenRepository(page);
+    await injectCommandError(page, 'set_editor_config', WRITE_ERROR);
+    await openSettings(page);
+
+    const select = page.locator('gn-settings-dialog #external-editor-select');
+    await select.selectOption('__custom__');
+
+    const customInput = page.locator('gn-settings-dialog #external-editor-custom-input');
+    await expect(customInput).toBeVisible();
+    await customInput.fill('subl --wait');
+    await customInput.blur();
+
+    await expect(errorToast(page)).toContainText('Failed to save editor command');
+    await expect(errorToast(page)).toContainText('Permission denied');
+    await expect(customInput).toHaveValue('');
   });
 });

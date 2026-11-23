@@ -1,9 +1,21 @@
 import { test, expect } from '@playwright/test';
-import { setupOpenRepository, initializeRepositoryStore, withVimMode } from '../fixtures/tauri-mock';
+import {
+  setupOpenRepository,
+  setupTauriMocks,
+  emptyRepository,
+  initializeRepositoryStore,
+  withVimMode,
+} from '../fixtures/tauri-mock';
 import { AppPage } from '../pages/app.page';
 import { DialogsPage } from '../pages/dialogs.page';
 import { GraphPanelPage, RightPanelPage } from '../pages/panels.page';
-import { startCommandCapture, findCommand, waitForCommand, injectCommandError } from '../fixtures/test-helpers';
+import {
+  startCommandCapture,
+  findCommand,
+  waitForCommand,
+  injectCommandError,
+  injectCommandMock,
+} from '../fixtures/test-helpers';
 
 test.describe('Keyboard Shortcuts', () => {
   let dialogs: DialogsPage;
@@ -502,5 +514,80 @@ test.describe('Keyboard - Error Scenarios', () => {
     // Error should be displayed to user
     const errorIndicator = page.locator('gn-toast-container .toast.error, .error-message, .error-banner').first();
     await expect(errorIndicator).toBeVisible({ timeout: 5000 });
+  });
+});
+
+test.describe('Open in Editor Shortcut', () => {
+  test('Ctrl+Shift+A and Meta+Shift+A invoke open_in_configured_editor with repository path', async ({
+    page,
+  }) => {
+    await setupOpenRepository(page);
+    await startCommandCapture(page);
+
+    await page.keyboard.press('Control+Shift+A');
+    await waitForCommand(page, 'open_in_configured_editor');
+
+    let calls = await findCommand(page, 'open_in_configured_editor');
+    expect(calls).toHaveLength(1);
+    expect(calls[0].args).toMatchObject({
+      path: '/tmp/test-repo',
+      filePath: '/tmp/test-repo',
+    });
+
+    await page.keyboard.press('Meta+Shift+A');
+    await expect
+      .poll(async () => (await findCommand(page, 'open_in_configured_editor')).length)
+      .toBe(2);
+
+    calls = await findCommand(page, 'open_in_configured_editor');
+    expect(calls[1].args).toMatchObject({
+      path: '/tmp/test-repo',
+      filePath: '/tmp/test-repo',
+    });
+  });
+
+  test('when open_in_configured_editor returns notConfigured, Configure Editor action opens Settings focused on editor select', async ({
+    page,
+  }) => {
+    await setupOpenRepository(page);
+    await injectCommandMock(page, {
+      open_in_configured_editor: {
+        success: false,
+        notConfigured: true,
+        message: 'No editor is configured (e.g., VS Code). Configure an editor in Settings.',
+      },
+    });
+
+    await page.keyboard.press('Control+Shift+A');
+
+    const warningToast = page.locator('gn-toast-container .toast.warning').first();
+    await expect(warningToast).toBeVisible({ timeout: 5000 });
+    await expect(warningToast.locator('.toast-message')).toContainText('No editor is configured');
+
+    const configureButton = warningToast.locator('.toast-action-btn', { hasText: 'Configure Editor' });
+    await expect(configureButton).toBeVisible();
+    await configureButton.click();
+
+    await expect(page.locator('gn-settings-dialog')).toBeVisible();
+    await expect(page.locator('gn-settings-dialog #external-editor-select')).toBeFocused();
+  });
+
+  test('without an open repository, shows warning toast without invoking backend', async ({
+    page,
+  }) => {
+    await setupTauriMocks(page, emptyRepository());
+    const app = new AppPage(page);
+    await app.goto();
+    await expect(app.welcomeScreen).toBeVisible();
+
+    await startCommandCapture(page);
+    await page.keyboard.press('Control+Shift+A');
+
+    const warningToast = page.locator('gn-toast-container .toast.warning').first();
+    await expect(warningToast).toBeVisible({ timeout: 5000 });
+    await expect(warningToast.locator('.toast-message')).toContainText(
+      'Please open a repository first'
+    );
+    expect(await findCommand(page, 'open_in_configured_editor')).toHaveLength(0);
   });
 });
