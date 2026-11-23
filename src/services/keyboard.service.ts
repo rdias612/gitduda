@@ -11,6 +11,7 @@ export interface Shortcut {
   shift?: boolean;
   alt?: boolean;
   meta?: boolean;
+  noRepeat?: boolean;
   action: () => void;
   description: string;
   category: string;
@@ -67,8 +68,8 @@ class KeyboardService {
   private defaultBindings: Map<string, ShortcutBinding> = new Map();
   /** Map of shortcut ID to custom binding (if different from default) */
   private customBindings: Map<string, ShortcutBinding> = new Map();
-  /** Map of shortcut ID to its metadata (description, category, action) */
-  private shortcutMetadata: Map<string, { description: string; category: string; action: () => void }> = new Map();
+  /** Map of shortcut ID to its metadata (description, category, action, noRepeat) */
+  private shortcutMetadata: Map<string, { description: string; category: string; action: () => void; noRepeat?: boolean }> = new Map();
   /** Reverse mapping from key combo to shortcut ID for O(1) lookups */
   private keyToId: Map<string, string> = new Map();
   private enabled = true;
@@ -177,11 +178,12 @@ class KeyboardService {
     };
     this.defaultBindings.set(id, defaultBinding);
 
-    // Store metadata (description, category, action)
+    // Store metadata (description, category, action, noRepeat)
     this.shortcutMetadata.set(id, {
       description: shortcut.description,
       category: shortcut.category,
       action: shortcut.action,
+      noRepeat: shortcut.noRepeat,
     });
 
     // Use custom binding if available, otherwise use default
@@ -191,6 +193,7 @@ class KeyboardService {
       description: shortcut.description,
       category: shortcut.category,
       action: shortcut.action,
+      noRepeat: shortcut.noRepeat,
     };
 
     const key = this.getShortcutKey(activeShortcut);
@@ -583,7 +586,9 @@ class KeyboardService {
     if (shortcut) {
       e.preventDefault();
       e.stopPropagation();
-      shortcut.action();
+      if (!(e.repeat && shortcut.noRepeat)) {
+        shortcut.action();
+      }
     }
 
     // Notify listeners
@@ -724,6 +729,7 @@ export function registerDefaultShortcuts(actions: {
   toggleTerminal?: () => void;
   openCommandPalette?: () => void;
   openReflog?: () => void;
+  openInEditor?: () => void;
   fetch?: () => void;
   pull?: () => void;
   push?: () => void;
@@ -864,6 +870,18 @@ export function registerDefaultShortcuts(actions: {
       ctrl: true,
       action: actions.openReflog,
       description: 'Open undo history',
+      category: 'General',
+    });
+  }
+
+  if (actions.openInEditor) {
+    keyboardService.register('open-in-editor', {
+      key: 'a',
+      ctrl: true,
+      shift: true,
+      noRepeat: true,
+      action: actions.openInEditor,
+      description: 'Open repository in configured editor',
       category: 'General',
     });
   }

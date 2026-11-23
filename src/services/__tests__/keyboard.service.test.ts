@@ -1,6 +1,6 @@
 import { expect } from '@open-wc/testing';
 import type { Shortcut } from '../keyboard.service.ts';
-import { keyboardService } from '../keyboard.service.ts';
+import { keyboardService, registerDefaultShortcuts } from '../keyboard.service.ts';
 import { pushOverlay, removeOverlay, resetOverlayStack } from '../../utils/overlay-stack.ts';
 
 // Clear localStorage before tests
@@ -282,6 +282,7 @@ describe('registerDefaultShortcuts', () => {
       push: () => {},
       createBranch: () => {},
       createStash: () => {},
+      openInEditor: () => {},
     };
 
     registerDefaultShortcuts(mockActions);
@@ -294,6 +295,150 @@ describe('registerDefaultShortcuts', () => {
     expect(descriptions).to.include('Push to remote');
     expect(descriptions).to.include('Create new branch');
     expect(descriptions).to.include('Create stash');
+    expect(descriptions).to.include('Open repository in configured editor');
+  });
+
+  describe('open-in-editor shortcut (Ctrl+Shift+A / Cmd+Shift+A)', () => {
+    function baseActions(openInEditor: () => void) {
+      return {
+        navigateUp: () => {},
+        navigateDown: () => {},
+        selectCommit: () => {},
+        stageAll: () => {},
+        unstageAll: () => {},
+        commit: () => {},
+        refresh: () => {},
+        search: () => {},
+        openSettings: () => {},
+        toggleLeftPanel: () => {},
+        toggleRightPanel: () => {},
+        openInEditor,
+      };
+    }
+
+    beforeEach(() => {
+      keyboardService.setEnabled(true);
+      localStorage.removeItem(STORAGE_KEY);
+    });
+
+    afterEach(() => {
+      keyboardService.unregister('open-in-editor');
+      localStorage.removeItem(STORAGE_KEY);
+    });
+
+    it('registers open-in-editor in General on Ctrl+Shift+A and fires on Ctrl/Cmd+Shift+A', () => {
+      let fired = 0;
+      registerDefaultShortcuts(baseActions(() => { fired++; }));
+
+      const binding = keyboardService.getBinding('open-in-editor');
+      expect(binding).to.deep.equal({
+        key: 'a',
+        ctrl: true,
+        shift: true,
+        alt: undefined,
+        meta: undefined,
+      });
+
+      const general = keyboardService.getShortcutsByCategory().get('General') ?? [];
+      const registered = general.find((s) => s.description === 'Open repository in configured editor');
+      expect(registered).to.exist;
+      expect(registered?.noRepeat).to.be.true;
+
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'A', ctrlKey: true, shiftKey: true }));
+      expect(fired, 'Ctrl+Shift+A fires').to.equal(1);
+
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'A', metaKey: true, shiftKey: true }));
+      expect(fired, 'Cmd+Shift+A fires').to.equal(2);
+    });
+
+    it('ignores repeated keydown events (e.repeat === true) before and after rebind', () => {
+      let fired = 0;
+      registerDefaultShortcuts(baseActions(() => { fired++; }));
+
+      const initialRepeat = new KeyboardEvent('keydown', {
+        key: 'A',
+        ctrlKey: true,
+        shiftKey: true,
+        repeat: true,
+        cancelable: true,
+      });
+      document.dispatchEvent(initialRepeat);
+      expect(fired, 'repeat event must not fire action').to.equal(0);
+      expect(initialRepeat.defaultPrevented, 'shortcut still handles the key event').to.be.true;
+
+      expect(keyboardService.rebind('open-in-editor', { key: 'e', ctrl: true, shift: true })).to.be.true;
+
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'E', ctrlKey: true, shiftKey: true, repeat: true }));
+      expect(fired, 'repeat event after rebind must still be ignored').to.equal(0);
+
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'E', ctrlKey: true, shiftKey: true, repeat: false }));
+      expect(fired, 'non-repeat event after rebind fires once').to.equal(1);
+
+      keyboardService.resetBinding('open-in-editor');
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'A', ctrlKey: true, shiftKey: true, repeat: true }));
+      expect(fired, 'repeat event after resetBinding must still be ignored').to.equal(1);
+    });
+
+    it('fires when focus is inside an input because mod+shift+a does not collide with mod+a', () => {
+      let fired = 0;
+      registerDefaultShortcuts(baseActions(() => { fired++; }));
+
+      const input = document.createElement('input');
+      document.body.appendChild(input);
+
+      try {
+        input.focus();
+        const ev = new KeyboardEvent('keydown', {
+          key: 'A',
+          ctrlKey: true,
+          shiftKey: true,
+          bubbles: true,
+          composed: true,
+          cancelable: true,
+        });
+        input.dispatchEvent(ev);
+        expect(fired).to.equal(1);
+        expect(ev.defaultPrevented).to.be.true;
+      } finally {
+        input.remove();
+      }
+    });
+
+    it('respects the gn-terminal-panel guard for Ctrl+Shift+A while allowing Cmd+Shift+A', () => {
+      let fired = 0;
+      registerDefaultShortcuts(baseActions(() => { fired++; }));
+
+      const terminal = document.createElement('gn-terminal-panel');
+      const inner = document.createElement('div');
+      terminal.appendChild(inner);
+      document.body.appendChild(terminal);
+
+      try {
+        const ctrlEv = new KeyboardEvent('keydown', {
+          key: 'A',
+          ctrlKey: true,
+          shiftKey: true,
+          bubbles: true,
+          composed: true,
+          cancelable: true,
+        });
+        inner.dispatchEvent(ctrlEv);
+        expect(fired, 'Ctrl+Shift+A inside gn-terminal-panel belongs to the terminal').to.equal(0);
+
+        const metaEv = new KeyboardEvent('keydown', {
+          key: 'A',
+          metaKey: true,
+          shiftKey: true,
+          bubbles: true,
+          composed: true,
+          cancelable: true,
+        });
+        inner.dispatchEvent(metaEv);
+        expect(fired, 'Cmd+Shift+A bypasses terminal guard').to.equal(1);
+      } finally {
+        terminal.remove();
+      }
+    });
   });
 
   describe('shifted punctuation shortcuts', () => {

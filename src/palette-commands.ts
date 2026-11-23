@@ -894,6 +894,7 @@ export function buildPaletteCommands(shell: PaletteCommandHost): PaletteCommand[
       label: 'Open in Editor',
       category: 'action',
       icon: 'file',
+      shortcut: `${mod}⇧A`,
       action: shell.requiresRepository(() => {
         void openRepositoryInEditor(shell.activeRepository!.repository.path);
       }),

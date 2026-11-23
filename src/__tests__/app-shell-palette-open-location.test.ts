@@ -33,6 +33,7 @@ import type { AppShell } from '../app-shell.ts';
 import '../app-shell.ts';
 import { uiStore, repositoryStore } from '../stores/index.ts';
 import { dialogs } from '../stores/dialog.store.ts';
+import { keyboardService } from '../services/keyboard.service.ts';
 import type { Repository } from '../types/git.types.ts';
 
 function mockRepo(path: string, name: string): Repository {
@@ -55,6 +56,7 @@ function mockRepo(path: string, name: string): Repository {
 interface PaletteCommandLike {
   id: string;
   label: string;
+  shortcut?: string;
   action: () => void;
 }
 
@@ -73,6 +75,7 @@ describe('app-shell command palette: open the repository elsewhere', () => {
   });
 
   afterEach(() => {
+    keyboardService.unregister('open-in-editor');
     dialogs.reset();
     repositoryStore.getState().reset();
   });
@@ -107,7 +110,9 @@ describe('app-shell command palette: open the repository elsewhere', () => {
 
     expect(paletteCommand(el, 'open-in-terminal').label).to.equal('Open in Terminal');
     expect(paletteCommand(el, 'reveal-in-file-manager').label).to.equal('Reveal in File Manager');
-    expect(paletteCommand(el, 'open-in-editor').label).to.equal('Open in Editor');
+    const editorCommand = paletteCommand(el, 'open-in-editor');
+    expect(editorCommand.label).to.equal('Open in Editor');
+    expect(editorCommand.shortcut).to.match(/^(?:⌘|Ctrl)⇧A$/);
   });
 
   it('Open in Terminal invokes open_terminal for the active repository', async () => {
@@ -245,5 +250,55 @@ describe('app-shell command palette: open the repository elsewhere', () => {
     const warnings = uiStore.getState().toasts.filter((t) => t.type === 'warning');
     expect(warnings).to.have.lengthOf(3);
     expect(warnings[0].message).to.contain('open a repository');
+  });
+
+  it('Ctrl+Shift+A opens the active repository in the configured editor and ignores key repeat', async () => {
+    const el = document.createElement('gn-app-shell') as AppShell;
+    document.body.appendChild(el);
+    (el as any).activeRepository = { repository: mockRepo('/repo/active', 'active') };
+
+    try {
+      document.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'A', ctrlKey: true, shiftKey: true, repeat: true, cancelable: true }),
+      );
+      await settle();
+      expect(
+        invokeCallArgs.filter((c) => c.command === 'open_in_configured_editor'),
+        'repeated Ctrl+Shift+A must not trigger',
+      ).to.have.lengthOf(0);
+
+      document.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'A', ctrlKey: true, shiftKey: true, repeat: false, cancelable: true }),
+      );
+      await settle();
+
+      const calls = invokeCallArgs.filter((c) => c.command === 'open_in_configured_editor');
+      expect(calls).to.have.lengthOf(1);
+      expect(calls[0].args.path).to.equal('/repo/active');
+      expect(calls[0].args.filePath).to.equal('/repo/active');
+    } finally {
+      el.remove();
+    }
+  });
+
+  it('Ctrl+Shift+A warns without invoking the backend when no repository is open', async () => {
+    const el = document.createElement('gn-app-shell') as AppShell;
+    document.body.appendChild(el);
+    (el as any).activeRepository = null;
+
+    try {
+      document.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'A', ctrlKey: true, shiftKey: true, repeat: false, cancelable: true }),
+      );
+      await settle();
+
+      const calls = invokeCallArgs.filter((c) => c.command === 'open_in_configured_editor');
+      expect(calls).to.have.lengthOf(0);
+      const warnings = uiStore.getState().toasts.filter((t) => t.type === 'warning');
+      expect(warnings).to.have.lengthOf(1);
+      expect(warnings[0].message).to.contain('open a repository');
+    } finally {
+      el.remove();
+    }
   });
 });

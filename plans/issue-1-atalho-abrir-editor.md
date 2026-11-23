@@ -26,7 +26,7 @@
 ## 2. Checklist de Execução de Etapas
 - [x] Etapa 1: Backend de Detecção e Resolução de Editores, Contrato `OpenResult`/`DialogContexts` e Toast de Ação
 - [x] Etapa 2: Navegação Direta para Settings (`app-shell.ts` / `focus.ts`), Campo Editor em `gn-settings-dialog.ts` e Sincronização i18n
-- [ ] Etapa 3: Atalho Global `Ctrl+Shift+A` (com Guard contra `e.repeat`), Badge na Paleta de Comandos e Wiring no `app-shell.ts`
+- [x] Etapa 3: Atalho Global `Ctrl+Shift+A` (com Guard contra `e.repeat`), Badge na Paleta de Comandos e Wiring no `app-shell.ts`
 - [ ] Etapa 4: Mocks E2E, Testes Playwright e Validação Global Final
 
 ---

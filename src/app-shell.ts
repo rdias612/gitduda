@@ -178,7 +178,7 @@ import {
   stopGitCommandLogging,
 } from './services/git-output.service.ts';
 import { showToast, notifyWarning } from './services/notification.service.ts';
-import { handleOpenEditorFailure } from './services/open-location.service.ts';
+import { handleOpenEditorFailure, openRepositoryInEditor } from './services/open-location.service.ts';
 import { emitSecuritySettings } from './services/security-sync.service.ts';
 import { showErrorWithSuggestion } from './services/error-suggestion.service.ts';
 import { runFetch, runPull, runPush } from './services/remote-operations.service.ts';
@@ -2208,6 +2208,9 @@ export class AppShell extends LitElement {
       toggleTerminal: this.requiresRepository(() => this.toggleTerminalPanel()),
       openCommandPalette: () => this.openCommandPalette(),
       openReflog: this.requiresRepository(() => { dialogs.open('reflog'); }),
+      openInEditor: this.requiresRepository(() => {
+        void openRepositoryInEditor(this.activeRepository!.repository.path);
+      }),
       // Wrapped like the palette entries: pressing Ctrl+Shift+F on the welcome
       // screen used to do nothing at all while the same command from the
       // palette explained that a repository is needed.
