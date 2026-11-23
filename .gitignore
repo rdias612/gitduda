@@ -45,3 +45,8 @@ playwright/.cache/
 # MSIX packaging
 dist-msix/
 *.msix
+
+# Gemini squad plugin temporary files
+plans/
+discussao/
+spec/
