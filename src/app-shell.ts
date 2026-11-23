@@ -6458,6 +6458,7 @@ export class AppShell extends LitElement {
               @close=${this.handleCloseSettings}
             >
               <gn-settings-dialog
+                .focusSection=${dialogs.context('settings')?.focusSection ?? null}
                 @close=${this.handleCloseSettings}
                 @open-profile-manager=${() => { dialogs.open('profileManager'); }}
               ></gn-settings-dialog>

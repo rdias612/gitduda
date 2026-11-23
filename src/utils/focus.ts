@@ -25,7 +25,13 @@ export function deepActiveElement(): Element | null {
  * so it cannot yank the caret out of a field the user has already moved to.
  */
 export function containsDeepActiveElement(host: Element): boolean {
-  const active = deepActiveElement();
-  if (!active) return false;
-  return host.contains(active) || (host.shadowRoot?.contains(active) ?? false);
+  let node: Node | null = deepActiveElement();
+  while (node) {
+    if (host.contains(node) || (host.shadowRoot?.contains(node) ?? false)) {
+      return true;
+    }
+    const root = node.getRootNode();
+    node = root instanceof ShadowRoot ? root.host : null;
+  }
+  return false;
 }

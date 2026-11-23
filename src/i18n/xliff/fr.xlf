@@ -232,9 +232,6 @@
 <trans-unit id="sb7f9d1cd846aff50">
   <source>e.g., /usr/bin/meld $LOCAL $REMOTE</source>
   <target>ex. : /usr/bin/meld $LOCAL $REMOTE</target></trans-unit>
-<trans-unit id="s59c675c04da12f61">
-  <source>Open a repository to configure external tools</source>
-  <target>Ouvrez un dépôt pour configurer les outils externes</target></trans-unit>
 <trans-unit id="sb3fff06c253a0d9e">
   <source>Network &amp; Sync</source>
   <target>Réseau et synchronisation</target></trans-unit>
@@ -822,6 +819,34 @@
 <trans-unit id="s9a32ecff99487d61">
   <source>Gitduda - a tornado of git branches</source>
   <target>Gitduda - une tornade de branches git</target>
+</trans-unit>
+<trans-unit id="sa75b95980cd80e78">
+  <source>Editor</source>
+  <target>Éditeur</target>
+</trans-unit>
+<trans-unit id="s34a92ca9f4177faa">
+  <source>External editor for opening repositories and files</source>
+  <target>Éditeur externe pour ouvrir les dépôts et les fichiers</target>
+</trans-unit>
+<trans-unit id="s6df43b20aa793cf9">
+  <source>Select an editor...</source>
+  <target>Sélectionner un éditeur...</target>
+</trans-unit>
+<trans-unit id="s3cec2d2643c08541">
+  <source>Editor Command</source>
+  <target>Commande de l'éditeur</target>
+</trans-unit>
+<trans-unit id="s2b09c9a813e9ac1c">
+  <source>Custom command to launch editor</source>
+  <target>Commande personnalisée pour lancer l'éditeur</target>
+</trans-unit>
+<trans-unit id="saf1d20d2135500f9">
+  <source>e.g., code --wait</source>
+  <target>ex. : code --wait</target>
+</trans-unit>
+<trans-unit id="sfe4b1b4fa274a3f2">
+  <source>Open a repository to configure merge and diff tools</source>
+  <target>Ouvrez un dépôt pour configurer les outils de fusion et de comparaison</target>
 </trans-unit>
 </body>
 </file>

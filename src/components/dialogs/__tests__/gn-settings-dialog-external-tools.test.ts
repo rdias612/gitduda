@@ -136,7 +136,9 @@ let callbackId = 0;
 };
 
 // Import AFTER setting up the mock
+import '../gn-modal.ts';
 import '../gn-settings-dialog.ts';
+import type { GnModal } from '../gn-modal.ts';
 import type { GnSettingsDialog } from '../gn-settings-dialog.ts';
 
 async function waitUntil(predicate: () => boolean, what: string): Promise<void> {
@@ -235,7 +237,7 @@ async function renderDialog(): Promise<GnSettingsDialog> {
   // Wait for the async external-tools load kicked off by connectedCallback.
   for (let i = 0; i < 50; i++) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if ((el as any).loadingTools === false) break;
+    if ((el as any).loadingTools === false && (el as any).loadingEditor === false) break;
     await new Promise((r) => setTimeout(r, 5));
     await el.updateComplete;
   }
@@ -777,5 +779,217 @@ describe('gn-settings-dialog external tools "None"', () => {
 
     expect(unsetCalls(), 'no config write without an active repository').to.have.lengthOf(0);
     expect(uiStore.getState().toasts, 'no toast').to.have.lengthOf(0);
+  });
+});
+
+describe('gn-settings-dialog external editor', () => {
+  const EDITOR_REPO_PATH = '/test/editor-repo';
+  let settingsChangedCount = 0;
+  let onSettingsChanged: () => void;
+
+  beforeEach(() => {
+    calls.length = 0;
+    failingCommands = new Set();
+    deferredCommands = new Set();
+    deferredWrites = [];
+    for (const key of Object.keys(failures)) delete failures[key];
+    configuredGlobally.mergeTool = false;
+    configuredGlobally.diffTool = false;
+    responses = {
+      get_available_editors: [
+        { id: 'vscode', displayName: 'VS Code', command: 'code', available: true },
+        { id: 'cursor', displayName: 'Cursor', command: 'cursor', available: false },
+        { id: 'zed', displayName: 'Zed', command: 'zed', available: true },
+      ],
+      get_editor_config: { editor: null, visual: null },
+      set_editor_config: { success: true, message: 'Editor updated' },
+      get_merge_tool_config: { toolName: null, toolCmd: null },
+      get_diff_tool: { tool: null, cmd: null, prompt: false },
+      get_available_merge_tools: [],
+      list_diff_tools: [],
+    };
+    uiStore.setState({ toasts: [] });
+    repositoryStore.getState().reset();
+    settingsChangedCount = 0;
+    onSettingsChanged = () => {
+      settingsChangedCount += 1;
+    };
+    window.addEventListener('settings-changed', onSettingsChanged);
+  });
+
+  afterEach(() => {
+    window.removeEventListener('settings-changed', onSettingsChanged);
+    repositoryStore.getState().reset();
+    uiStore.setState({ toasts: [] });
+  });
+
+  it('renders the Editor selector even when no repository is open', async () => {
+    const el = await renderDialog();
+
+    const editorSelect = el.shadowRoot?.querySelector<HTMLSelectElement>('#external-editor-select');
+    expect(editorSelect).to.exist;
+    expect(editorSelect?.disabled).to.equal(false);
+
+    const getEditorCalls = calls.filter((c) => c.command === 'get_editor_config');
+    expect(getEditorCalls).to.have.lengthOf(1);
+    expect(getEditorCalls[0].args).to.deep.equal({ path: '', global: true });
+
+    const section = el.shadowRoot?.querySelector('#external-tools-section');
+    expect(section?.textContent).to.contain('Open a repository to configure merge and diff tools');
+    expect(el.shadowRoot?.querySelector('#merge-tool-select')).to.equal(null);
+  });
+
+  it('tolerates null responses from legacy mocks for editor commands', async () => {
+    delete responses['get_available_editors'];
+    delete responses['get_editor_config'];
+
+    const el = await renderDialog();
+    const editorSelect = el.shadowRoot?.querySelector<HTMLSelectElement>('#external-editor-select');
+    expect(editorSelect).to.exist;
+    expect(editorSelect?.value).to.equal('');
+    const optionValues = Array.from(editorSelect?.options ?? []).map((o) => o.value);
+    expect(optionValues).to.deep.equal(['', '__custom__']);
+  });
+
+  it('shows only detected available editors (without None) and falls back to all OS presets when none are detected', async () => {
+    const el = await renderDialog();
+    const editorSelect = el.shadowRoot!.querySelector<HTMLSelectElement>('#external-editor-select')!;
+    const options = Array.from(editorSelect.options);
+    const values = options.map((o) => o.value);
+    const labels = options.map((o) => o.textContent?.trim());
+
+    expect(values).to.deep.equal(['', 'code', 'zed', '__custom__']);
+    expect(options[0].disabled).to.equal(true);
+    expect(labels[0]).to.equal('Select an editor...');
+    expect(labels).to.not.include('None');
+    expect(labels).to.not.include('Cursor (cursor)');
+
+    responses['get_available_editors'] = [
+      { id: 'vscode', displayName: 'VS Code', command: 'code', available: false },
+      { id: 'cursor', displayName: 'Cursor', command: 'cursor', available: false },
+    ];
+    const fallbackEl = await renderDialog();
+    const fallbackSelect = fallbackEl.shadowRoot!.querySelector<HTMLSelectElement>('#external-editor-select')!;
+    expect(Array.from(fallbackSelect.options).map((o) => o.value)).to.deep.equal([
+      '',
+      'code',
+      'cursor',
+      '__custom__',
+    ]);
+  });
+
+  it('saves a selected editor globally and dispatches settings-changed', async () => {
+    repositoryStore.getState().addRepository(mockRepo(EDITOR_REPO_PATH, 'editor-repo'));
+    const el = await renderDialog();
+
+    const editorSelect = el.shadowRoot!.querySelector<HTMLSelectElement>('#external-editor-select')!;
+    editorSelect.value = 'zed';
+    change(editorSelect);
+
+    await waitUntil(() => settingsChangedCount === 1, 'settings-changed after editor save');
+    await el.updateComplete;
+
+    const setCalls = calls.filter((c) => c.command === 'set_editor_config');
+    expect(setCalls).to.have.lengthOf(1);
+    expect(setCalls[0].args).to.deep.equal({
+      path: EDITOR_REPO_PATH,
+      editor: 'zed',
+      global: true,
+    });
+    expect(editorSelect.value).to.equal('zed');
+    expect(editorSelect.querySelector('option[value=""]')).to.equal(null);
+  });
+
+  it('preserves a saved custom editor command across reloads and restores empty submissions', async () => {
+    responses['get_editor_config'] = { editor: 'nvim --wait', visual: null };
+    const el = await renderDialog();
+
+    const editorSelect = el.shadowRoot!.querySelector<HTMLSelectElement>('#external-editor-select')!;
+    expect(editorSelect.value).to.equal('__custom__');
+
+    const customInput = el.shadowRoot!.querySelector<HTMLInputElement>('#external-editor-custom-input')!;
+    expect(customInput).to.exist;
+    expect(customInput.value).to.equal('nvim --wait');
+
+    customInput.value = '   ';
+    change(customInput);
+    await settle();
+
+    expect(customInput.value).to.equal('nvim --wait');
+    expect(calls.filter((c) => c.command === 'set_editor_config')).to.have.lengthOf(0);
+
+    customInput.value = 'emacs -nw';
+    change(customInput);
+    await waitUntil(() => settingsChangedCount === 1, 'settings-changed after custom command save');
+
+    const setCalls = calls.filter((c) => c.command === 'set_editor_config');
+    expect(setCalls).to.have.lengthOf(1);
+    expect(setCalls[0].args).to.deep.equal({ path: '', editor: 'emacs -nw', global: true });
+  });
+
+  it('focuses the custom command input when Custom... is chosen without overwriting core.editor', async () => {
+    responses['get_editor_config'] = { editor: 'code', visual: null };
+    const el = await renderDialog();
+
+    const editorSelect = el.shadowRoot!.querySelector<HTMLSelectElement>('#external-editor-select')!;
+    editorSelect.value = '__custom__';
+    change(editorSelect);
+
+    await waitUntil(
+      () => !!el.shadowRoot?.querySelector('#external-editor-custom-input'),
+      'custom input to appear',
+    );
+    await el.updateComplete;
+
+    const customInput = el.shadowRoot!.querySelector<HTMLInputElement>('#external-editor-custom-input')!;
+    expect(customInput.value).to.equal('');
+    expect(el.shadowRoot?.activeElement).to.equal(customInput);
+    expect(calls.filter((c) => c.command === 'set_editor_config')).to.have.lengthOf(0);
+  });
+
+  it('rolls back editor selection and shows an error toast when saving fails', async () => {
+    responses['get_editor_config'] = { editor: 'code', visual: null };
+    responses['set_editor_config'] = { success: false, message: 'git config failed' };
+    const el = await renderDialog();
+
+    const editorSelect = el.shadowRoot!.querySelector<HTMLSelectElement>('#external-editor-select')!;
+    editorSelect.value = 'zed';
+    change(editorSelect);
+
+    await waitUntil(() => errorToasts().length > 0, 'editor save error toast');
+    await el.updateComplete;
+
+    expect(errorToasts()[0]).to.contain('Failed to save editor');
+    expect(errorToasts()[0]).to.contain('git config failed');
+    expect(editorSelect.value).to.equal('code');
+    expect(settingsChangedCount).to.equal(0);
+  });
+
+  it('scrolls to external tools and keeps focus on #external-editor-select inside gn-modal when focusSection is external-tools', async () => {
+    const modal = await fixture<GnModal>(html`
+      <gn-modal open modalTitle="Settings">
+        <gn-settings-dialog .focusSection=${'external-tools'}></gn-settings-dialog>
+      </gn-modal>
+    `);
+    const dialog = modal.querySelector<GnSettingsDialog>('gn-settings-dialog')!;
+    const section = dialog.shadowRoot?.querySelector<HTMLElement>('#external-tools-section');
+    let scrolled = false;
+    if (section) {
+      section.scrollIntoView = () => {
+        scrolled = true;
+      };
+    }
+
+    await waitUntil(
+      () => dialog.shadowRoot?.querySelector<HTMLSelectElement>('#external-editor-select')?.disabled === false,
+      'editor config to load',
+    );
+    await dialog.updateComplete;
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+    const editorSelect = dialog.shadowRoot!.querySelector<HTMLSelectElement>('#external-editor-select')!;
+    expect(scrolled).to.equal(true);
+    expect(dialog.shadowRoot?.activeElement).to.equal(editorSelect);
   });
 });

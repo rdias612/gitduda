@@ -1,5 +1,5 @@
-import { LitElement, html, css, nothing } from 'lit';
-import { customElement, state } from 'lit/decorators.js';
+import { LitElement, html, css, nothing, type PropertyValues } from 'lit';
+import { customElement, property, state } from 'lit/decorators.js';
 import { localized, msg, str } from '@lit/localize';
 import {
   settingsStore,
@@ -32,7 +32,7 @@ import '../mcp/gn-mcp-clients.ts';
 import '../mcp/gn-mcp-external-servers.ts';
 import './gn-ai-routing-ledger.ts';
 import * as gitService from '../../services/git.service.ts';
-import type { MergeToolInfo, AvailableDiffTool } from '../../services/git.service.ts';
+import type { MergeToolInfo, AvailableDiffTool, EditorInfo } from '../../services/git.service.ts';
 import { avatarBlockedExplanation, GRAVATAR_HOST } from '../../utils/avatar-policy.ts';
 import { showToast } from '../../services/notification.service.ts';
 import { repositoryStore } from '../../stores/repository.store.ts';
@@ -528,7 +528,13 @@ export class GnSettingsDialog extends LitElement {
   private downloadCompleteUnlisten: UnlistenFn | null = null;
   private downloadErrorUnlisten: UnlistenFn | null = null;
 
+  @property({ type: String }) focusSection: 'external-tools' | null = null;
+
   // External tools settings
+  @state() private availableEditors: EditorInfo[] = [];
+  @state() private editorSelectValue = '';
+  @state() private editorCustomCmd = '';
+  @state() private loadingEditor = false;
   @state() private mergeToolName: string | null = null;
   @state() private mergeToolCmd: string | null = null;
   @state() private availableMergeTools: MergeToolInfo[] = [];
@@ -540,8 +546,10 @@ export class GnSettingsDialog extends LitElement {
   // Monotonic write tokens. Only the newest write for a tool owns its controls,
   // so a slow failure can no longer roll the UI back over a newer save that
   // already landed.
+  private editorWriteToken = 0;
   private mergeToolWriteToken = 0;
   private diffToolWriteToken = 0;
+  private pendingEditorFocus = false;
 
   /** Same guard for the provider listing, which the security settings can now
    * re-request while an earlier request is still in flight. */
@@ -551,6 +559,9 @@ export class GnSettingsDialog extends LitElement {
 
   connectedCallback(): void {
     super.connectedCallback();
+    if (this.focusSection === 'external-tools') {
+      this.pendingEditorFocus = true;
+    }
     this.loadSettings();
     // The graph colour scheme can change underneath an open dialog when the OS
     // high-contrast setting flips, so mirror it from the store.
@@ -581,11 +592,16 @@ export class GnSettingsDialog extends LitElement {
     this.downloadErrorUnlisten = null;
   }
 
-  protected updated(): void {
+  protected updated(changedProperties: PropertyValues): void {
+    if (changedProperties.has('focusSection')) {
+      this.pendingEditorFocus = this.focusSection === 'external-tools';
+    }
+
     // A <select>'s `.value` binding commits before the <option>s rendered inside
     // it in the same Lit update, so a value whose option only appears in that
     // update is dropped and the select falls back to "None". Re-apply both tool
     // selects once their options exist.
+    this.syncSelectValue('#external-editor-select', this.editorSelectValue);
     this.syncSelectValue('#merge-tool-select', this.mergeToolName);
     this.syncSelectValue('#diff-tool-select', this.diffToolName);
     // Same hazard: the graph scheme select and its options render in one
@@ -596,6 +612,16 @@ export class GnSettingsDialog extends LitElement {
     // Same hazard again: the language select and its options render in the same
     // update, so a non-default locale would fall back to the first option.
     this.syncSelectValue('#language-select', this.language);
+
+    if (this.pendingEditorFocus && !this.loadingEditor) {
+      const section = this.shadowRoot?.querySelector<HTMLElement>('#external-tools-section');
+      const select = this.shadowRoot?.querySelector<HTMLSelectElement>('#external-editor-select');
+      section?.scrollIntoView?.({ block: 'center' });
+      if (select && !select.disabled) {
+        select.focus();
+      }
+      this.pendingEditorFocus = false;
+    }
   }
 
   private syncSelectValue(selector: string, value: string | null): void {
@@ -865,19 +891,74 @@ export class GnSettingsDialog extends LitElement {
     }
   }
 
+  private getDisplayedEditors(): EditorInfo[] {
+    const available = this.availableEditors.filter((editor) => editor.available);
+    return available.length > 0 ? available : this.availableEditors;
+  }
+
   private async loadExternalToolsConfig(): Promise<void> {
     const repo = repositoryStore.getState().getActiveRepository();
-    if (!repo) return;
 
-    this.loadingTools = true;
+    this.loadingEditor = true;
+    if (repo) {
+      this.loadingTools = true;
+    }
+
+    const editorPromise = (async () => {
+      try {
+        const [editorConfig, editorsResult] = await Promise.all([
+          gitService.getEditorConfig(repo?.repository.path ?? '', true),
+          gitService.getAvailableEditors(),
+        ]);
+        if (!this.isConnected) return;
+
+        if (editorsResult.success && Array.isArray(editorsResult.data)) {
+          this.availableEditors = editorsResult.data;
+        }
+        if (editorConfig.success && editorConfig.data) {
+          const configuredEditor = editorConfig.data.editor?.trim() ?? '';
+          if (!configuredEditor) {
+            this.editorSelectValue = '';
+            this.editorCustomCmd = '';
+          } else {
+            const matchesDisplayed = this.getDisplayedEditors().some(
+              (editor) => editor.command === configuredEditor,
+            );
+            if (matchesDisplayed) {
+              this.editorSelectValue = configuredEditor;
+              this.editorCustomCmd = '';
+            } else {
+              this.editorSelectValue = '__custom__';
+              this.editorCustomCmd = configuredEditor;
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load editor config:', err);
+        showToast(
+          `Failed to load editor config: ${err instanceof Error ? err.message : 'Unknown error'}`,
+          'error',
+        );
+      } finally {
+        this.loadingEditor = false;
+      }
+    })();
+
+    if (!repo) {
+      await editorPromise;
+      return;
+    }
+
     try {
       const path = repo.repository.path;
-      const [mergeConfig, diffConfig, mergeTools, diffTools] = await Promise.all([
+      const [, mergeConfig, diffConfig, mergeTools, diffTools] = await Promise.all([
+        editorPromise,
         gitService.getMergeToolConfig(path),
         gitService.getDiffToolConfig(path),
         gitService.getAvailableMergeTools(),
         gitService.listDiffTools(path),
       ]);
+      if (!this.isConnected) return;
 
       if (mergeConfig.success && mergeConfig.data) {
         this.mergeToolName = mergeConfig.data.toolName;
@@ -902,6 +983,88 @@ export class GnSettingsDialog extends LitElement {
     } finally {
       this.loadingTools = false;
     }
+  }
+
+  private async handleEditorSelectChange(e: Event): Promise<void> {
+    const select = e.target as HTMLSelectElement;
+    const value = select.value;
+    if (!value) return;
+
+    const token = ++this.editorWriteToken;
+
+    if (value === '__custom__') {
+      const hasPreviousCustomCmd =
+        this.editorSelectValue === '__custom__' && this.editorCustomCmd.trim() !== '';
+      this.editorSelectValue = '__custom__';
+      if (!hasPreviousCustomCmd) {
+        this.editorCustomCmd = '';
+      }
+      await this.updateComplete;
+      this.shadowRoot?.querySelector<HTMLInputElement>('#external-editor-custom-input')?.focus();
+      return;
+    }
+
+    const previousSelectValue = this.editorSelectValue;
+    const previousCustomCmd = this.editorCustomCmd;
+    this.editorSelectValue = value;
+    this.editorCustomCmd = '';
+
+    const repo = repositoryStore.getState().getActiveRepository();
+    const result = await gitService.setEditorConfig(
+      repo?.repository.path ?? '',
+      value,
+      true,
+    );
+
+    if (token !== this.editorWriteToken) return;
+
+    if (!result.success || !result.data?.success) {
+      this.editorSelectValue = previousSelectValue;
+      this.editorCustomCmd = previousCustomCmd;
+      select.value = previousSelectValue;
+      showToast(
+        `Failed to save editor: ${result.data?.message ?? result.error?.message ?? 'Unknown error'}`,
+        'error',
+      );
+      return;
+    }
+
+    window.dispatchEvent(new CustomEvent('settings-changed'));
+  }
+
+  private async handleEditorCustomCmdChange(e: Event): Promise<void> {
+    const input = e.target as HTMLInputElement;
+    const trimmed = input.value.trim();
+    if (!trimmed) {
+      input.value = this.editorCustomCmd;
+      return;
+    }
+
+    const token = ++this.editorWriteToken;
+    const previousCmd = this.editorCustomCmd;
+    this.editorCustomCmd = trimmed;
+    input.value = trimmed;
+
+    const repo = repositoryStore.getState().getActiveRepository();
+    const result = await gitService.setEditorConfig(
+      repo?.repository.path ?? '',
+      trimmed,
+      true,
+    );
+
+    if (token !== this.editorWriteToken) return;
+
+    if (!result.success || !result.data?.success) {
+      this.editorCustomCmd = previousCmd;
+      input.value = previousCmd;
+      showToast(
+        `Failed to save editor command: ${result.data?.message ?? result.error?.message ?? 'Unknown error'}`,
+        'error',
+      );
+      return;
+    }
+
+    window.dispatchEvent(new CustomEvent('settings-changed'));
   }
 
   private async handleMergeToolChange(e: Event): Promise<void> {
@@ -1970,8 +2133,45 @@ export class GnSettingsDialog extends LitElement {
           </div>
         </div>
 
-        <div class="settings-section">
+        <div class="settings-section" id="external-tools-section">
           <div class="section-title">${msg('External Tools')}</div>
+
+          <div class="setting-row">
+            <div class="setting-label">
+              <span class="setting-name">${msg('Editor')}</span>
+              <span class="setting-description">${msg('External editor for opening repositories and files')}</span>
+            </div>
+            <select
+              id="external-editor-select"
+              .value=${this.editorSelectValue}
+              @change=${this.handleEditorSelectChange}
+              ?disabled=${this.loadingEditor}
+            >
+              ${this.editorSelectValue === ''
+                ? html`<option value="" disabled>${msg('Select an editor...')}</option>`
+                : nothing}
+              ${this.getDisplayedEditors().map(editor => html`
+                <option value=${editor.command}>${editor.displayName} (${editor.command})</option>
+              `)}
+              <option value="__custom__">${msg('Custom...')}</option>
+            </select>
+          </div>
+
+          ${this.editorSelectValue === '__custom__' ? html`
+            <div class="setting-row">
+              <div class="setting-label">
+                <span class="setting-name">${msg('Editor Command')}</span>
+                <span class="setting-description">${msg('Custom command to launch editor')}</span>
+              </div>
+              <input
+                id="external-editor-custom-input"
+                type="text"
+                .value=${this.editorCustomCmd}
+                @change=${this.handleEditorCustomCmdChange}
+                placeholder=${msg('e.g., code --wait')}
+              />
+            </div>
+          ` : nothing}
 
           ${repositoryStore.getState().getActiveRepository()
             ? html`
@@ -2048,7 +2248,7 @@ export class GnSettingsDialog extends LitElement {
             : html`
               <div class="setting-row">
                 <div class="setting-label">
-                  <span class="setting-description">${msg('Open a repository to configure external tools')}</span>
+                  <span class="setting-description">${msg('Open a repository to configure merge and diff tools')}</span>
                 </div>
               </div>
             `

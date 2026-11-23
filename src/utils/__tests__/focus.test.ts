@@ -13,9 +13,17 @@ class FocusTestHost extends LitElement {
   }
 }
 
+@customElement('focus-test-child')
+class FocusTestChild extends LitElement {
+  render() {
+    return litHtml`<input id="child-shadow-input" />`;
+  }
+}
+
 declare global {
   interface HTMLElementTagNameMap {
     'focus-test-host': FocusTestHost;
+    'focus-test-child': FocusTestChild;
   }
 }
 
@@ -75,6 +83,37 @@ describe('focus utils', () => {
     await host.updateComplete;
 
     wrap.querySelector<HTMLInputElement>('#outside')!.focus();
+    expect(containsDeepActiveElement(host)).to.equal(false);
+  });
+
+  it('containsDeepActiveElement walks across slotted child shadow roots', async () => {
+    const el = await fixture<FocusTestHost>(
+      html`<focus-test-host><focus-test-child></focus-test-child></focus-test-host>`,
+    );
+    await el.updateComplete;
+    const child = el.querySelector<FocusTestChild>('focus-test-child')!;
+    await child.updateComplete;
+
+    const childInput = child.shadowRoot!.querySelector<HTMLInputElement>('#child-shadow-input')!;
+    childInput.focus();
+
+    expect(deepActiveElement()).to.equal(childInput);
+    expect(containsDeepActiveElement(el)).to.equal(true);
+  });
+
+  it('containsDeepActiveElement is false for a sibling element with its own shadow root', async () => {
+    const wrap = await fixture<HTMLDivElement>(html`
+      <div>
+        <focus-test-host></focus-test-host>
+        <focus-test-child></focus-test-child>
+      </div>
+    `);
+    const host = wrap.querySelector<FocusTestHost>('focus-test-host')!;
+    const sibling = wrap.querySelector<FocusTestChild>('focus-test-child')!;
+    await host.updateComplete;
+    await sibling.updateComplete;
+
+    sibling.shadowRoot!.querySelector<HTMLInputElement>('#child-shadow-input')!.focus();
     expect(containsDeepActiveElement(host)).to.equal(false);
   });
 });

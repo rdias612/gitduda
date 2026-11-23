@@ -110,6 +110,13 @@ describe('dialog.store', () => {
       expect(dialogs.isOpen('search'), 'the dialog stays open').to.equal(true);
       expect(dialogs.context('search')?.mode).to.equal('commits');
     });
+
+    it('stores and clears settings focusSection context', () => {
+      dialogs.open('settings', { focusSection: 'external-tools' });
+      expect(dialogs.context('settings')).to.deep.equal({ focusSection: 'external-tools' });
+      dialogs.close('settings');
+      expect(dialogs.context('settings')).to.equal(null);
+    });
   });
 
   describe('closeRepoScoped', () => {
