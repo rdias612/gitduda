@@ -204,6 +204,8 @@ export class GnRightPanel extends LitElement {
         this.repositoryPath = newPath;
         this.stagedFiles = activeRepo?.stagedFiles ?? [];
         this.stagedCount = this.stagedFiles.length;
+        this.changesCount = activeRepo?.status?.length ?? 0;
+        this.hasUnseenChanges = false;
         if (newPath) {
           this.detectGitHubRepo();
         } else {
@@ -392,8 +394,8 @@ export class GnRightPanel extends LitElement {
     e: CustomEvent<{ stagedCount: number; totalCount?: number; stagedFiles?: StatusEntry[] }>,
   ): void {
     this.stagedCount = e.detail.stagedCount;
-    if (e.detail.stagedFiles !== undefined) {
-      this.stagedFiles = e.detail.stagedFiles;
+    if (e.detail.stagedFiles !== undefined || this.stagedCount === 0) {
+      this.stagedFiles = e.detail.stagedFiles ?? [];
     }
     if (e.detail.totalCount !== undefined) {
       const previousCount = this.changesCount;

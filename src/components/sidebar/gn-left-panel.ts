@@ -3,6 +3,7 @@ import { customElement, state } from 'lit/decorators.js';
 import { sharedStyles } from '../../styles/shared-styles.ts';
 import { repositoryStore } from '../../stores/index.ts';
 import './gn-branch-list.ts';
+import './gn-worktree-list.ts';
 import './gn-stash-list.ts';
 import './gn-tag-list.ts';
 import './gn-pull-request-list.ts';
@@ -35,23 +36,27 @@ export class GnLeftPanel extends LitElement {
         display: flex;
         align-items: center;
         gap: 6px;
-        padding: 4px 12px;
-        font-size: var(--font-size-sm);
-        font-weight: var(--font-weight-medium);
+        height: 28px;
+        padding: 0 10px;
+        font-size: var(--font-size-xs);
+        font-weight: var(--font-weight-semibold);
+        letter-spacing: 0.02em;
         color: var(--color-text-secondary);
         background: var(--color-bg-tertiary);
         border-bottom: 1px solid var(--color-border);
         user-select: none;
         cursor: pointer;
+        flex-shrink: 0;
       }
 
       .section-header:hover {
         background: var(--color-bg-hover);
+        color: var(--color-text-primary);
       }
 
       .section-header .chevron {
-        width: 14px;
-        height: 14px;
+        width: 12px;
+        height: 12px;
         transition: transform var(--transition-fast);
         flex-shrink: 0;
       }
@@ -62,10 +67,14 @@ export class GnLeftPanel extends LitElement {
 
       .section-header .title {
         flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
 
       .section-header .count {
-        font-size: var(--font-size-xs);
+        font-size: 10px;
         color: var(--color-text-muted);
         background: var(--color-bg-secondary);
         padding: 1px 6px;
@@ -74,8 +83,8 @@ export class GnLeftPanel extends LitElement {
       }
 
       .section-action {
-        width: 18px;
-        height: 18px;
+        width: 20px;
+        height: 20px;
         padding: 0;
         border: none;
         background: transparent;
@@ -86,7 +95,7 @@ export class GnLeftPanel extends LitElement {
         color: var(--color-text-muted);
         cursor: pointer;
         flex-shrink: 0;
-        opacity: 0;
+        opacity: 0.65;
         transition: all var(--transition-fast);
       }
 
@@ -107,12 +116,12 @@ export class GnLeftPanel extends LitElement {
 
       .branches-section {
         flex: 1;
-        min-height: 100px;
+        min-height: 120px;
       }
 
       .refs-section {
         flex: 0 0 auto;
-        max-height: 30%;
+        max-height: 42%;
         border-top: 1px solid var(--color-border);
       }
 
@@ -145,6 +154,7 @@ export class GnLeftPanel extends LitElement {
   ];
 
   @state() private repositoryPath: string | null = null;
+  @state() private worktreeCount: number = 0;
   @state() private stashCount: number = 0;
   @state() private tagCount: number = 0;
   @state() private pullRequestCount: number = 0;
@@ -161,7 +171,14 @@ export class GnLeftPanel extends LitElement {
     // Subscribe to changes
     this.unsubscribe = repositoryStore.subscribe((state) => {
       const activeRepo = state.getActiveRepository();
-      this.repositoryPath = activeRepo?.repository.path ?? null;
+      const nextPath = activeRepo?.repository.path ?? null;
+      if (nextPath !== this.repositoryPath) {
+        this.worktreeCount = 0;
+        this.stashCount = 0;
+        this.tagCount = 0;
+        this.pullRequestCount = 0;
+      }
+      this.repositoryPath = nextPath;
     });
   }
 
@@ -176,6 +193,7 @@ export class GnLeftPanel extends LitElement {
     }
 
     const branchesExpanded = this.expandedSections.has('branches');
+    const worktreesExpanded = this.expandedSections.has('worktrees');
     const stashesExpanded = this.expandedSections.has('stashes');
     const tagsExpanded = this.expandedSections.has('tags');
     const pullRequestsExpanded = this.expandedSections.has('pull-requests');
@@ -194,6 +212,32 @@ export class GnLeftPanel extends LitElement {
             @branch-checkout=${this.handleBranchCheckout}
             @branches-changed=${this.handleBranchesChanged}
           ></gn-branch-list>
+        </div>
+      </section>
+
+      <!-- Worktrees Section -->
+      <section class="section refs-section ${worktreesExpanded ? '' : 'collapsed'}">
+        <header class="section-header" @click=${() => this.toggleSection('worktrees')}>
+          ${this.renderChevron(worktreesExpanded)}
+          <span class="title">Worktrees</span>
+          ${this.worktreeCount > 0 ? html`<span class="count">${this.worktreeCount}</span>` : ''}
+          <button
+            class="section-action"
+            title="Manage worktrees"
+            @click=${this.handleManageWorktrees}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+          </button>
+        </header>
+        <div class="section-content">
+          <gn-worktree-list
+            .repositoryPath=${this.repositoryPath}
+            @worktrees-changed=${this.handleWorktreesChanged}
+            @worktree-count-changed=${this.handleWorktreeCountChanged}
+          ></gn-worktree-list>
         </div>
       </section>
 
@@ -352,15 +396,44 @@ export class GnLeftPanel extends LitElement {
     this.forwardRefresh(e);
   }
 
+  private handleWorktreesChanged(e?: Event): void {
+    this.forwardRefresh(e);
+  }
+
+  private handleWorktreeCountChanged(e: CustomEvent<{ count: number }>): void {
+    this.worktreeCount = e.detail.count;
+  }
+
+  private handleManageWorktrees(e: Event): void {
+    e.stopPropagation();
+    this.dispatchEvent(new CustomEvent('manage-worktrees', {
+      bubbles: true,
+      composed: true,
+    }));
+  }
+
   private handleTagsChanged(e?: Event): void {
     this.forwardRefresh(e);
   }
+
+  private static readonly SECONDARY_SECTIONS = [
+    'worktrees',
+    'stashes',
+    'tags',
+    'pull-requests',
+    'gitflow',
+  ] as const;
 
   private toggleSection(section: string): void {
     const newExpanded = new Set(this.expandedSections);
     if (newExpanded.has(section)) {
       newExpanded.delete(section);
     } else {
+      if (section !== 'branches') {
+        for (const secondary of GnLeftPanel.SECONDARY_SECTIONS) {
+          newExpanded.delete(secondary);
+        }
+      }
       newExpanded.add(section);
     }
     this.expandedSections = newExpanded;

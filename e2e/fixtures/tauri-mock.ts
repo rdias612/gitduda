@@ -728,6 +728,20 @@ export function createMockHandler(mocks: typeof defaultMockData) {
       // Checkpoints and the Claude Code hooks bridge (#607, #608)
       case 'list_checkpoints':
         return [];
+      case 'get_worktrees':
+        return [
+          {
+            path: mocks.repository.path,
+            branch: mocks.repository.headRef,
+            isMain: true,
+            isLocked: false,
+            lockReason: null,
+            commit: mocks.commits[0]?.oid ?? 'abc123def456',
+            isBare: false,
+            isPrunable: false,
+            isCurrent: true,
+          },
+        ];
       case 'get_agent_hooks_status':
         return { installed: false, partial: false, settingsPath: '/tmp/test-repo/.claude/settings.local.json', scriptPath: '/tmp/test-repo/.git/gitduda/agent-checkpoint.sh' };
       case 'get_agent_attribution':
@@ -1364,6 +1378,20 @@ export async function setupTauriMocks(
           // Checkpoints and the Claude Code hooks bridge (#607, #608)
           case 'list_checkpoints':
             return [];
+          case 'get_worktrees':
+            return [
+              {
+                path: state.repository.path,
+                branch: state.repository.headRef,
+                isMain: true,
+                isLocked: false,
+                lockReason: null,
+                commit: state.commits[0]?.oid ?? 'abc123def456',
+                isBare: false,
+                isPrunable: false,
+                isCurrent: true,
+              },
+            ];
           case 'get_agent_hooks_status':
             return { installed: false, partial: false, settingsPath: '/tmp/test-repo/.claude/settings.local.json', scriptPath: '/tmp/test-repo/.git/gitduda/agent-checkpoint.sh' };
           case 'get_agent_attribution':

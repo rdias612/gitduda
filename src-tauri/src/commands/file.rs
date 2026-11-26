@@ -8,18 +8,16 @@ use super::path_utils::resolve_path_within_repo;
 use crate::error::{GitdudaError, Result};
 use crate::utils::create_command;
 
-/// Escape cmd.exe metacharacters to prevent command injection (Windows only).
 #[cfg(target_os = "windows")]
-fn escape_cmd_meta(s: &str) -> String {
-    s.chars()
-        .map(|c| {
-            if "&|<>^()%!".contains(c) {
-                format!("^{}", c)
-            } else {
-                c.to_string()
-            }
-        })
-        .collect()
+fn windows_open_default_command(target: &Path) -> std::process::Command {
+    use std::os::windows::process::CommandExt;
+
+    let mut command = std::process::Command::new("rundll32.exe");
+    // CREATE_NO_WINDOW = 0x08000000
+    command.creation_flags(0x08000000);
+    command.arg("url.dll,FileProtocolHandler");
+    command.arg(target.as_os_str());
+    command
 }
 
 /// Result of an open/reveal operation
@@ -267,8 +265,7 @@ pub async fn open_in_default_app(path: String) -> Result<OpenResult> {
 
     #[cfg(target_os = "windows")]
     {
-        std::process::Command::new("cmd")
-            .args(["/c", "start", "", &escape_cmd_meta(&path)])
+        windows_open_default_command(target)
             .spawn()
             .map_err(|e| GitdudaError::OperationFailed(format!("Failed to open file: {}", e)))?;
     }
@@ -448,7 +445,9 @@ async fn open_in_configured_editor_with_deps(
     }
 
     // Get editor from git config (local first, then global)
-    let editor = get_git_config_value(Some(repo_path), "core.editor", false)
+    let editor = Some(repo_path)
+        .filter(|p| p.is_dir())
+        .and_then(|dir| get_git_config_value(Some(dir), "core.editor", false))
         .or_else(|| get_git_config_value_with(None, "core.editor", true, global_config_override))
         .or_else(|| env_var("GIT_EDITOR").filter(|v| !v.trim().is_empty()))
         .or_else(|| env_var("VISUAL").filter(|v| !v.trim().is_empty()))
@@ -480,10 +479,12 @@ async fn open_in_configured_editor_with_deps(
             let mut command = std::process::Command::new(&resolved_cmd);
             command
                 .args(&args)
-                .current_dir(repo_path)
                 .stdin(std::process::Stdio::null())
                 .stdout(std::process::Stdio::null())
                 .stderr(std::process::Stdio::null());
+            if repo_path.is_dir() {
+                command.current_dir(repo_path);
+            }
 
             #[cfg(target_os = "windows")]
             {
@@ -992,6 +993,23 @@ mod tests {
         let argument = windows_reveal_argument(target);
 
         assert_eq!(argument, r#"/select,"C:\repo with spaces\src\main.rs""#);
+    }
+
+    #[cfg(target_os = "windows")]
+    #[test]
+    fn test_windows_open_default_command_uses_rundll32_file_protocol_handler() {
+        let target = Path::new(r"C:\repo with spaces & ampersand\src\tags-input.ts");
+        let cmd = windows_open_default_command(target);
+
+        assert_eq!(cmd.get_program(), "rundll32.exe");
+        let args: Vec<_> = cmd.get_args().collect();
+        assert_eq!(
+            args,
+            vec![
+                std::ffi::OsStr::new("url.dll,FileProtocolHandler"),
+                target.as_os_str(),
+            ]
+        );
     }
 
     #[cfg(target_os = "linux")]
