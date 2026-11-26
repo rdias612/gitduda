@@ -26,6 +26,9 @@ import { fuzzyScore } from '../../utils/fuzzy-search.ts';
 import '../dialogs/gn-branch-cleanup-dialog.ts';
 import type { GnBranchCleanupDialog } from '../dialogs/gn-branch-cleanup-dialog.ts';
 import type { Branch, Stack } from '../../types/git.types.ts';
+import type { Worktree } from '../../services/git.service.ts';
+import { samePath } from '../../utils/path-compare.ts';
+import { openOrSwitchWorktreeTab } from './gn-worktree-list.ts';
 import { findStackBranch } from '../../utils/stack-navigation.ts';
 import { restackConflictMessage, restackSummaryLines, restackedCount } from '../../utils/restack-plan.ts';
 import { isTopOverlay } from '../../utils/overlay-stack.ts';
@@ -147,13 +150,14 @@ export class GnBranchList extends LitElement {
         display: flex;
         align-items: center;
         gap: 6px;
-        padding: 2px 12px;
+        min-height: 26px;
+        padding: 2px 10px;
         cursor: pointer;
         font-size: var(--font-size-sm);
       }
 
       .branch-item.nested {
-        padding-left: 32px;
+        padding-left: 24px;
       }
 
       .subgroup {
@@ -167,7 +171,8 @@ export class GnBranchList extends LitElement {
         display: flex;
         align-items: center;
         gap: 6px;
-        padding: 2px 12px;
+        min-height: 26px;
+        padding: 2px 10px;
         cursor: pointer;
         user-select: none;
         font-size: var(--font-size-sm);
@@ -217,6 +222,7 @@ export class GnBranchList extends LitElement {
 
       .branch-name {
         flex: 1;
+        min-width: 0;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -236,7 +242,7 @@ export class GnBranchList extends LitElement {
       .branch-upstream {
         display: block;
         font-size: 10px;
-        line-height: 1.3;
+        line-height: 1.25;
         color: var(--color-text-muted);
         overflow: hidden;
         text-overflow: ellipsis;
@@ -245,8 +251,11 @@ export class GnBranchList extends LitElement {
 
       .ahead-behind {
         display: flex;
-        gap: 4px;
-        font-size: var(--font-size-xs);
+        align-items: center;
+        gap: 3px;
+        flex-shrink: 0;
+        font-size: 11px;
+        font-variant-numeric: tabular-nums;
         color: var(--color-text-muted);
       }
 
@@ -409,33 +418,39 @@ export class GnBranchList extends LitElement {
         margin: var(--spacing-xs) 0;
       }
 
-      /* Local section header */
+      /* Local section header & controls */
       .local-header {
         display: flex;
         align-items: center;
         justify-content: space-between;
+        gap: 4px;
         padding: 2px 8px;
         border-bottom: 1px solid var(--color-border);
       }
 
       .local-header-title {
-        font-size: var(--font-size-sm);
-        font-weight: var(--font-weight-medium);
-        color: var(--color-text-secondary);
+        font-size: 11px;
+        font-weight: var(--font-weight-semibold);
+        color: var(--color-text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        white-space: nowrap;
       }
 
       .cleanup-btn {
-        display: flex;
+        display: inline-flex;
         align-items: center;
         gap: 4px;
-        padding: 2px 8px;
+        height: 22px;
+        padding: 0 6px;
         border: none;
         background: none;
         color: var(--color-text-muted);
-        font-size: var(--font-size-xs);
+        font-size: 11px;
         cursor: pointer;
         border-radius: var(--radius-sm);
         transition: all var(--transition-fast);
+        white-space: nowrap;
       }
 
       .cleanup-btn:hover {
@@ -508,8 +523,10 @@ export class GnBranchList extends LitElement {
         display: flex;
         align-items: center;
         gap: 2px;
-        padding: 2px 4px;
+        min-height: 28px;
+        padding: 2px 6px 2px 10px;
         border-bottom: 1px solid var(--color-border);
+        background: var(--color-bg-secondary);
       }
 
       .controls-btn {
@@ -635,6 +652,46 @@ export class GnBranchList extends LitElement {
       .branch-item.hidden-branch {
         opacity: 0.4;
       }
+
+      .worktree-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 20px;
+        height: 18px;
+        padding: 0;
+        border-radius: var(--radius-xs);
+        font-size: 10px;
+        font-family: var(--font-family-mono);
+        background: var(--color-bg-tertiary);
+        color: var(--color-primary);
+        border: 1px solid var(--color-border);
+        cursor: pointer;
+        flex-shrink: 0;
+      }
+
+      .worktree-badge:hover {
+        background: var(--color-primary-bg);
+        border-color: var(--color-primary);
+      }
+
+      .worktree-badge svg {
+        width: 11px;
+        height: 11px;
+        flex-shrink: 0;
+      }
+
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
     `,
   ];
 
@@ -649,6 +706,8 @@ export class GnBranchList extends LitElement {
   @state() private stackPrSyncing = false;
   /** Local branches by name, for resolving stack rows to Branch objects. */
   private localBranchesByName = new Map<string, Branch>();
+  /** Worktrees keyed by branch name (for branches checked out in another worktree). */
+  @state() private worktreesByBranch = new Map<string, Worktree>();
   @state() private loading = true;
   @state() private error: string | null = null;
   @state() private expandedGroups = new Set<string>(['local', 'local-ungrouped', 'stacks']);
@@ -876,19 +935,32 @@ export class GnBranchList extends LitElement {
   }
 
   async updated(changedProperties: Map<string, unknown>): Promise<void> {
-    if (changedProperties.has('repositoryPath') && this.repositoryPath) {
+    if (changedProperties.has('repositoryPath')) {
       // A menu entry acts on the branch it was opened over, but resolves the
       // repo from `this.repositoryPath` at click time — and a keyboard tab
       // switch produces neither a document click nor Escape, so the menu would
       // survive the rebind and delete repo A's branch inside repo B.
       this.contextMenu = { ...this.contextMenu, visible: false };
+      // Clear previous repo's branches immediately so a failed or slow load on
+      // the newly selected tab never displays the old repository's branches.
+      this.localBranchGroups = [];
+      this.remoteGroups = [];
+      this.stacks = [];
+      this.stacksError = null;
+      this.localBranchesByName = new Map();
+      this.worktreesByBranch = new Map();
+      this.cleanupCandidateNames = new Set();
+      this.cleanupCheckFailed = false;
+      this.error = null;
       this.loadHiddenBranches();
       // Clear before the await: the previous repository's provider must never
       // label -- or enable -- a menu opened over this one's branches.
       this.prProvider = null;
       this.prProviderResolved = false;
-      await this.loadBranches();
-      await this.detectProvider();
+      if (this.repositoryPath) {
+        await this.loadBranches();
+        await this.detectProvider();
+      }
     }
   }
 
@@ -1037,6 +1109,29 @@ export class GnBranchList extends LitElement {
   // NEWER load for the same path started meanwhile (path equality alone
   // can't catch A -> B -> A switches reordering two loads for A)
   private branchesLoadSeq = new Map<string, number>();
+  private inFlightCleanupScan = new Map<
+    string,
+    { days: number; promise: ReturnType<typeof gitService.getCleanupCandidates> }
+  >();
+
+  private getCoalescedCleanupCandidates(
+    repoPath: string,
+    staleBranchDays: number,
+  ): ReturnType<typeof gitService.getCleanupCandidates> {
+    const existing = this.inFlightCleanupScan.get(repoPath);
+    if (existing && existing.days === staleBranchDays) {
+      return existing.promise;
+    }
+    const promise = gitService
+      .getCleanupCandidates(repoPath, staleBranchDays)
+      .finally(() => {
+        if (this.inFlightCleanupScan.get(repoPath)?.promise === promise) {
+          this.inFlightCleanupScan.delete(repoPath);
+        }
+      });
+    this.inFlightCleanupScan.set(repoPath, { days: staleBranchDays, promise });
+    return promise;
+  }
 
   private async loadBranches(): Promise<void> {
     if (!this.repositoryPath) return;
@@ -1055,14 +1150,15 @@ export class GnBranchList extends LitElement {
       // detection across every branch only for the "Clean up" header badge,
       // while `getBranches`, `getRemotes`, and `getStacks` are fast metadata
       // reads that should populate the sidebar immediately.
-      const cleanupPromise = gitService.getCleanupCandidates(
+      const cleanupPromise = this.getCoalescedCleanupCandidates(
         loadedPath,
         settingsStore.getState().staleBranchDays,
       );
-      const [branchesResult, remotesResult, stacksResult] = await Promise.all([
+      const [branchesResult, remotesResult, stacksResult, worktreesResult] = await Promise.all([
         gitService.getBranches(loadedPath),
         gitService.getRemotes(loadedPath),
         gitService.getStacks(loadedPath),
+        gitService.getWorktrees(loadedPath),
       ]);
 
       // A newer load for the SAME path supersedes this one entirely (its
@@ -1078,6 +1174,12 @@ export class GnBranchList extends LitElement {
 
       if (!branchesResult.success) {
         if (isCurrent) {
+          this.localBranchGroups = [];
+          this.remoteGroups = [];
+          this.stacks = [];
+          this.localBranchesByName = new Map();
+          this.worktreesByBranch = new Map();
+          this.cleanupCandidateNames = new Set();
           this.error = branchesResult.error?.message ?? 'Failed to load branches';
         }
         return;
@@ -1102,6 +1204,16 @@ export class GnBranchList extends LitElement {
       // Separate local and remote branches
       const localBranches = branches.filter((b) => !b.isRemote);
       this.localBranchesByName = new Map(localBranches.map((b) => [b.name, b]));
+
+      const wtMap = new Map<string, Worktree>();
+      if (worktreesResult?.success && Array.isArray(worktreesResult.data)) {
+        for (const wt of worktreesResult.data) {
+          if (wt.branch && !wt.isCurrent && !samePath(wt.path, loadedPath)) {
+            wtMap.set(wt.branch, wt);
+          }
+        }
+      }
+      this.worktreesByBranch = wtMap;
       // Stacks are an overlay on the branch list: a failure to read them is
       // reported in their own section and never hides the branches.
       if (stacksResult?.success) {
@@ -1426,6 +1538,23 @@ export class GnBranchList extends LitElement {
 
   private async handleCheckout(branch: Branch): Promise<void> {
     if (branch.isHead) return;
+
+    // If this local branch is already checked out in another worktree, Git
+    // refuses `git checkout <branch>` with "already used by worktree at ...".
+    // Switch to (or open) that worktree tab directly instead!
+    if (!branch.isRemote) {
+      const wt = this.worktreesByBranch.get(branch.name) ?? this.worktreesByBranch.get(branch.shorthand);
+      if (wt && !wt.isPrunable) {
+        this.contextMenu = { ...this.contextMenu, visible: false };
+        const opened = await openOrSwitchWorktreeTab(wt.path);
+        if (opened) {
+          const folderName = wt.path.replace(/\\/g, '/').replace(/\/+$/, '').split('/').pop() || wt.path;
+          showToast(`Switched to worktree "${folderName}" (${branch.shorthand})`, 'info');
+        }
+        return;
+      }
+    }
+
     const lockedRepo = this.repositoryPath;
     if (!this.claimOperation(lockedRepo)) return;
 
@@ -2176,6 +2305,44 @@ export class GnBranchList extends LitElement {
     `;
   }
 
+  private renderWorktreeBadge(branch: Branch) {
+    if (branch.isRemote || branch.isHead) return nothing;
+    const wt = this.worktreesByBranch.get(branch.name) ?? this.worktreesByBranch.get(branch.shorthand);
+    if (!wt) return nothing;
+
+    const folderName = wt.path.replace(/\\/g, '/').replace(/\/+$/, '').split('/').pop() || wt.path;
+    return html`
+      <span
+        class="worktree-badge"
+        title="Checked out in worktree: ${folderName} (${wt.path}) — click to open tab"
+        @click=${async (e: Event) => {
+          e.stopPropagation();
+          if (!wt.isPrunable) {
+            await openOrSwitchWorktreeTab(wt.path);
+          }
+        }}
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+        </svg>
+        <span class="sr-only">${folderName}</span>
+      </span>
+    `;
+  }
+
+  /**
+   * Only show a second-line upstream subtitle when the upstream branch name
+   * differs from the local branch's shorthand (e.g. `my-branch` tracking
+   * `origin/main`). Standard `origin/<same-shorthand>` tracking is shown via
+   * tooltip so rows stay single-line and readable.
+   */
+  private hasDivergentUpstream(branch: Branch): boolean {
+    if (branch.isRemote || !branch.upstream) return false;
+    const slashIdx = branch.upstream.indexOf('/');
+    const upstreamBranch = slashIdx >= 0 ? branch.upstream.slice(slashIdx + 1) : branch.upstream;
+    return upstreamBranch !== branch.shorthand;
+  }
+
   private renderBranchItem(branch: Branch, nested = false, stripPrefix: string | null = null) {
     // Determine display name: strip prefix if provided
     let displayName = branch.shorthand;
@@ -2188,6 +2355,10 @@ export class GnBranchList extends LitElement {
     const dropClass = isDropTarget ? `drop-target drop-target-${this.dropAction}` : '';
     const staleClass = this.isBranchStale(branch) ? 'stale' : '';
     const hiddenClass = this.hiddenBranches.has(branch.name) ? 'hidden-branch' : '';
+    const showUpstreamLine = this.hasDivergentUpstream(branch);
+    const rowTooltip = !branch.isRemote && branch.upstream
+      ? `${branch.name} → ${branch.upstream}`
+      : branch.name;
 
     return html`
       <li
@@ -2206,12 +2377,13 @@ export class GnBranchList extends LitElement {
         title="${branch.name}"
       >
         ${this.renderBranchIcon(branch.isHead)}
-        ${!branch.isRemote && branch.upstream ? html`
+        ${showUpstreamLine ? html`
           <div class="branch-info">
-            <span class="branch-name">${displayName}</span>
+            <span class="branch-name" title="${rowTooltip}">${displayName}</span>
             <span class="branch-upstream" title="Tracking ${branch.upstream}">→ ${branch.upstream}</span>
           </div>
-        ` : html`<span class="branch-name">${displayName}</span>`}
+        ` : html`<span class="branch-name" title="${rowTooltip}">${displayName}</span>`}
+        ${this.renderWorktreeBadge(branch)}
         ${this.renderAheadBehind(branch)}
         ${this.renderStaleIndicator(branch)}
         ${isDropTarget ? html`
@@ -2645,6 +2817,9 @@ export class GnBranchList extends LitElement {
     const branch = this.contextMenu.branch;
     const isLocal = !branch.isRemote;
     const isHead = branch.isHead;
+    const linkedWorktree = isLocal
+      ? (this.worktreesByBranch.get(branch.name) ?? this.worktreesByBranch.get(branch.shorthand) ?? null)
+      : null;
     const createRequestBlocked = isLocal ? this.createRequestBlockedReason(branch) : null;
 
     return html`
@@ -2661,7 +2836,27 @@ export class GnBranchList extends LitElement {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
               <polyline points="20 6 9 17 4 12"></polyline>
             </svg>
-            Checkout
+            ${linkedWorktree ? 'Switch to Worktree Tab' : 'Checkout'}
+          </button>
+        ` : ''}
+
+        ${isLocal && !isHead && !linkedWorktree ? html`
+          <button
+            class="context-menu-item"
+            role="menuitem"
+            @click=${() => {
+              this.contextMenu = { ...this.contextMenu, visible: false };
+              this.dispatchEvent(new CustomEvent('manage-worktrees', {
+                detail: { branch: branch.shorthand },
+                bubbles: true,
+                composed: true,
+              }));
+            }}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+            </svg>
+            Open in New Worktree...
           </button>
         ` : ''}
 
@@ -2824,8 +3019,30 @@ export class GnBranchList extends LitElement {
   }
 
   private renderControls() {
+    const showCleanup = this.localBranchGroups.length > 0
+      && (this.getCleanupCandidateCount() > 0 || this.cleanupCheckFailed);
     return html`
-      <div class="controls" style="position: relative;">
+      <div class="controls local-header" style="position: relative;">
+        <span class="local-header-title">Local</span>
+        ${showCleanup ? html`
+          <button
+            class="cleanup-btn"
+            @click=${this.handleOpenCleanupDialog}
+            title=${this.cleanupCheckFailed
+              ? 'Could not check for cleanup candidates — open to retry'
+              : `${this.getCleanupCandidateCount()} branch${this.getCleanupCandidateCount() === 1 ? '' : 'es'} can be reviewed for cleanup`}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>
+            </svg>
+            Clean up
+            ${this.cleanupCheckFailed
+              ? nothing
+              : html`<span class="badge">${this.getCleanupCandidateCount()}</span>`}
+          </button>
+        ` : nothing}
+        <div style="flex:1"></div>
         <button
           class="controls-btn ${this.showFilter ? 'active' : ''}"
           title="Filter branches"
@@ -2849,7 +3066,6 @@ export class GnBranchList extends LitElement {
             <line x1="4" y1="18" x2="12" y2="18"></line>
           </svg>
         </button>
-        <div style="flex:1"></div>
         <button
           class="controls-btn"
           title="Create branch"
@@ -3038,27 +3254,6 @@ export class GnBranchList extends LitElement {
 
       <!-- Local branches -->
       ${this.localBranchGroups.length > 0 ? html`
-        <div class="local-header">
-          <span class="local-header-title">Local Branches</span>
-          ${this.getCleanupCandidateCount() > 0 || this.cleanupCheckFailed ? html`
-            <button
-              class="cleanup-btn"
-              @click=${this.handleOpenCleanupDialog}
-              title=${this.cleanupCheckFailed
-                ? 'Could not check for cleanup candidates — open to retry'
-                : `${this.getCleanupCandidateCount()} branch${this.getCleanupCandidateCount() === 1 ? '' : 'es'} can be reviewed for cleanup`}
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="3 6 5 6 21 6"></polyline>
-                <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"></path>
-              </svg>
-              Clean up
-              ${this.cleanupCheckFailed
-                ? nothing
-                : html`<span class="badge">${this.getCleanupCandidateCount()}</span>`}
-            </button>
-          ` : nothing}
-        </div>
         <div class="local-section">
           ${this.localBranchGroups.map((group) => this.renderLocalGroup(group))}
         </div>
