@@ -298,8 +298,6 @@ export class GnToolbar extends LitElement {
       .tab-context-menu {
         position: fixed;
         z-index: 1000;
-        max-height: 60vh;
-        overflow-y: auto;
         padding: var(--spacing-xs);
         background: var(--color-bg-secondary);
         border: 1px solid var(--color-border);
@@ -311,24 +309,37 @@ export class GnToolbar extends LitElement {
       .tab-context-menu {
         min-width: 220px;
         max-width: 360px;
+        max-height: 60vh;
+        overflow-y: auto;
       }
 
       .tab-list-menu {
         --tab-list-width: min(32rem, calc(100vw - 16px));
+        top: var(--tab-list-top);
         left: clamp(8px, calc(var(--tab-list-anchor) - var(--tab-list-width)),
           calc(100vw - var(--tab-list-width) - 8px));
         box-sizing: border-box;
         width: var(--tab-list-width);
+        max-height: min(20rem, 50vh, calc(100vh - var(--tab-list-top) - 8px));
         display: grid;
         grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+        grid-template-rows: minmax(0, 1fr);
       }
 
       .tab-list-column {
+        display: grid;
+        grid-template-rows: auto minmax(0, 1fr);
         padding: 0 var(--spacing-xs);
       }
 
       .tab-list-column + .tab-list-column {
         border-left: 1px solid var(--color-border);
+      }
+
+      .tab-list-entries {
+        overflow-y: auto;
+        overscroll-behavior-y: contain;
+        scrollbar-width: thin;
       }
 
       .tab-list-heading,
@@ -1254,50 +1265,54 @@ export class GnToolbar extends LitElement {
         aria-label=${msg('Switch workspace or repository')}
         tabindex="-1"
         data-keyboard-nav
-        style="top: ${this.tabListAnchor.y}px; --tab-list-anchor: ${this.tabListAnchor.x}px;"
+        style="--tab-list-top: ${this.tabListAnchor.y}px; --tab-list-anchor: ${this.tabListAnchor.x}px;"
         @focusout=${this.handleTabListFocusOut}
       >
         <div class="tab-list-column" role="group" aria-labelledby="tab-list-workspaces">
           <h2 class="tab-list-heading" id="tab-list-workspaces">${msg('Workspaces')}</h2>
-          ${this.workspaces.length
-            ? this.workspaces.map((workspace) => {
-                const isActive = workspace.id === this.activeWorkspaceId;
-                return html`
-                  <button
-                    class="tab-list-item"
-                    aria-current=${isActive ? 'true' : nothing}
-                    ?disabled=${this.isOpeningWorkspace}
-                    title=${workspace.name}
-                    @click=${() => this.handleWorkspaceSelect(workspace)}
-                  >
-                    ${this.renderTabListCheck(isActive)}
-                    <span class="item-texts"><span class="item-name">${workspace.name}</span></span>
-                  </button>
-                `;
-              })
-            : html`<p class="tab-list-empty">${msg('No workspaces yet')}</p>`}
+          <div class="tab-list-entries">
+            ${this.workspaces.length
+              ? this.workspaces.map((workspace) => {
+                  const isActive = workspace.id === this.activeWorkspaceId;
+                  return html`
+                    <button
+                      class="tab-list-item"
+                      aria-current=${isActive ? 'true' : nothing}
+                      ?disabled=${this.isOpeningWorkspace}
+                      title=${workspace.name}
+                      @click=${() => this.handleWorkspaceSelect(workspace)}
+                    >
+                      ${this.renderTabListCheck(isActive)}
+                      <span class="item-texts"><span class="item-name">${workspace.name}</span></span>
+                    </button>
+                  `;
+                })
+              : html`<p class="tab-list-empty">${msg('No workspaces yet')}</p>`}
+          </div>
         </div>
         <div class="tab-list-column" role="group" aria-labelledby="tab-list-repositories">
           <h2 class="tab-list-heading" id="tab-list-repositories">${msg('Open repositories')}</h2>
-          ${this.openRepositories.length
-            ? this.openRepositories.map((repo, index) => {
-                const isActive = index === this.activeIndex;
-                return html`
-                  <button
-                    class="tab-list-item"
-                    aria-current=${isActive ? 'true' : nothing}
-                    title=${repo.repository.path}
-                    @click=${() => this.handleTabListSelect(index)}
-                  >
-                    ${this.renderTabListCheck(isActive)}
-                    <span class="item-texts">
-                      <span class="item-name">${repo.repository.name}</span>
-                      <span class="item-path">${repo.repository.path}</span>
-                    </span>
-                  </button>
-                `;
-              })
-            : html`<p class="tab-list-empty">${msg('No repositories open')}</p>`}
+          <div class="tab-list-entries">
+            ${this.openRepositories.length
+              ? this.openRepositories.map((repo, index) => {
+                  const isActive = index === this.activeIndex;
+                  return html`
+                    <button
+                      class="tab-list-item"
+                      aria-current=${isActive ? 'true' : nothing}
+                      title=${repo.repository.path}
+                      @click=${() => this.handleTabListSelect(index)}
+                    >
+                      ${this.renderTabListCheck(isActive)}
+                      <span class="item-texts">
+                        <span class="item-name">${repo.repository.name}</span>
+                        <span class="item-path">${repo.repository.path}</span>
+                      </span>
+                    </button>
+                  `;
+                })
+              : html`<p class="tab-list-empty">${msg('No repositories open')}</p>`}
+          </div>
         </div>
       </div>
     `;

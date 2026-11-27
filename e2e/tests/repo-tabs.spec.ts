@@ -18,12 +18,14 @@ import {
  * are added through the repository store like the welcome/restore flows do.
  */
 
-async function addRepo(page: Page, path: string, name: string): Promise<void> {
+async function addRepo(page: Page, path: string, name: string, activate = true): Promise<void> {
   await page.evaluate(
-    ({ path, name }) => {
+    ({ path, name, activate }) => {
       const stores = (window as unknown as Record<string, unknown>).__GITNADO_STORES__ as {
         repositoryStore: {
-          getState: () => { addRepository: (repo: unknown) => void };
+          getState: () => {
+            addRepository: (repo: unknown, options: { activate: boolean }) => void;
+          };
         };
       };
       stores.repositoryStore.getState().addRepository({
@@ -36,9 +38,9 @@ async function addRepo(page: Page, path: string, name: string): Promise<void> {
         isShallow: false,
         isPartialClone: false,
         cloneFilter: null,
-      });
+      }, { activate });
     },
-    { path, name }
+    { path, name, activate }
   );
 }
 
@@ -217,6 +219,54 @@ test('the toolbar opens a workspace and still switches individual repositories',
   await page.keyboard.press('Escape');
   await expect(trigger).toBeFocused();
   await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+});
+
+test('long workspaces and repositories lists scroll independently', async ({ page }) => {
+  await page.setViewportSize({ width: 1000, height: 600 });
+  const entries = Array.from({ length: 24 }, (_, index) => index + 1);
+  await setupOpenRepository(page, {
+    workspaces: entries.map((number) => ({
+      id: `workspace-${number}`,
+      name: `Workspace ${number}`,
+      description: '',
+      color: '#4fc3f7',
+      repositories: [],
+      createdAt: '2026-01-01T00:00:00Z',
+      lastOpened: null,
+    })),
+  });
+  for (const number of entries) {
+    await addRepo(page, `/tmp/repo-${number}`, `repo-${number}`, false);
+  }
+
+  const label = 'Switch workspace or repository';
+  await page.getByRole('button', { name: label }).click();
+  const menu = page.getByRole('region', { name: label });
+  const workspaces = menu.getByRole('group', { name: 'Workspaces', exact: true });
+  const repos = menu.getByRole('group', { name: 'Open repositories' });
+  const workspaceList = workspaces.locator('.tab-list-entries');
+  const repoList = repos.locator('.tab-list-entries');
+  const workspaceHeading = workspaces.getByRole('heading');
+  const repoHeading = repos.getByRole('heading');
+  const workspaceHeadingTop = (await workspaceHeading.boundingBox())!.y;
+  const repoHeadingTop = (await repoHeading.boundingBox())!.y;
+  expect((await menu.boundingBox())!.height).toBeLessThanOrEqual(300);
+
+  await workspaceList.hover();
+  await page.mouse.wheel(0, 1000);
+  await expect.poll(() => workspaceList.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+  expect(await repoList.evaluate((el) => el.scrollTop)).toBe(0);
+  expect((await workspaceHeading.boundingBox())!.y).toBe(workspaceHeadingTop);
+
+  const workspaceScroll = await workspaceList.evaluate((el) => el.scrollTop);
+  await repoList.hover();
+  await page.mouse.wheel(0, 1000);
+  await expect.poll(() => repoList.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+  expect(await workspaceList.evaluate((el) => el.scrollTop)).toBe(workspaceScroll);
+  expect((await repoHeading.boundingBox())!.y).toBe(repoHeadingTop);
+
+  await repos.getByRole('button', { name: /repo-24/ }).click();
+  await expect(page.locator('gn-toolbar .tab.active')).toHaveAttribute('title', '/tmp/repo-24');
 });
 
 test.describe('Repository Tabs - single repo', () => {
