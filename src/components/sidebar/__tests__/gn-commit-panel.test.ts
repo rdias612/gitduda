@@ -1150,4 +1150,47 @@ describe('gn-commit-panel', () => {
       expect((el as any).amend, 'and the checkbox is not left armed').to.equal(false);
     });
   });
+
+  describe('AI availability (event-driven, no polling)', () => {
+    const countAiChecks = (): number =>
+      invokeHistory.filter((h) => h.command === 'is_ai_available').length;
+
+    it('checks once on mount and schedules no 5000ms retry timer when unavailable', async () => {
+      const originalSetTimeout = window.setTimeout;
+      const delays: Array<number | undefined> = [];
+      window.setTimeout = ((handler: TimerHandler, timeout?: number, ...args: unknown[]) => {
+        delays.push(timeout);
+        return originalSetTimeout(handler, timeout, ...args);
+      }) as typeof window.setTimeout;
+
+      try {
+        // setupDefaultMocks makes is_ai_available resolve to false.
+        await renderCommitPanel();
+
+        expect(countAiChecks(), 'is_ai_available called exactly once').to.equal(1);
+        expect(delays.includes(5000), 'no 5000ms polling timer scheduled').to.be.false;
+      } finally {
+        window.setTimeout = originalSetTimeout;
+      }
+    });
+
+    it('re-checks and becomes ready when ai-settings-changed is dispatched', async () => {
+      const el = await renderCommitPanel();
+      expect(countAiChecks()).to.equal(1);
+      expect(el.shadowRoot!.querySelector('.generate-btn')!.classList.contains('ai-ready')).to.be.false;
+
+      const baseMock = mockInvoke;
+      mockInvoke = async (command: string, args?: unknown) => {
+        if (command === 'is_ai_available') return true;
+        return baseMock(command, args);
+      };
+
+      window.dispatchEvent(new CustomEvent('ai-settings-changed'));
+      await new Promise((r) => setTimeout(r, 100));
+      await el.updateComplete;
+
+      expect(countAiChecks(), 'is_ai_available re-invoked once more').to.equal(2);
+      expect(el.shadowRoot!.querySelector('.generate-btn')!.classList.contains('ai-ready')).to.be.true;
+    });
+  });
 });
