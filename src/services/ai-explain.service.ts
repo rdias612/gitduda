@@ -48,7 +48,6 @@ const PROVIDER_DEFAULT_ENDPOINTS: Readonly<Record<AiProviderType, string>> = {
   anthropic: 'https://api.anthropic.com',
   github_copilot: 'https://models.inference.ai.azure.com',
   google_gemini: 'https://generativelanguage.googleapis.com',
-  local_inference: '',
 };
 
 function endpointHost(endpoint: string): string {
@@ -102,13 +101,12 @@ function aiBlockedResult<T>(
           `Settings > Security, or ${repoint}`
         : `Offline mode is enabled and ${name} is a cloud AI provider. ` +
           'Turn offline mode off in Settings > Security, or select a local ' +
-          'provider (Ollama, LM Studio or Local AI).'
+          'provider (Ollama or LM Studio).'
       : local
         ? `${name} is configured to use ${host}, which is not in your remote ` +
           `allowlist. Add it in Settings > Security, or ${repoint}`
         : `${name} (${host}) is not in your remote allowlist. Add it in ` +
-          'Settings > Security, or select a local provider (Ollama, LM Studio ' +
-          'or Local AI).';
+          'Settings > Security, or select a local provider (Ollama or LM Studio).';
 
   return { success: false, error: { code: 'BLOCKED', message } };
 }

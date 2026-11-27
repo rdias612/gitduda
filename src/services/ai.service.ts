@@ -17,7 +17,7 @@ import type { CommandResult } from '../types/api.types.ts';
  * `OpenAi` variant crosses the IPC boundary (and is persisted in the AI config
  * file) as `open_ai` — not `openai`.
  */
-export type AiProviderType = 'ollama' | 'lm_studio' | 'open_ai' | 'anthropic' | 'github_copilot' | 'google_gemini' | 'local_inference';
+export type AiProviderType = 'ollama' | 'lm_studio' | 'open_ai' | 'anthropic' | 'github_copilot' | 'google_gemini';
 
 /**
  * AI provider information
@@ -69,9 +69,9 @@ export interface ConflictResolutionSuggestion {
 /**
  * Providers whose requests leave this machine.
  *
- * Ollama and LM Studio listen on localhost and local inference runs
- * in-process, so none of those three ever leaves the machine — offline mode
- * has no business refusing them, and this list is what keeps them working.
+ * Ollama and LM Studio listen on localhost, so neither ever leaves the machine
+ * — offline mode has no business refusing them, and this list is what keeps
+ * them working.
  */
 const CLOUD_PROVIDERS: ReadonlySet<AiProviderType> = new Set<AiProviderType>([
   'open_ai',
@@ -97,7 +97,6 @@ const CLOUD_PROVIDERS: ReadonlySet<AiProviderType> = new Set<AiProviderType>([
 const LOCAL_PROVIDERS: ReadonlySet<AiProviderType> = new Set<AiProviderType>([
   'ollama',
   'lm_studio',
-  'local_inference',
 ]);
 
 /** True when a provider's requests leave this machine. */
@@ -114,8 +113,7 @@ export function isLocalAiProvider(providerType: AiProviderType): boolean {
  * The endpoint each provider talks to BY DEFAULT. Mirrors
  * `AiProviderType::default_endpoint` in `src-tauri/src/services/ai/mod.rs`
  * value for value, LOCAL PROVIDERS INCLUDED — a local provider's default is a
- * loopback URL, and `local_inference` is the embedded model, which has no
- * endpoint at all.
+ * loopback URL.
  *
  * Only the fallback: a provider whose endpoint has been overridden in the AI
  * config is judged on that endpoint, which is what the request will really
@@ -136,7 +134,6 @@ const PROVIDER_DEFAULT_ENDPOINTS: Readonly<Record<AiProviderType, string>> = {
   anthropic: 'https://api.anthropic.com',
   github_copilot: 'https://models.inference.ai.azure.com',
   google_gemini: 'https://generativelanguage.googleapis.com',
-  local_inference: '',
 };
 
 /**
@@ -186,15 +183,14 @@ function aiBlockedResult<T>(
           `Settings > Security, or ${repoint}`
         : `Offline mode is enabled and ${name} is a cloud AI provider. ` +
           'Turn offline mode off in Settings > Security, or select a local ' +
-          'provider (Ollama, LM Studio or Local AI).'
+          'provider (Ollama or LM Studio).'
       : local
         ? // Same split on the allowlist side. This branch used to end in
           // "select a local provider" while a local provider was selected.
           `${name} is configured to use ${host}, which is not in your remote ` +
           `allowlist. Add it in Settings > Security, or ${repoint}`
         : `${name} (${host}) is not in your remote allowlist. Add it in ` +
-          'Settings > Security, or select a local provider (Ollama, LM Studio ' +
-          'or Local AI).';
+          'Settings > Security, or select a local provider (Ollama or LM Studio).';
 
   // `BLOCKED` is the code the git gate uses, so `isNetworkGateRefusal` and the
   // suggestion service treat an AI refusal exactly like any other.
@@ -742,8 +738,6 @@ export function getProviderDisplayName(providerType: AiProviderType): string {
       return 'GitHub Models';
     case 'google_gemini':
       return 'Google Gemini';
-    case 'local_inference':
-      return 'Local AI (Embedded)';
   }
 }
 
@@ -815,7 +809,7 @@ export interface AiPrivacySummary {
 }
 
 /**
- * True when `providerType` executes locally (`local_inference`, `ollama`, `lm_studio`).
+ * True when `providerType` executes locally (`ollama`, `lm_studio`).
  */
 export function isLocalProvider(providerType: AiProviderType): boolean {
   return isLocalAiProvider(providerType);

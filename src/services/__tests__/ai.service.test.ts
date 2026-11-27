@@ -84,7 +84,6 @@ describe('AI Service Types', () => {
       expect(getProviderDisplayName('anthropic')).to.equal('Anthropic Claude');
       expect(getProviderDisplayName('github_copilot')).to.equal('GitHub Models');
       expect(getProviderDisplayName('google_gemini')).to.equal('Google Gemini');
-      expect(getProviderDisplayName('local_inference')).to.equal('Local AI (Embedded)');
     });
 
     it('should correctly identify API key requirements', () => {
@@ -94,7 +93,6 @@ describe('AI Service Types', () => {
       expect(providerRequiresApiKey('anthropic')).to.be.true;
       expect(providerRequiresApiKey('github_copilot')).to.be.true;
       expect(providerRequiresApiKey('google_gemini')).to.be.true;
-      expect(providerRequiresApiKey('local_inference')).to.be.false;
     });
   });
 
@@ -109,7 +107,6 @@ describe('AI Service Types', () => {
       'anthropic',
       'github_copilot',
       'google_gemini',
-      'local_inference',
     ];
 
     it('maps every providerType the backend emits to a display name', () => {
@@ -135,13 +132,13 @@ describe('AI Service Types', () => {
           selectedModel: null,
         },
         {
-          providerType: 'local_inference',
-          name: 'Local AI (Embedded)',
+          providerType: 'ollama',
+          name: 'Ollama',
           available: false,
           probed: true,
           requiresApiKey: false,
           hasApiKey: false,
-          endpoint: '',
+          endpoint: 'http://localhost:11434',
           models: [],
           selectedModel: null,
         },

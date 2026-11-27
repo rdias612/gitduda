@@ -14,9 +14,9 @@
  * network call fails this test without anyone having to remember to register it.
  *
  * Round 20 showed the inversion was only half done: the sweep enumerated
- * git.service and nothing else, so `download_model` (multi-GB, huggingface.co),
- * `download_embedding_model` and the two GitHub App endpoints in
- * credential.service shipped with no frontend gate and a green suite.
+ * git.service and nothing else, so `download_embedding_model` and the two
+ * GitHub App endpoints in credential.service shipped with no frontend gate and
+ * a green suite.
  *
  * And the claim that followed — "every service that invokes a command capable
  * of leaving the machine is swept here" — was false while it stood:
@@ -113,7 +113,6 @@ Object.defineProperty(navigator, 'clipboard', {
 import { expect } from '@open-wc/testing';
 import * as gitService from '../git.service.ts';
 import * as credentialService from '../credential.service.ts';
-import * as localAiService from '../local-ai.service.ts';
 import * as updateService from '../update.service.ts';
 import * as unifiedProfileService from '../unified-profile.service.ts';
 import * as aiService from '../ai.service.ts';
@@ -182,7 +181,7 @@ const NETWORK_COMMANDS = new Set([
   // a plain API read.
   'configure_github_app', 'list_github_app_installations',
   // model weights, fetched from huggingface.co
-  'download_model', 'download_embedding_model',
+  'download_embedding_model',
   // the auto-updater: `check_for_update` fetches latest.json from the release
   // host and `download_and_install_update` pulls a binary and runs it.
   'check_for_update', 'download_and_install_update',
@@ -229,16 +228,12 @@ const LOCAL_COMMANDS = new Set([
   'get_pending_mcp_consents', 'respond_mcp_consent',
   'list_mcp_clients', 'create_mcp_client', 'revoke_mcp_client',
   'get_mcp_stdio_command',
-  // keyring reads/writes and the local-AI + embedding operations that only
+  // keyring reads/writes and the embedding operations that only
   // touch this machine. Gating any of these would make offline mode hide the
   // controls that turn offline mode off, or refuse an already-downloaded model.
   'get_keyring_token', 'store_keyring_token', 'delete_keyring_token',
   'get_github_app_config', 'remove_github_app_config',
   'detect_credential_manager',
-  'get_system_capabilities', 'get_available_models', 'get_downloaded_models',
-  'get_recommended_model', 'get_model_status', 'get_loaded_model_name',
-  'load_model', 'unload_model', 'delete_model', 'cancel_model_download',
-  'import_custom_model',
   'get_jira_config', 'save_jira_config', 'delete_jira_config',
   'build_embedding_index', 'refresh_embedding_index', 'semantic_search',
   'get_embedding_index_status', 'cancel_embedding_build',
@@ -401,8 +396,6 @@ const SKIP = new Set([
   'onFileChange',
   'onOperationProgress',
   'isNetworkGateRefusal',
-  // local-ai.service: registers app-lifetime Tauri event listeners.
-  'listenForModelDownloadFailures',
   // embedding-index.service: same, for the index progress events.
   'onProgress',
   // update.service: app-lifetime Tauri event listeners for the updater's
@@ -445,7 +438,6 @@ const SKIP = new Set([
 const SWEPT_MODULES: Array<{ label: string; entries: Array<[string, unknown]> }> = [
   { label: 'git.service', entries: Object.entries(gitService) },
   { label: 'credential.service', entries: Object.entries(credentialService) },
-  { label: 'local-ai.service', entries: Object.entries(localAiService) },
   // The auto-updater was the last outbound path with no frontend gate and no
   // entry in this sweep — and the only one that runs unattended and installs a
   // binary. It is swept whole now, like everything else here.
@@ -1094,7 +1086,7 @@ describe('network gate coverage', () => {
   it('a local AI provider is still reachable with offline mode on', async () => {
     settingsStore.setState({ offlineMode: true, confirmNetworkOps: false, remoteAllowlist: [] });
 
-    for (const provider of ['ollama', 'lm_studio', 'local_inference'] as const) {
+    for (const provider of ['ollama', 'lm_studio'] as const) {
       invoked.length = 0;
       const result = await aiService.testAiProvider(provider);
       expect(invoked.includes('test_ai_provider'), `${provider} runs on this machine`).to.equal(
@@ -1152,12 +1144,6 @@ describe('network gate coverage', () => {
   it('a refused download or GitHub App call explains itself', async () => {
     settingsStore.setState({ offlineMode: true, confirmNetworkOps: false, remoteAllowlist: [] });
 
-    const model = await localAiService.downloadModel('gemma-3-1b-q4km');
-    expect(model.success).to.equal(false);
-    expect(model.error?.code, 'the code every other refusal uses').to.equal('BLOCKED');
-    expect(model.error?.message).to.contain('Offline mode');
-    expect(model.error?.message).to.contain('Settings > Security');
-
     let embeddingError: string | null = null;
     try {
       await embeddingIndexService.downloadModel();
@@ -1201,11 +1187,6 @@ describe('network gate coverage', () => {
 
   it('an allowlist refusal names the host that is missing from it', async () => {
     settingsStore.setState({ offlineMode: false, confirmNetworkOps: false, remoteAllowlist: ['github.com'] });
-
-    const model = await localAiService.downloadModel('gemma-3-1b-q4km');
-    expect(model.success).to.equal(false);
-    expect(model.error?.message).to.contain('huggingface.co');
-    expect(model.error?.message).to.contain('allowlist');
 
     // The same allowlist names api.github.com's domain, so the GitHub App
     // calls are permitted — an allowlist that refused everything would just be
@@ -1257,7 +1238,6 @@ describe('network gate coverage', () => {
     // exercising them (an argument shape drifting, an export renamed) and the
     // offline assertion above would pass without proving anything.
     for (const command of [
-      'download_model',
       'download_embedding_model',
       'configure_github_app',
       'list_github_app_installations',

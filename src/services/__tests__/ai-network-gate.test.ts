@@ -85,7 +85,7 @@ const CLOUD_PROVIDERS: AiProviderType[] = [
   'github_copilot',
   'google_gemini',
 ];
-const LOCAL_PROVIDERS: AiProviderType[] = ['ollama', 'lm_studio', 'local_inference'];
+const LOCAL_PROVIDERS: AiProviderType[] = ['ollama', 'lm_studio'];
 
 /**
  * Arguments wide enough to get every exported function to its invoke. The

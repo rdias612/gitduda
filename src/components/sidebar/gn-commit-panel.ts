@@ -6,8 +6,6 @@ import * as aiService from '../../services/ai.service.ts';
 import { showToast } from '../../services/notification.service.ts';
 import { showPrompt } from '../../services/dialog.service.ts';
 import { repositoryStore, settingsStore } from '../../stores/index.ts';
-import { listen, type UnlistenFn } from '@tauri-apps/api/event';
-import { safeUnlisten } from '../../services/tauri-api.ts';
 import type { CommitTemplate, ConventionalType, CommitMessageRules } from '../../services/git.service.ts';
 import type { Commit, StatusEntry } from '../../types/git.types.ts';
 import { buildDefaultCommitMessage } from '../../utils/default-commit-message.ts';
@@ -997,7 +995,6 @@ export class GnCommitPanel extends LitElement {
   private boundHandleIdentityChanged = () => this.loadAuthorName();
   private unsubscribeStore?: () => void;
   private aiRetryTimer?: ReturnType<typeof setTimeout>;
-  private modelCompleteUnlisten?: UnlistenFn;
 
   async connectedCallback(): Promise<void> {
     super.connectedCallback();
@@ -1035,24 +1032,6 @@ export class GnCommitPanel extends LitElement {
     // Reload it immediately when the config dialog saves a new identity.
     window.addEventListener('git-identity-changed', this.boundHandleIdentityChanged);
 
-    // Also listen for Tauri backend event when a model download completes and auto-loads
-    listen<{ modelId: string; loaded?: boolean }>('model-download-complete', (event) => {
-      if (event.payload.loaded) {
-        void this.checkAiAvailability();
-      }
-    })
-      .then(unlisten => {
-        if (!this.isConnected) {
-          safeUnlisten(unlisten);
-        } else {
-          this.modelCompleteUnlisten = unlisten;
-        }
-      })
-      .catch(() => {
-        // No Tauri event bridge (unit tests, plain browser): the periodic
-        // availability poll below still notices a model that loads later.
-      });
-
     // If AI isn't available yet, poll periodically to catch backend auto-loading
     // a model on startup (which can take 10-30 seconds)
     if (!this.aiAvailable && this.isConnected) {
@@ -1067,8 +1046,6 @@ export class GnCommitPanel extends LitElement {
     window.removeEventListener('ai-settings-changed', this.boundHandleAiSettingsChanged);
     window.removeEventListener('repository-refresh', this.boundHandleRepositoryRefresh);
     window.removeEventListener('git-identity-changed', this.boundHandleIdentityChanged);
-    safeUnlisten(this.modelCompleteUnlisten);
-    this.modelCompleteUnlisten = undefined;
     if (this.aiRetryTimer) clearTimeout(this.aiRetryTimer);
     this.unsubscribeStore?.();
   }

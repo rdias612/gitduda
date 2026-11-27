@@ -23,9 +23,8 @@ import {
   checkForUpdate,
   type UpdateCheckEvent,
 } from '../../services/update.service.ts';
-import { openCloneDestinationDialog, openDialog, showConfirm } from '../../services/dialog.service.ts';
+import { openCloneDestinationDialog, showConfirm } from '../../services/dialog.service.ts';
 import * as aiService from '../../services/ai.service.ts';
-import * as localAiService from '../../services/local-ai.service.ts';
 import * as mcpService from '../../services/mcp.service.ts';
 import '../mcp/gn-mcp-write-settings.ts';
 import '../mcp/gn-mcp-clients.ts';
@@ -39,10 +38,7 @@ import { repositoryStore } from '../../stores/repository.store.ts';
 import { providerNetworkBlockReason } from '../../services/ai.service.ts';
 import type { AiNetworkPolicy, AiProviderInfo, AiProviderType } from '../../services/ai.service.ts';
 import { emitSecuritySettings } from '../../services/security-sync.service.ts';
-import type { SystemCapabilities, ModelEntry, DownloadedModel, DownloadProgress, LocalModelStatus } from '../../services/local-ai.service.ts';
 import type { McpStatus } from '../../services/mcp.service.ts';
-import { listen, type UnlistenFn } from '@tauri-apps/api/event';
-import { safeUnlisten } from '../../services/tauri-api.ts';
 import '../common/gn-toggle.ts';
 
 /**
@@ -491,16 +487,6 @@ export class GnSettingsDialog extends LitElement {
   @state() private providerTestStatus: Record<string, 'untested' | 'success' | 'failed'> = {};
   @state() private apiKeyInputs: Record<string, string> = {};
 
-  // Local AI settings
-  @state() private systemCapabilities: SystemCapabilities | null = null;
-  @state() private availableModels: ModelEntry[] = [];
-  @state() private downloadedModels: DownloadedModel[] = [];
-  @state() private downloadProgress: Record<string, DownloadProgress> = {};
-  @state() private localModelStatus: LocalModelStatus = 'unloaded';
-  @state() private loadedModelName: string | null = null;
-  @state() private loadingModelId: string | null = null;
-  @state() private recommendedModel: ModelEntry | null = null;
-
   // MCP settings
   @state() private mcpStatus: McpStatus = {
     running: false,
@@ -521,11 +507,6 @@ export class GnSettingsDialog extends LitElement {
    * save so persisting the port or the enabled flag cannot wipe the list.
    */
   @state() private mcpAllowedOrigins: string[] = [];
-
-  // Event listener cleanup
-  private downloadProgressUnlisten: UnlistenFn | null = null;
-  private downloadCompleteUnlisten: UnlistenFn | null = null;
-  private downloadErrorUnlisten: UnlistenFn | null = null;
 
   @property({ type: String }) focusSection: 'external-tools' | null = null;
 
@@ -572,23 +553,13 @@ export class GnSettingsDialog extends LitElement {
     this.loadVersion();
     this.loadAiProviders();
     this.loadExternalToolsConfig();
-    this.loadLocalAiData();
     this.loadMcpStatus();
-    this.setupDownloadListeners();
   }
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
     this.settingsUnsubscribe?.();
     this.settingsUnsubscribe = null;
-    // Raw Tauri unlisten closures reject where there is no event bridge, and
-    // a teardown has no one to hand that rejection to.
-    safeUnlisten(this.downloadProgressUnlisten);
-    safeUnlisten(this.downloadCompleteUnlisten);
-    safeUnlisten(this.downloadErrorUnlisten);
-    this.downloadProgressUnlisten = null;
-    this.downloadCompleteUnlisten = null;
-    this.downloadErrorUnlisten = null;
   }
 
   protected updated(changedProperties: PropertyValues): void {
@@ -1416,194 +1387,6 @@ export class GnSettingsDialog extends LitElement {
   }
 
   // =====================================================
-  // Local AI Methods
-  // =====================================================
-
-  private async loadLocalAiData(): Promise<void> {
-    const [capsResult, modelsResult, downloadedResult, recommendedResult, statusResult, nameResult] = await Promise.all([
-      localAiService.getSystemCapabilities(),
-      localAiService.getAvailableModels(),
-      localAiService.getDownloadedModels(),
-      localAiService.getRecommendedModel(),
-      localAiService.getModelStatus(),
-      localAiService.getLoadedModelName(),
-    ]);
-
-    if (capsResult.success && capsResult.data) {
-      this.systemCapabilities = capsResult.data;
-    }
-    if (modelsResult.success && modelsResult.data) {
-      this.availableModels = modelsResult.data;
-    }
-    if (downloadedResult.success && downloadedResult.data) {
-      this.downloadedModels = downloadedResult.data;
-    }
-    if (recommendedResult.success && recommendedResult.data !== undefined) {
-      this.recommendedModel = recommendedResult.data;
-    }
-    if (statusResult.success && statusResult.data !== undefined) {
-      this.localModelStatus = statusResult.data;
-    }
-    if (nameResult.success) {
-      this.loadedModelName = nameResult.data ?? null;
-    }
-  }
-
-  /**
-   * `listen()`, resolving to null where there is no Tauri event bridge (unit
-   * tests that mock `invoke` alone, a plain browser). connectedCallback fires
-   * this without awaiting it, so a rejection here would be unhandled.
-   */
-  private async listenOrNull<T>(
-    event: string,
-    handler: (event: { payload: T }) => void,
-  ): Promise<UnlistenFn | null> {
-    try {
-      return await listen<T>(event, handler);
-    } catch {
-      return null;
-    }
-  }
-
-  private async setupDownloadListeners(): Promise<void> {
-    this.downloadProgressUnlisten = await this.listenOrNull<DownloadProgress>('model-download-progress', (event) => {
-      this.downloadProgress = {
-        ...this.downloadProgress,
-        [event.payload.modelId]: event.payload,
-      };
-    });
-
-    this.downloadCompleteUnlisten = await this.listenOrNull<{ modelId: string; loaded?: boolean; loadError?: string }>('model-download-complete', (event) => {
-      // Remove from progress tracking and refresh the model list
-      const nextProgress = { ...this.downloadProgress };
-      delete nextProgress[event.payload.modelId];
-      this.downloadProgress = nextProgress;
-      this.loadLocalAiData();
-
-      // If the model was auto-loaded, refresh provider list and notify other components
-      if (event.payload.loaded) {
-        this.loadAiProviders();
-        window.dispatchEvent(new CustomEvent('ai-settings-changed'));
-      } else if (event.payload.loaded === false) {
-        // The download succeeded but the engine refused the model - the user
-        // still has no AI, so say so instead of silently refreshing the list.
-        const reason = event.payload.loadError ?? msg('unknown error');
-        this.aiError = msg(str`Loading failed for ${event.payload.modelId}: ${reason}`);
-      }
-    });
-
-    this.downloadErrorUnlisten = await this.listenOrNull<{ modelId: string; error: string }>('model-download-error', (event) => {
-      this.aiError = msg(str`Download failed for ${event.payload.modelId}: ${event.payload.error}`);
-      // Remove from progress tracking and refresh downloaded models list
-      const nextProgress = { ...this.downloadProgress };
-      delete nextProgress[event.payload.modelId];
-      this.downloadProgress = nextProgress;
-      this.loadLocalAiData();
-    });
-  }
-
-  private async handleDownloadModel(modelId: string): Promise<void> {
-    this.aiError = null;
-    const result = await localAiService.downloadModel(modelId);
-    if (!result.success) {
-      this.aiError = result.error?.message ?? msg('Failed to start download');
-    }
-  }
-
-  private async handleCancelDownload(modelId: string): Promise<void> {
-    this.aiError = null;
-    const result = await localAiService.cancelModelDownload(modelId);
-    // If the cancel failed, keep the progress entry (the download is still
-    // running) and surface the error instead of silently dropping the UI row.
-    if (!result.success) {
-      this.aiError = result.error?.message ?? msg('Failed to cancel download');
-      return;
-    }
-    const nextProgress = { ...this.downloadProgress };
-    delete nextProgress[modelId];
-    this.downloadProgress = nextProgress;
-    await this.loadLocalAiData();
-  }
-
-  private async handleDeleteModel(modelId: string): Promise<void> {
-    this.aiError = null;
-    // Unload first if this model is currently loaded
-    if (this.localModelStatus === 'ready') {
-      await localAiService.unloadModel();
-    }
-    const result = await localAiService.deleteModel(modelId);
-    if (result.success) {
-      await Promise.all([this.loadLocalAiData(), this.loadAiProviders()]);
-      // Deleting a model changes what the local provider can answer with, and
-      // `deleteModel` — unlike load/unload — makes no announcement of its own.
-      // The AI surfaces cache availability and listen only to this event.
-      window.dispatchEvent(new CustomEvent('ai-settings-changed'));
-    } else {
-      this.aiError = result.error?.message ?? msg('Failed to delete model');
-    }
-  }
-
-  private async handleLoadModel(modelId: string): Promise<void> {
-    this.aiError = null;
-    this.localModelStatus = 'loading';
-    this.loadingModelId = modelId;
-    const result = await localAiService.loadModel(modelId);
-    this.loadingModelId = null;
-    if (result.success) {
-      // localAiService.loadModel already announces `ai-settings-changed`.
-      await Promise.all([this.loadLocalAiData(), this.loadAiProviders()]);
-    } else {
-      this.aiError = result.error?.message ?? msg('Failed to load model');
-      await this.loadLocalAiData();
-    }
-  }
-
-  private async handleUnloadModel(): Promise<void> {
-    this.aiError = null;
-    const result = await localAiService.unloadModel();
-    if (result.success) {
-      // localAiService.unloadModel already announces `ai-settings-changed`.
-      await Promise.all([this.loadLocalAiData(), this.loadAiProviders()]);
-    } else {
-      this.aiError = result.error?.message ?? msg('Failed to unload model');
-    }
-  }
-
-  private async handleImportCustomModel(customPath?: string): Promise<void> {
-    this.aiError = null;
-    let selectedPath = customPath;
-    if (!selectedPath) {
-      const picked = await openDialog({
-        title: msg('Import Custom GGUF Model'),
-        multiple: false,
-        filters: [{ name: 'GGUF Model', extensions: ['gguf'] }],
-      });
-      if (!picked) return;
-      selectedPath = Array.isArray(picked) ? picked[0] : picked;
-      if (!selectedPath) return;
-    }
-
-    const result = await localAiService.importCustomModel(selectedPath);
-    if (result.success && result.data) {
-      await Promise.all([this.loadLocalAiData(), this.loadAiProviders()]);
-      window.dispatchEvent(new CustomEvent('ai-settings-changed'));
-      showToast(msg(str`Imported model ${result.data.displayName}`), 'success');
-    } else {
-      const errMsg = result.error?.message ?? msg('Failed to import model');
-      this.aiError = errMsg;
-      showToast(errMsg, 'error');
-    }
-  }
-
-  private isModelDownloaded(modelId: string): boolean {
-    return this.downloadedModels.some(m => m.id === modelId);
-  }
-
-  private isModelDownloading(modelId: string): boolean {
-    return modelId in this.downloadProgress;
-  }
-
-  // =====================================================
   // MCP Methods
   // =====================================================
 
@@ -2316,7 +2099,7 @@ export class GnSettingsDialog extends LitElement {
           ${this.renderToggleRow(
             msg('Offline Mode'),
             msg(
-              'Block every operation that leaves this machine — fetch, pull, push, clone, tag push, remote prune, LFS, submodules, auto-fetch, provider APIs (pull requests, issues, releases, CI), and cloud AI providers (OpenAI, Anthropic, Google Gemini, GitHub Models). Local AI — Ollama, LM Studio and the embedded model — keeps working.'
+              'Block every operation that leaves this machine — fetch, pull, push, clone, tag push, remote prune, LFS, submodules, auto-fetch, provider APIs (pull requests, issues, releases, CI), and cloud AI providers (OpenAI, Anthropic, Google Gemini, GitHub Models). Local AI — Ollama and LM Studio — keeps working.'
             ),
             this.offlineMode,
             'offlineMode'
@@ -2540,168 +2323,6 @@ export class GnSettingsDialog extends LitElement {
           </div>
 
           <gn-ai-routing-ledger></gn-ai-routing-ledger>
-        </div>
-
-        <div class="settings-section">
-          <div class="section-title">${msg('Local AI Engine')}</div>
-
-          ${this.systemCapabilities ? html`
-            <div class="setting-row">
-              <div class="setting-label">
-                <span class="setting-name">${msg('System')}</span>
-                <span class="setting-description">
-                  ${msg(str`RAM: ${localAiService.formatBytes(this.systemCapabilities.totalRamBytes)}`)}${this.systemCapabilities.unifiedMemory ? ` (${msg('Unified')})` : nothing}
-                  ${this.systemCapabilities.gpuInfo
-                    ? msg(str` | GPU: ${this.systemCapabilities.gpuInfo.name}`)
-                    : msg(' | No dedicated GPU detected')}
-                  ${this.systemCapabilities.npuInfo?.available
-                    ? msg(str` | NPU: ${this.systemCapabilities.npuInfo.name}`)
-                    : nothing}
-                  | ${localAiService.getBackendDisplayName(this.systemCapabilities)}
-                </span>
-              </div>
-              <span class="status-indicator ${this.systemCapabilities.recommendedTier !== 'none' ? 'configured' : 'not-configured'}">
-                <span class="status-dot"></span>
-                ${localAiService.getTierDisplayName(this.systemCapabilities.recommendedTier)}
-              </span>
-            </div>
-          ` : html`
-            <div class="setting-row">
-              <span class="setting-description">${msg('Detecting system capabilities...')}</span>
-            </div>
-          `}
-
-          ${this.localModelStatus === 'ready' ? html`
-            <div class="setting-row">
-              <div class="setting-label">
-                <span class="setting-name">${msg('Engine Status')}</span>
-                ${this.loadedModelName ? html`
-                  <span class="setting-description">${this.loadedModelName}</span>
-                ` : nothing}
-              </div>
-              <span class="status-indicator configured">
-                <span class="status-dot"></span>
-                ${msg('Model Loaded')}
-              </span>
-            </div>
-          ` : this.localModelStatus === 'loading' ? html`
-            <div class="setting-row">
-              <div class="setting-label">
-                <span class="setting-name">${msg('Engine Status')}</span>
-              </div>
-              <span class="status-indicator testing">${msg('Loading model...')}</span>
-            </div>
-          ` : nothing}
-
-          ${this.recommendedModel && !this.isModelDownloaded(this.recommendedModel.id) ? html`
-            <div class="setting-row">
-              <div class="setting-label">
-                <span class="setting-name">${msg(str`Recommended: ${this.recommendedModel.displayName}`)}</span>
-                <span class="setting-description">
-                  ${msg(str`${localAiService.formatBytes(this.recommendedModel.sizeBytes)} download`)}
-                </span>
-              </div>
-              <button
-                class="primary"
-                @click=${() => this.handleDownloadModel(this.recommendedModel!.id)}
-                ?disabled=${this.isModelDownloading(this.recommendedModel.id)}
-              >
-                ${this.isModelDownloading(this.recommendedModel.id) ? msg('Downloading...') : msg('Download')}
-              </button>
-            </div>
-          ` : nothing}
-
-          ${this.availableModels.map(model => {
-            const downloaded = this.isModelDownloaded(model.id);
-            const downloading = this.isModelDownloading(model.id);
-            const progress = this.downloadProgress[model.id];
-            return html`
-              <div class="setting-row" style="flex-direction: column; align-items: stretch; gap: 4px;">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                  <div class="setting-label">
-                    <span class="setting-name">${model.displayName}</span>
-                    <span class="setting-description">
-                      ${localAiService.formatBytes(model.sizeBytes)} |
-                      ${localAiService.getTierDisplayName(model.tier)} |
-                      ${model.architecture}
-                    </span>
-                  </div>
-                  <div style="display: flex; gap: 4px;">
-                    ${downloaded ? html`
-                      ${this.localModelStatus === 'ready' && this.loadedModelName === model.displayName ? html`
-                        <span class="status-indicator configured">${msg('Loaded')}</span>
-                        <button @click=${() => this.handleUnloadModel()}>${msg('Unload')}</button>
-                      ` : this.loadingModelId === model.id ? html`
-                        <span class="status-indicator">${msg('Loading...')}</span>
-                      ` : html`
-                        <span class="status-indicator">${msg('Downloaded')}</span>
-                        <button
-                          @click=${() => this.handleLoadModel(model.id)}
-                          ?disabled=${this.localModelStatus === 'loading'}
-                        >${msg('Load')}</button>
-                      `}
-                      <button class="danger" @click=${() => this.handleDeleteModel(model.id)}>${msg('Delete')}</button>
-                    ` : downloading ? html`
-                      <button @click=${() => this.handleCancelDownload(model.id)}>${msg('Cancel')}</button>
-                    ` : html`
-                      <button @click=${() => this.handleDownloadModel(model.id)}>${msg('Download')}</button>
-                    `}
-                  </div>
-                </div>
-                ${downloading && progress ? html`
-                  <div class="progress-bar">
-                    <div class="progress-fill" style="width: ${progress.progressPercent}%"></div>
-                  </div>
-                  <span class="progress-text">
-                    ${localAiService.formatBytes(progress.downloadedBytes)} / ${localAiService.formatBytes(progress.totalBytes)}
-                    (${progress.progressPercent.toFixed(1)}%)
-                  </span>
-                ` : nothing}
-              </div>
-            `;
-          })}
-
-          ${this.downloadedModels
-            .filter(dm => !this.availableModels.some(am => am.id === dm.id))
-            .map(model => html`
-              <div class="setting-row" style="flex-direction: column; align-items: stretch; gap: 4px;">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                  <div class="setting-label">
-                    <span class="setting-name">${model.displayName}</span>
-                    <span class="setting-description">
-                      ${localAiService.formatBytes(model.sizeBytes)} | ${msg('Custom GGUF')}
-                    </span>
-                  </div>
-                  <div style="display: flex; gap: 4px;">
-                    ${this.localModelStatus === 'ready' && this.loadedModelName === model.displayName ? html`
-                      <span class="status-indicator configured">${msg('Loaded')}</span>
-                      <button @click=${() => this.handleUnloadModel()}>${msg('Unload')}</button>
-                    ` : this.loadingModelId === model.id ? html`
-                      <span class="status-indicator">${msg('Loading...')}</span>
-                    ` : html`
-                      <span class="status-indicator">${msg('Downloaded')}</span>
-                      <button
-                        @click=${() => this.handleLoadModel(model.id)}
-                        ?disabled=${this.localModelStatus === 'loading'}
-                      >${msg('Load')}</button>
-                    `}
-                    <button class="danger" @click=${() => this.handleDeleteModel(model.id)}>${msg('Delete')}</button>
-                  </div>
-                </div>
-              </div>
-            `)}
-
-          <div class="setting-row">
-            <div class="setting-label">
-              <span class="setting-name">${msg('Custom Model')}</span>
-              <span class="setting-description">
-                ${msg('Import a local .gguf model file from disk')}
-              </span>
-            </div>
-            <button @click=${() => this.handleImportCustomModel()}>
-              ${msg('Import .gguf…')}
-            </button>
-          </div>
         </div>
 
         <div class="settings-section">

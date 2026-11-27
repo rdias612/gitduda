@@ -23,13 +23,13 @@ describe('gn-ai-routing-ledger', () => {
     mockResponses = {
       get_ai_providers: [
         {
-          providerType: 'local_inference',
-          name: 'Local AI (Embedded)',
+          providerType: 'ollama',
+          name: 'Ollama',
           available: true,
           probed: true,
           requiresApiKey: false,
           hasApiKey: false,
-          endpoint: '',
+          endpoint: 'http://localhost:11434',
           models: ['qwen-2.5-coder-7b-q4km'],
           selectedModel: 'qwen-2.5-coder-7b-q4km',
         },
@@ -45,7 +45,7 @@ describe('gn-ai-routing-ledger', () => {
           selectedModel: 'claude-haiku-4-5',
         },
       ],
-      get_active_ai_provider: 'local_inference',
+      get_active_ai_provider: 'ollama',
       get_ai_task_routes: {},
       get_ai_ledger: [
         {
@@ -53,7 +53,7 @@ describe('gn-ai-routing-ledger', () => {
           timestamp: 1710000000,
           feature: 'commit_message',
           taskTier: 'fast_text',
-          providerType: 'local_inference',
+          providerType: 'ollama',
           model: 'qwen-2.5-coder-7b-q4km',
           isLocal: true,
           promptBytes: 400,
