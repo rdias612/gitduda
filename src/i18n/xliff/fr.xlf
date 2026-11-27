@@ -796,14 +796,6 @@
   <source>Comma-separated patterns naming branches agents work on; * matches anything</source>
   <target>Motifs séparés par des virgules désignant les branches où travaillent les agents ; * correspond à tout</target>
 </trans-unit>
-<trans-unit id="s13352929d4858989">
-  <source>Install &amp; Restart</source>
-  <target>Installer et redémarrer</target>
-</trans-unit>
-<trans-unit id="sb5137a7885462e4e">
-  <source>Installing...</source>
-  <target>Installation...</target>
-</trans-unit>
 <trans-unit id="sdc0738463d5a0472">
   <source>Failed to install update. Try again later.</source>
   <target>Impossible d'installer la mise à jour. Réessayez plus tard.</target>
@@ -863,6 +855,38 @@
 <trans-unit id="s1b205b0d79ef6c9a">
   <source>No repositories open</source>
   <target>Aucun dépôt ouvert</target>
+</trans-unit>
+<trans-unit id="sb573ca8caa4ed25c">
+  <source>Update downloaded. Installing...</source>
+  <target>Mise à jour téléchargée. Installation en cours...</target>
+</trans-unit>
+<trans-unit id="s6c410fedda2a575f">
+  <source>Update available</source>
+  <target>Mise à jour disponible</target>
+</trans-unit>
+<trans-unit id="sadb2a74df6061e8d">
+  <source>Installed version</source>
+  <target>Version installée</target>
+</trans-unit>
+<trans-unit id="s8a89f39c73255374">
+  <source>Available version</source>
+  <target>Version disponible</target>
+</trans-unit>
+<trans-unit id="s1e0d0048d41c0bf9">
+  <source>What's changed</source>
+  <target>Nouveautés</target>
+</trans-unit>
+<trans-unit id="s32e57fd78e90d76c">
+  <source>The list of changes is unavailable.</source>
+  <target>La liste des modifications est indisponible.</target>
+</trans-unit>
+<trans-unit id="s275772c501fb3b2e">
+  <source>Not now</source>
+  <target>Pas maintenant</target>
+</trans-unit>
+<trans-unit id="s5671fb95bc3d5b04">
+  <source>Update now</source>
+  <target>Mettre à jour maintenant</target>
 </trans-unit>
 </body>
 </file>

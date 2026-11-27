@@ -30,6 +30,7 @@ export interface UpdateCheckEvent {
   currentVersion: string;
   latestVersion?: string;
   releaseNotes?: string;
+  changes: string[];
 }
 
 /**
@@ -96,12 +97,12 @@ export async function checkForUpdate(): Promise<CommandResult<UpdateCheckEvent>>
 }
 
 /**
- * Download and install the available update
+ * Download and install the version the user confirmed.
  */
-export async function downloadAndInstallUpdate(): Promise<CommandResult<void>> {
+export async function downloadAndInstallUpdate(expectedVersion: string): Promise<CommandResult<void>> {
   const blocked = await guardUpdateNetwork('Downloading an update');
   if (blocked) return blocked;
-  return invokeCommand<void>('download_and_install_update');
+  return invokeCommand<void>('download_and_install_update', { expectedVersion });
 }
 
 /**

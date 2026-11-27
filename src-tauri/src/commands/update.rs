@@ -2,7 +2,7 @@
 
 use crate::error::Result;
 use crate::services::update_service::{
-    check_for_update_manual, install_update, UpdateCheckEvent, UpdateState,
+    check_for_update as check_update, install_update, UpdateCheckEvent, UpdateState,
 };
 use tauri::{command, AppHandle, State};
 
@@ -16,13 +16,13 @@ use tauri::{command, AppHandle, State};
 /// reported a security refusal as a failed update check.
 #[command]
 pub async fn check_for_update(app: AppHandle) -> Result<UpdateCheckEvent> {
-    check_for_update_manual(&app).await
+    check_update(&app).await
 }
 
-/// Download and install the available update
+/// Download and install the version confirmed by the user.
 #[command]
-pub async fn download_and_install_update(app: AppHandle) -> Result<()> {
-    install_update(&app).await
+pub async fn download_and_install_update(app: AppHandle, expected_version: String) -> Result<()> {
+    install_update(&app, &expected_version).await
 }
 
 /// Start automatic update checking.
@@ -202,6 +202,7 @@ mod tests {
             current_version: "0.1.0".to_string(),
             latest_version: Some("0.2.0".to_string()),
             release_notes: Some("Bug fixes and improvements".to_string()),
+            changes: vec!["#9 — Confirm updates".to_string()],
         };
 
         let json = serde_json::to_string(&event).unwrap();
@@ -210,6 +211,7 @@ mod tests {
         assert!(json.contains("0.1.0"));
         assert!(json.contains("0.2.0"));
         assert!(json.contains("Bug fixes"));
+        assert!(json.contains("#9 — Confirm updates"));
     }
 
     #[test]
@@ -221,6 +223,7 @@ mod tests {
             current_version: "0.2.0".to_string(),
             latest_version: None,
             release_notes: None,
+            changes: Vec::new(),
         };
 
         let json = serde_json::to_string(&event).unwrap();

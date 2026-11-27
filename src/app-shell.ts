@@ -1,7 +1,7 @@
 import { LitElement, html, css, nothing } from 'lit';
 import { customElement, state, query } from 'lit/decorators.js';
 import { localized, msg } from '@lit/localize';
-import { sharedStyles } from './styles/shared-styles.ts';
+import { buttonStyles, sharedStyles } from './styles/shared-styles.ts';
 import { repositoryStore, uiStore, type OpenRepository } from './stores/index.ts';
 import {
   dialogStore,
@@ -237,6 +237,7 @@ import {
 export class AppShell extends LitElement {
   static styles = [
     sharedStyles,
+    buttonStyles,
     css`
       :host {
         display: flex;
@@ -731,6 +732,42 @@ export class AppShell extends LitElement {
         font-weight: var(--font-weight-medium);
       }
 
+      .update-details {
+        width: min(500px, 76vw);
+        overflow-wrap: anywhere;
+      }
+
+      .update-versions {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: var(--spacing-xs) var(--spacing-lg);
+        margin: 0 0 var(--spacing-md);
+      }
+
+      .update-versions dd {
+        margin: 0;
+        font-weight: var(--font-weight-semibold);
+      }
+
+      .update-changes-heading {
+        margin: 0;
+        font-size: inherit;
+      }
+
+      .update-changes {
+        margin: var(--spacing-sm) 0 0;
+        padding-inline-start: var(--spacing-lg);
+      }
+
+      .update-changes li + li {
+        margin-block-start: var(--spacing-xs);
+      }
+
+      .update-notes-unavailable {
+        margin: var(--spacing-sm) 0 0;
+        color: var(--color-text-secondary);
+      }
+
       /* Blame view uses the same diff-area styling */
     `,
   ];
@@ -1141,6 +1178,8 @@ export class AppShell extends LitElement {
   private refsChangedDebounceTimer?: ReturnType<typeof setTimeout>;
   private deferredRefsRefreshPending = false;
   private updateUnlisteners: UnlistenFn[] = [];
+  @state() private pendingUpdate: updateService.UpdateCheckEvent | null = null;
+  private installingUpdate = false;
   /** Teardown for the native menu's key-press watcher. */
   private appMenuWatchDispose?: () => void;
   /** Last repository-open state pushed to the native menu, to skip no-op IPC. */
@@ -2390,13 +2429,8 @@ export class AppShell extends LitElement {
   }
 
   private async setupUpdateListeners(): Promise<void> {
-    // Update available - show notification
     const unlistenAvailable = await updateService.onUpdateAvailable((event) => {
-      showToast(
-        `Update available: v${event.latestVersion}`,
-        'info',
-        10000
-      );
+      this.offerUpdate(event);
     });
     this.updateUnlisteners.push(unlistenAvailable);
 
@@ -2408,7 +2442,7 @@ export class AppShell extends LitElement {
 
     // Update ready - will restart
     const unlistenReady = await updateService.onUpdateReady(() => {
-      showToast('Update installed - restarting...', 'success', 3000);
+      showToast(msg('Update downloaded. Installing...'), 'info', 3000);
     });
     this.updateUnlisteners.push(unlistenReady);
 
@@ -2417,6 +2451,65 @@ export class AppShell extends LitElement {
       showToast(`Update failed: ${error.message}`, 'error', 8000);
     });
     this.updateUnlisteners.push(unlistenError);
+  }
+
+  private offerUpdate(event: updateService.UpdateCheckEvent): void {
+    if (event.updateAvailable && event.latestVersion && !this.pendingUpdate && !this.installingUpdate) {
+      this.pendingUpdate = event;
+    }
+  }
+
+  private dismissUpdate(): void {
+    this.pendingUpdate = null;
+  }
+
+  private async confirmUpdate(): Promise<void> {
+    const version = this.pendingUpdate?.latestVersion;
+    if (!version || this.installingUpdate) return;
+
+    this.installingUpdate = true;
+    this.dismissUpdate();
+    try {
+      const result = await updateService.downloadAndInstallUpdate(version);
+      if (!result.success) {
+        showToast(result.error?.message ?? msg('Failed to install update. Try again later.'), 'error');
+      }
+    } finally {
+      this.installingUpdate = false;
+    }
+  }
+
+  private renderUpdateDialog() {
+    const update = this.pendingUpdate;
+    return html`
+      <gn-modal
+        class="update-modal"
+        ?open=${Boolean(update)}
+        modalTitle=${msg('Update available')}
+        @close=${this.dismissUpdate}
+      >
+        ${update ? html`
+          <div class="update-details">
+            <dl class="update-versions">
+              <dt>${msg('Installed version')}</dt>
+              <dd>${update.currentVersion}</dd>
+              <dt>${msg('Available version')}</dt>
+              <dd>${update.latestVersion}</dd>
+            </dl>
+            <h3 class="update-changes-heading">${msg("What's changed")}</h3>
+            ${update.changes.length > 0
+              ? html`<ul class="update-changes">${update.changes.map((change) => html`<li>${change}</li>`)}</ul>`
+              : html`<p class="update-notes-unavailable">${msg('The list of changes is unavailable.')}</p>`}
+          </div>
+          <button slot="footer" class="btn btn-secondary" @click=${this.dismissUpdate}>
+            ${msg('Not now')}
+          </button>
+          <button slot="footer" class="btn btn-primary" @click=${this.confirmUpdate}>
+            ${msg('Update now')}
+          </button>
+        ` : ''}
+      </gn-modal>
+    `;
   }
 
   /**
@@ -6530,6 +6623,8 @@ export class AppShell extends LitElement {
               <gn-settings-dialog
                 .focusSection=${dialogs.context('settings')?.focusSection ?? null}
                 @close=${this.handleCloseSettings}
+                @update-found=${(event: CustomEvent<updateService.UpdateCheckEvent>) =>
+                  this.offerUpdate(event.detail)}
                 @open-profile-manager=${() => { dialogs.open('profileManager'); }}
               ></gn-settings-dialog>
             </gn-modal>
@@ -7225,6 +7320,7 @@ export class AppShell extends LitElement {
         ></gn-interactive-rebase-dialog>
       ` : ''}
 
+      ${this.renderUpdateDialog()}
       <gn-toast-container></gn-toast-container>
       <gn-progress-indicator
         .operations=${this.progressOperations}

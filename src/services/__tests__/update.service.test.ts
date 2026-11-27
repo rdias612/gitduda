@@ -14,6 +14,7 @@ const mockResults: Record<string, unknown> = {
       currentVersion: '1.0.0',
       latestVersion: '1.1.0',
       releaseNotes: '## New Features\n- Added dark mode\n- Performance improvements',
+      changes: ['Added dark mode', 'Performance improvements'],
     } as UpdateCheckEvent,
   },
   download_and_install_update: { success: true, data: null },
@@ -39,6 +40,7 @@ describe('Update Service Types', () => {
         currentVersion: '1.0.0',
         latestVersion: '1.1.0',
         releaseNotes: '## Changes\n- Bug fixes\n- New features',
+        changes: ['Bug fixes', 'New features'],
       };
 
       expect(event.updateAvailable).to.be.true;
@@ -53,6 +55,7 @@ describe('Update Service Types', () => {
         currentVersion: '1.1.0',
         latestVersion: undefined,
         releaseNotes: undefined,
+        changes: [],
       };
 
       expect(event.updateAvailable).to.be.false;
@@ -66,6 +69,7 @@ describe('Update Service Types', () => {
         currentVersion: '2.3.4',
         latestVersion: '2.4.0',
         releaseNotes: 'Minor update',
+        changes: ['Minor update'],
       };
 
       // Verify semver format
@@ -270,6 +274,7 @@ describe('Update Workflow', () => {
       currentVersion: '1.0.0',
       latestVersion: undefined,
       releaseNotes: undefined,
+      changes: [],
     };
 
     const shouldShowUpdateDialog = checkResult.updateAvailable;
@@ -281,6 +286,7 @@ describe('Update Workflow', () => {
       updateAvailable: true,
       currentVersion: '1.0.0',
       latestVersion: '1.1.0',
+      changes: ['Added dark mode support', 'Improved performance', 'Fixed crash on startup', 'Resolved memory leak'],
       releaseNotes: `
 ## What's New in 1.1.0
 
@@ -315,6 +321,7 @@ describe('Update Event Handling', () => {
         currentVersion: '1.0.0',
         latestVersion: '1.1.0',
         releaseNotes: 'New features',
+        changes: ['New features'],
       });
 
       expect(receivedEvent).to.not.be.null;
@@ -331,6 +338,7 @@ describe('Update Event Handling', () => {
       handler({
         updateAvailable: false,
         currentVersion: '1.0.0',
+        changes: [],
       });
 
       expect(receivedEvent).to.not.be.null;

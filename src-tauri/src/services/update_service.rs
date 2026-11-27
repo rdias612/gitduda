@@ -1,4 +1,4 @@
-//! Auto-update service for periodic update checking and installation.
+//! Periodic and manual update checks, followed by installation on confirmation.
 //!
 //! Everything here reaches the network — `updater.check()` fetches
 //! `latest.json` from the configured endpoint and `download_and_install`
@@ -19,8 +19,12 @@ use crate::error::{GitdudaError, Result};
 use std::sync::Arc;
 use std::time::Duration;
 use tauri::Emitter;
-use tokio::sync::RwLock;
+use tokio::sync::{Mutex, RwLock};
 use tokio::task::JoinHandle;
+
+mod release_notes;
+
+static INSTALL_LOCK: Mutex<()> = Mutex::const_new(());
 
 /// Update check event payload
 #[derive(Debug, Clone, serde::Serialize)]
@@ -30,6 +34,7 @@ pub struct UpdateCheckEvent {
     pub current_version: String,
     pub latest_version: Option<String>,
     pub release_notes: Option<String>,
+    pub changes: Vec<String>,
 }
 
 /// Update download progress event
@@ -198,7 +203,9 @@ impl UpdateService {
         #[cfg(feature = "msix-store")]
         {
             self.stop_periodic_check();
-            tracing::info!("Updates are managed by Microsoft Store; skipping periodic update check");
+            tracing::info!(
+                "Updates are managed by Microsoft Store; skipping periodic update check"
+            );
             return;
         }
 
@@ -214,7 +221,7 @@ impl UpdateService {
             loop {
                 tracing::info!("Checking for updates...");
 
-                match classify_tick(check_and_install_update(&app_handle).await) {
+                match classify_tick(announce_update(&app_handle).await) {
                     TickReport::Silent => {}
                     TickReport::Skipped(reason) => {
                         // Offline mode or the allowlist. The timer keeps
@@ -256,207 +263,111 @@ impl UpdateService {
     }
 }
 
-/// Check for updates and install if available (fully automatic).
-///
-/// Returns [`crate::error::GitdudaError`] rather than a `String` so a refusal
-/// from the network gate keeps its `NetworkBlocked` identity all the way to the
-/// frontend, where it reads as `BLOCKED` like every other refusal — and so the
-/// scheduled loop can tell a refusal apart from a failure.
-#[cfg_attr(feature = "msix-store", allow(unreachable_code, unused_variables))]
-async fn check_and_install_update(app: &tauri::AppHandle) -> Result<()> {
-    #[cfg(feature = "msix-store")]
-    {
-        tracing::info!("Updates are managed by Microsoft Store; skipping update check");
-        return Ok(());
-    }
-
-    tracing::debug!("check_and_install_update: Starting update check");
-
-    let current_version = env!("CARGO_PKG_VERSION").to_string();
-    tracing::debug!(
-        "check_and_install_update: Current version is {}",
-        current_version
-    );
-
-    // Gated inside: this downloads and RUNS a binary, so the refusal has to
-    // come before anything reaches the network, not somewhere between the
-    // fetch and the install.
-    tracing::debug!("check_and_install_update: Building updater...");
-    let updater = gated_updater(app)?;
-    tracing::debug!("check_and_install_update: Updater built successfully");
-
-    tracing::debug!("check_and_install_update: Calling updater.check()...");
-    let check_result = updater.check().await;
-    tracing::debug!("check_and_install_update: updater.check() returned");
-
-    match check_result {
-        Ok(Some(update)) => {
-            tracing::debug!("check_and_install_update: Update found");
-
-            // The manifest just told us WHERE the binary lives, and that
-            // answer is not the configured endpoint the gate above checked.
-            // Refuse here, before anything is announced or fetched: emitting
-            // `update-available` and `update-downloading` for a download that
-            // is about to be refused would put a stuck progress row in front
-            // of the user, and refusing after the fetch would be too late.
-            guard_update_download(update.download_url.as_str())?;
-
-            let latest_version = update.version.clone();
-            let release_notes = update.body.clone();
-
-            tracing::info!(
-                "Update available: {} -> {}",
-                current_version,
-                latest_version
-            );
-
-            // Emit update available event
-            let _ = app.emit(
-                "update-available",
-                UpdateCheckEvent {
-                    update_available: true,
-                    current_version: current_version.clone(),
-                    latest_version: Some(latest_version.clone()),
-                    release_notes: release_notes.clone(),
-                },
-            );
-
-            // Emit downloading event
-            let _ = app.emit("update-downloading", ());
-
-            tracing::info!("Downloading update...");
-
-            let app_clone = app.clone();
-            let app_clone2 = app.clone();
-
-            // Download and install the update
-            let downloaded = std::sync::atomic::AtomicU64::new(0);
-            update
-                .download_and_install(
-                    |chunk_length, content_length| {
-                        let prev = downloaded
-                            .fetch_add(chunk_length as u64, std::sync::atomic::Ordering::Relaxed);
-                        let current = prev + chunk_length as u64;
-                        let progress = content_length
-                            .map(|total| (current as f64 / total as f64) * 100.0)
-                            .unwrap_or(0.0);
-
-                        let _ = app_clone.emit(
-                            "update-download-progress",
-                            UpdateProgressEvent {
-                                downloaded: current,
-                                total: content_length,
-                                progress_percent: progress,
-                            },
-                        );
-                    },
-                    || {
-                        tracing::info!("Update downloaded, preparing to install...");
-                        let _ = app_clone2.emit("update-ready", ());
-                    },
-                )
-                .await
-                .map_err(|e| {
-                    GitdudaError::OperationFailed(format!(
-                        "Failed to download/install update: {}",
-                        e
-                    ))
-                })?;
-
-            tracing::info!("Update installed successfully, restarting...");
-
-            // On Windows, tauri-plugin-updater spawns the installer and exits the
-            // process inside `download_and_install`. On macOS and Linux,
-            // `download_and_install` swaps the `.app` bundle / AppImage in place and
-            // returns `Ok(())` without relaunching the running process.
-            app.restart();
-        }
-        Ok(None) => {
-            tracing::debug!("check_and_install_update: No update available");
-
-            let _ = app.emit(
-                "update-checked",
-                UpdateCheckEvent {
-                    update_available: false,
-                    current_version,
-                    latest_version: None,
-                    release_notes: None,
-                },
-            );
-
-            Ok(())
-        }
-        Err(e) => {
-            tracing::error!(
-                "check_and_install_update: Update check failed with error: {}",
-                e
-            );
-            Err(GitdudaError::OperationFailed(format!(
-                "Update check failed: {}",
-                e
-            )))
-        }
-    }
+/// Publish the scheduled check result for the confirmation dialog.
+async fn announce_update(app: &tauri::AppHandle) -> Result<()> {
+    let event = check_for_update(app).await?;
+    let name = if event.update_available {
+        "update-available"
+    } else {
+        "update-checked"
+    };
+    let _ = app.emit(name, event);
+    Ok(())
 }
 
-/// Manual check for updates (returns info without auto-installing).
-///
-/// The Settings button behind this one is a gesture the user just made, so its
-/// refusal travels back as `NetworkBlocked` and the dialog renders it. The
-/// scheduled loop is the path that must stay quiet, not this one.
-#[cfg_attr(feature = "msix-store", allow(unreachable_code, unused_variables))]
-pub async fn check_for_update_manual(app: &tauri::AppHandle) -> Result<UpdateCheckEvent> {
-    #[cfg(feature = "msix-store")]
-    {
-        return Err(GitdudaError::OperationFailed(
-            "Updates are managed by Microsoft Store.".to_string(),
-        ));
+/// Check the manifest and guard the installer URL before exposing the update.
+async fn find_update(app: &tauri::AppHandle) -> Result<Option<tauri_plugin_updater::Update>> {
+    let update = gated_updater(app)?
+        .check()
+        .await
+        .map_err(|e| GitdudaError::OperationFailed(format!("Update check failed: {}", e)))?;
+    if let Some(update) = &update {
+        guard_update_download(update.download_url.as_str())?;
     }
+    Ok(update)
+}
+
+/// Return metadata without starting a download. Both check entry points use this.
+#[cfg_attr(feature = "msix-store", allow(unreachable_code, unused_variables))]
+pub async fn check_for_update(app: &tauri::AppHandle) -> Result<UpdateCheckEvent> {
+    #[cfg(feature = "msix-store")]
+    return Err(GitdudaError::OperationFailed(
+        "Updates are managed by Microsoft Store.".to_string(),
+    ));
 
     let current_version = env!("CARGO_PKG_VERSION").to_string();
-
-    let updater = gated_updater(app)?;
-
-    match updater.check().await {
-        Ok(Some(update)) => {
-            // The BINARY's host is the manifest's choice, and only the install
-            // path used to check it — where a refusal is `Skipped` and logged.
-            // A check that announced the update anyway left Settings saying
-            // "Update available" for a binary nothing would ever fetch, with
-            // no explanation. Refusing here, naming the host, is what the
-            // click gets back.
-            guard_update_download(update.download_url.as_str())?;
-            Ok(UpdateCheckEvent {
-                update_available: true,
-                current_version,
-                latest_version: Some(update.version.clone()),
-                release_notes: update.body.clone(),
-            })
-        }
-        Ok(None) => Ok(UpdateCheckEvent {
+    let Some(update) = find_update(app).await? else {
+        return Ok(UpdateCheckEvent {
             update_available: false,
             current_version,
             latest_version: None,
             release_notes: None,
-        }),
-        Err(e) => Err(GitdudaError::OperationFailed(format!(
-            "Update check failed: {}",
-            e
-        ))),
-    }
+            changes: Vec::new(),
+        });
+    };
+
+    let changes = release_notes::load(&update.version, update.body.as_deref()).await;
+    Ok(UpdateCheckEvent {
+        update_available: true,
+        current_version,
+        latest_version: Some(update.version),
+        release_notes: update.body,
+        changes,
+    })
 }
 
-/// Download and install update manually
+/// Download and install only the version the user confirmed.
 #[cfg_attr(feature = "msix-store", allow(unreachable_code, unused_variables))]
-pub async fn install_update(app: &tauri::AppHandle) -> Result<()> {
+pub async fn install_update(app: &tauri::AppHandle, expected_version: &str) -> Result<()> {
     #[cfg(feature = "msix-store")]
-    {
-        return Err(GitdudaError::OperationFailed(
-            "Updates are managed by Microsoft Store.".to_string(),
-        ));
-    }
+    return Err(GitdudaError::OperationFailed(
+        "Updates are managed by Microsoft Store.".to_string(),
+    ));
 
-    check_and_install_update(app).await
+    let _install = INSTALL_LOCK.try_lock().map_err(|_| {
+        GitdudaError::OperationFailed("An update is already being installed.".to_string())
+    })?;
+    let update = find_update(app).await?;
+    let Some(update) = update.filter(|update| update.version == expected_version) else {
+        return Err(GitdudaError::OperationFailed(
+            "The confirmed update is no longer available. Check for updates again.".to_string(),
+        ));
+    };
+
+    let _ = app.emit("update-downloading", ());
+    let downloaded = std::sync::atomic::AtomicU64::new(0);
+    update
+        .download_and_install(
+            |chunk_length, content_length| {
+                let previous =
+                    downloaded.fetch_add(chunk_length as u64, std::sync::atomic::Ordering::Relaxed);
+                let current = previous + chunk_length as u64;
+                let progress = content_length
+                    .filter(|&total| total > 0)
+                    .map(|total| (current as f64 / total as f64) * 100.0)
+                    .unwrap_or(0.0);
+
+                let _ = app.emit(
+                    "update-download-progress",
+                    UpdateProgressEvent {
+                        downloaded: current,
+                        total: content_length,
+                        progress_percent: progress,
+                    },
+                );
+            },
+            || {
+                let _ = app.emit("update-ready", ());
+            },
+        )
+        .await
+        .map_err(|e| {
+            GitdudaError::OperationFailed(format!("Failed to download/install update: {}", e))
+        })?;
+
+    // The Windows installer exits the app itself. macOS and Linux return
+    // after replacing the bundle or AppImage and need an explicit restart.
+    app.restart();
 }
 
 /// Global update state type
@@ -654,59 +565,34 @@ mod tests {
     }
 
     #[test]
-    fn the_binary_url_is_guarded_before_anything_is_announced_or_fetched() {
-        // The refusal has to land before the `update-available` /
-        // `update-downloading` emits, or the user gets a progress row for a
-        // download that never starts — and before the fetch itself, obviously.
-        // Same reason: `include_str!` hands back the file verbatim, CRLF and
-        // all, on a Windows checkout.
+    fn checking_and_announcing_an_update_never_downloads_it() {
         let source = include_str!("update_service.rs").replace("\r\n", "\n");
-        let body = source
-            .split_once("async fn check_and_install_update")
-            .expect("the install path exists")
+        let (checks, install) = source
+            .split_once("pub async fn install_update(")
+            .expect("the install path exists");
+        let checks = checks
+            .split_once("async fn announce_update(")
+            .expect("the scheduled check exists")
             .1;
-        let guard = body
-            .find("guard_update_download")
-            .expect("the binary's host is guarded on the install path");
-        let announced = body
-            .find("\"update-available\"")
-            .expect("the availability emit");
-        let downloaded = body
-            .find("download_and_install")
-            .expect("the download call");
-        assert!(guard < announced, "guard before the update-available emit");
-        assert!(guard < downloaded, "guard before the download starts");
-    }
+        assert!(checks.contains("check_for_update(app).await?"));
+        assert!(checks.contains("find_update(app).await?"));
+        assert!(checks.contains("guard_update_download(update.download_url.as_str())?"));
+        assert!(!checks.contains(".download_and_install("));
 
-    #[test]
-    fn the_manual_check_refuses_a_binary_host_it_would_never_install_from() {
-        // Same structural pin as the install path above. The manual check
-        // had no guard at all: it announced an update whose binary the
-        // install path would then refuse — `Skipped`, logged, never shown —
-        // so Settings said "Update available" forever with nothing installed
-        // or explained. The guard has to run BEFORE the availability is
-        // reported, so the click gets the refusal, host and all.
-        // Same reason: `include_str!` hands back the file verbatim, CRLF and
-        // all, on a Windows checkout.
-        let source = include_str!("update_service.rs").replace("\r\n", "\n");
-        let body = source
-            .split_once("pub async fn check_for_update_manual")
-            .expect("the manual check exists")
-            .1;
-        let body = body
-            .split_once("\n}\n")
-            .expect("the manual check has a body")
-            .0;
-        let guard = body
-            .find("guard_update_download")
-            .expect("the manual check guards the binary's host");
-        let announced = body
-            .find("update_available: true")
-            .expect("the availability report");
-        assert!(
-            guard < announced,
-            "guard the binary's host before reporting the update as available"
-        );
+        let install = install.split_once("\n}\n").expect("the install body").0;
+        let guard = install
+            .find("find_update(app).await?")
+            .expect("guarded lookup");
+        let confirmed = install
+            .find("update.version == expected_version")
+            .expect("version check");
+        let downloading = install
+            .find("\"update-downloading\"")
+            .expect("progress event");
+        let download = install
+            .find(".download_and_install(")
+            .expect("download call");
+        assert!(guard < confirmed && confirmed < downloading && downloading < download);
     }
 
     // ---- the scheduled loop ----

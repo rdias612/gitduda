@@ -14,7 +14,7 @@ not hand-kept: `scripts/i18n-coverage.test.mjs` fails if a file gains or loses a
 `msg()` call and this list does not follow. Every file with at least one `msg()`
 call site is here, and nothing else in `src/` has one.
 
-- `src/app-shell.ts` — the Settings modal's title.
+- `src/app-shell.ts` — the Settings modal's title and the update confirmation dialog.
 - `src/components/dialogs/gn-clone-dialog.ts` — the recursive submodule clone option.
 - `src/components/dialogs/gn-settings-dialog.ts` — everything the dialog
   renders (section titles, setting names and descriptions, options, buttons,

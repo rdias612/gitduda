@@ -1194,7 +1194,7 @@ describe('network gate coverage', () => {
     expect(update.error?.message).to.contain('offline mode');
     expect(update.error?.message).to.contain('Settings > Security');
 
-    const install = await updateService.downloadAndInstallUpdate();
+    const install = await updateService.downloadAndInstallUpdate('1.1.0');
     expect(install.success, 'installing a binary is the same request').to.equal(false);
     expect(install.error?.code).to.equal('BLOCKED');
   });

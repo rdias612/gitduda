@@ -1,6 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { setupOpenRepository } from '../fixtures/tauri-mock';
 import {
+  emitBackendEvent,
   startCommandCaptureWithMocks,
   findCommand,
   injectCommandError,
@@ -26,7 +27,7 @@ const updateMocks = {
     updateAvailable: true,
     currentVersion: '0.8.0',
     latestVersion: '0.9.0',
-    releaseNotes: 'Fixes',
+    changes: ['#9 — Confirm before installing updates', 'Improve startup performance'],
   },
 };
 
@@ -190,5 +191,73 @@ test.describe('Settings Dialog — the updater respects the network gate', () =>
 
     await expect(updateError(page)).toBeVisible();
     await expect(updateError(page)).toContainText('connection reset');
+  });
+});
+
+test.describe('Update confirmation', () => {
+  test.beforeEach(async ({ page }) => {
+    await setupOpenRepository(page);
+  });
+
+  test('a manual check shows the versions and changes and can be repeated after dismissal', async ({
+    page,
+  }) => {
+    await startCommandCaptureWithMocks(page, updateMocks);
+    await openSettings(page);
+    const dialog = page.locator('gn-modal.update-modal');
+
+    await checkButton(page).click();
+    await expect(dialog.getByRole('dialog', { name: 'Update available' })).toBeVisible();
+    await expect(dialog.locator('.update-versions')).toHaveText(
+      /Installed version\s+0\.8\.0\s+Available version\s+0\.9\.0/,
+    );
+    await expect(dialog.getByRole('listitem')).toHaveText(updateMocks.check_for_update.changes);
+    expect(await findCommand(page, 'download_and_install_update')).toHaveLength(0);
+
+    await dialog.getByRole('button', { name: 'Not now' }).click();
+    await expect(dialog).toBeHidden();
+    await expect(checkButton(page)).toBeEnabled();
+    expect(await findCommand(page, 'download_and_install_update')).toHaveLength(0);
+
+    await checkButton(page).click();
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole('button', { name: 'Close' }).click();
+    await expect(dialog).toBeHidden();
+    await expect(page.locator('gn-settings-dialog')).toBeVisible();
+    expect(await findCommand(page, 'download_and_install_update')).toHaveLength(0);
+
+    await checkButton(page).click();
+    await dialog.getByRole('button', { name: 'Update now' }).click();
+    await expect.poll(() => findCommand(page, 'download_and_install_update')).toEqual([
+      { command: 'download_and_install_update', args: { expectedVersion: '0.9.0' } },
+    ]);
+  });
+
+  test('a scheduled update without notes can still be installed after confirmation', async ({ page }) => {
+    await startCommandCaptureWithMocks(page, updateMocks);
+    await emitBackendEvent(page, 'update-available', { ...updateMocks.check_for_update, changes: [] });
+    const dialog = page.locator('gn-modal.update-modal');
+
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByText('The list of changes is unavailable.')).toBeVisible();
+    expect(await findCommand(page, 'download_and_install_update')).toHaveLength(0);
+    await dialog.getByRole('button', { name: 'Update now' }).click();
+    await expect.poll(() => findCommand(page, 'download_and_install_update')).toEqual([
+      { command: 'download_and_install_update', args: { expectedVersion: '0.9.0' } },
+    ]);
+  });
+
+  test('an up-to-date app keeps the confirmation closed', async ({ page }) => {
+    const result = { updateAvailable: false, currentVersion: '0.8.0', changes: [] };
+    await startCommandCaptureWithMocks(page, { check_for_update: result });
+    const dialog = page.locator('gn-modal.update-modal');
+
+    await emitBackendEvent(page, 'update-checked', result);
+    await expect(dialog).toBeHidden();
+    await openSettings(page);
+    await checkButton(page).click();
+    await expect(page.locator('gn-settings-dialog .update-status')).toHaveText("You're up to date!");
+    await expect(dialog).toBeHidden();
+    expect(await findCommand(page, 'download_and_install_update')).toHaveLength(0);
   });
 });
