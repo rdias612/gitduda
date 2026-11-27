@@ -2082,4 +2082,134 @@ describe('gn-file-status', () => {
       expect(stageAllBtn.disabled).to.equal(true);
     });
   });
+
+  describe('explicit Unstage all button (issue #10)', () => {
+    function getStagedUnstageAll(el: GnFileStatus): HTMLButtonElement {
+      const stagedSection = el.shadowRoot!.querySelectorAll('.section')[0];
+      const btn = stagedSection.querySelector(
+        '.section-actions .section-action-labeled',
+      );
+      expect(btn, 'Unstage all button is rendered').to.not.be.null;
+      return btn as HTMLButtonElement;
+    }
+
+    it('renders visible "Unstage all" label without active filter', async () => {
+      const el = await renderFileStatus();
+      const unstageAllBtn = getStagedUnstageAll(el);
+
+      expect(unstageAllBtn.textContent?.trim()).to.equal('Unstage all');
+      expect(unstageAllBtn.disabled).to.equal(false);
+      expect(unstageAllBtn.getAttribute('aria-label')).to.equal('Unstage all files');
+    });
+
+    it('calls unstage_files with all staged paths when clicked', async () => {
+      const el = await renderFileStatus();
+      clearHistory();
+
+      const unstageAllBtn = getStagedUnstageAll(el);
+      unstageAllBtn.click();
+      await new Promise((r) => setTimeout(r, 100));
+      await el.updateComplete;
+
+      const unstageCalls = findCommands('unstage_files');
+      expect(unstageCalls).to.have.length(1);
+      const unstageArgs = unstageCalls[0].args as { path: string; paths: string[] };
+      expect(unstageArgs.paths).to.deep.equal([
+        'src/app.ts',
+        'src/new-file.ts',
+        'src/renamed.ts',
+        'src/partial.ts',
+      ]);
+    });
+
+    it('updates label and unstages only matching files when filter is active', async () => {
+      const el = await renderFileStatus();
+      await typeFilter(el, 'app.ts');
+      clearHistory();
+
+      const unstageAllBtn = getStagedUnstageAll(el);
+      expect(unstageAllBtn.textContent?.trim()).to.equal('Unstage 1 matching');
+      expect(unstageAllBtn.getAttribute('title')).to.equal(
+        'Unstage 1 file matching the filter',
+      );
+
+      unstageAllBtn.click();
+      await new Promise((r) => setTimeout(r, 100));
+      await el.updateComplete;
+
+      const unstageCalls = findCommands('unstage_files');
+      expect(unstageCalls).to.have.length(1);
+      const unstageArgs = unstageCalls[0].args as { paths: string[] };
+      expect(unstageArgs.paths).to.deep.equal(['src/app.ts']);
+    });
+
+    it('activates via Enter and Space without preventing default or collapsing Staged', async () => {
+      const el = await renderFileStatus();
+      clearHistory();
+
+      const stagedSection = el.shadowRoot!.querySelectorAll('.section')[0];
+      const sectionHeader = stagedSection.querySelector('.section-header')!;
+      const unstageAllBtn = getStagedUnstageAll(el);
+      unstageAllBtn.focus();
+
+      const enterEvent = new KeyboardEvent('keydown', {
+        key: 'Enter',
+        bubbles: true,
+        composed: true,
+        cancelable: true,
+      });
+      unstageAllBtn.dispatchEvent(enterEvent);
+      expect(enterEvent.defaultPrevented).to.equal(false);
+
+      unstageAllBtn.click();
+      await new Promise((r) => setTimeout(r, 100));
+      await el.updateComplete;
+      expect(findCommands('unstage_files')).to.have.length(1);
+      expect(sectionHeader.getAttribute('aria-expanded')).to.equal('true');
+
+      clearHistory();
+      const spaceEvent = new KeyboardEvent('keydown', {
+        key: ' ',
+        bubbles: true,
+        composed: true,
+        cancelable: true,
+      });
+      unstageAllBtn.dispatchEvent(spaceEvent);
+      expect(spaceEvent.defaultPrevented).to.equal(false);
+
+      unstageAllBtn.click();
+      await new Promise((r) => setTimeout(r, 100));
+      await el.updateComplete;
+      expect(findCommands('unstage_files')).to.have.length(1);
+      expect(sectionHeader.getAttribute('aria-expanded')).to.equal('true');
+    });
+
+    it('disables the button when there are only unstaged files', async () => {
+      setupDefaultMocks({
+        entries: [
+          { path: 'src/utils/helper.ts', status: 'modified', isStaged: false, isConflicted: false },
+        ],
+      });
+      const el = await renderFileStatus();
+      clearHistory();
+
+      const unstageAllBtn = getStagedUnstageAll(el);
+      expect(unstageAllBtn.disabled).to.equal(true);
+      expect(unstageAllBtn.getAttribute('title')).to.equal('No files to unstage');
+
+      unstageAllBtn.click();
+      await new Promise((r) => setTimeout(r, 50));
+      await el.updateComplete;
+      expect(findCommands('unstage_files')).to.have.length(0);
+    });
+
+    it('disables the button with "Unstage matching" label when filter leaves only unstaged files', async () => {
+      const el = await renderFileStatus();
+      await typeFilter(el, 'helper');
+
+      const unstageAllBtn = getStagedUnstageAll(el);
+      expect(unstageAllBtn.disabled).to.equal(true);
+      expect(unstageAllBtn.textContent?.trim()).to.equal('Unstage matching');
+    });
+  });
 });

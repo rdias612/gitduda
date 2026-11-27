@@ -3193,6 +3193,69 @@ export class GnFileStatus extends LitElement {
     `;
   }
 
+  private renderHeaderActionButton(opts: {
+    verb: "Stage" | "Unstage";
+    count: number;
+    enabled: boolean;
+    filtering: boolean;
+    onClick: () => void;
+  }) {
+    const { verb, count, enabled, filtering, onClick } = opts;
+    const filterTitle = `${verb} ${count} file${count === 1 ? "" : "s"} matching the filter`;
+    const title = filtering
+      ? filterTitle
+      : enabled
+        ? `${verb} all`
+        : `No files to ${verb.toLowerCase()}`;
+    const ariaLabel = filtering ? filterTitle : `${verb} all files`;
+    const label = filtering
+      ? count > 0
+        ? `${verb} ${count} matching`
+        : `${verb} matching`
+      : `${verb} all`;
+
+    return html`
+      <div
+        class="section-actions"
+        @click=${(e: Event) => e.stopPropagation()}
+      >
+        <button
+          class="section-action section-action-labeled"
+          ?disabled=${!enabled}
+          title=${title}
+          aria-label=${ariaLabel}
+          @click=${onClick}
+        >
+          ${verb === "Stage"
+            ? html`<svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                aria-hidden="true"
+              >
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>`
+            : html`<svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                aria-hidden="true"
+              >
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>`}
+          <span>${label}</span>
+        </button>
+      </div>
+    `;
+  }
+
   render() {
     if (this.loading) {
       return html`<div class="loading">Loading changes...</div>`;
@@ -3228,6 +3291,7 @@ export class GnFileStatus extends LitElement {
     const unstaged = this.filteredUnstagedFiles;
     const stageableUnstaged = unstaged.filter((f) => !f.isConflicted);
     const canStageAll = stageableUnstaged.length > 0;
+    const canUnstageAll = staged.length > 0;
     const filtering = this.isFiltering;
     const noMatches = filtering && staged.length === 0 && unstaged.length === 0;
 
@@ -3309,36 +3373,13 @@ export class GnFileStatus extends LitElement {
               ? `${staged.length} of ${this.stagedFiles.length}`
               : this.stagedFiles.length}</span
           >
-          ${staged.length > 0
-            ? html`
-                <div
-                  class="section-actions"
-                  @click=${(e: Event) => e.stopPropagation()}
-                >
-                  <button
-                    class="section-action"
-                    title=${filtering
-                      ? `Unstage ${staged.length} file${staged.length === 1 ? "" : "s"} matching the filter`
-                      : "Unstage all"}
-                    aria-label=${filtering
-                      ? `Unstage ${staged.length} file${staged.length === 1 ? "" : "s"} matching the filter`
-                      : "Unstage all files"}
-                    @click=${this.handleUnstageAllShown}
-                  >
-                    <svg
-                      width="12"
-                      height="12"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    >
-                      <line x1="5" y1="12" x2="19" y2="12"></line>
-                    </svg>
-                  </button>
-                </div>
-              `
-            : nothing}
+          ${this.renderHeaderActionButton({
+            verb: "Unstage",
+            count: staged.length,
+            enabled: canUnstageAll,
+            filtering,
+            onClick: this.handleUnstageAllShown,
+          })}
         </div>
         ${this.stagedExpanded ? this.renderSelectionActions(true) : nothing}
         ${staged.length > 0 && this.stagedExpanded
@@ -3378,44 +3419,13 @@ export class GnFileStatus extends LitElement {
               ? `${unstaged.length} of ${this.unstagedFiles.length}`
               : this.unstagedFiles.length}</span
           >
-          <div
-            class="section-actions"
-            @click=${(e: Event) => e.stopPropagation()}
-          >
-            <button
-              class="section-action section-action-labeled"
-              ?disabled=${!canStageAll}
-              title=${filtering
-                ? `Stage ${unstaged.length} file${unstaged.length === 1 ? "" : "s"} matching the filter`
-                : canStageAll
-                  ? "Stage all"
-                  : "No files to stage"}
-              aria-label=${filtering
-                ? `Stage ${unstaged.length} file${unstaged.length === 1 ? "" : "s"} matching the filter`
-                : "Stage all files"}
-              @click=${this.handleStageAllShown}
-            >
-              <svg
-                width="12"
-                height="12"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                aria-hidden="true"
-              >
-                <line x1="12" y1="5" x2="12" y2="19"></line>
-                <line x1="5" y1="12" x2="19" y2="12"></line>
-              </svg>
-              <span
-                >${filtering
-                  ? unstaged.length > 0
-                    ? `Stage ${unstaged.length} matching`
-                    : "Stage matching"
-                  : "Stage all"}</span
-              >
-            </button>
-          </div>
+          ${this.renderHeaderActionButton({
+            verb: "Stage",
+            count: unstaged.length,
+            enabled: canStageAll,
+            filtering,
+            onClick: this.handleStageAllShown,
+          })}
         </div>
         ${this.unstagedExpanded ? this.renderSelectionActions(false) : nothing}
         ${unstaged.length > 0 && this.unstagedExpanded
