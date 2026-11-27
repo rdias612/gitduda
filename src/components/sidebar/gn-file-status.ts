@@ -144,9 +144,21 @@ export class GnFileStatus extends LitElement {
         color: var(--color-text-muted);
       }
 
-      .section-action:hover {
+      .section-action:hover:not(:disabled) {
         background: var(--color-bg-hover);
         color: var(--color-text-primary);
+      }
+
+      .section-action-labeled {
+        width: auto;
+        padding: 0 6px;
+        gap: 4px;
+        font-size: var(--font-size-xs);
+        font-weight: var(--font-weight-medium);
+        white-space: nowrap;
+        color: var(--color-text-secondary);
+        background: var(--color-bg-tertiary);
+        border: 1px solid var(--color-border);
       }
 
       .file-list {
@@ -1147,7 +1159,8 @@ export class GnFileStatus extends LitElement {
     const origin = e.composedPath()[0];
     if (
       origin instanceof HTMLInputElement ||
-      origin instanceof HTMLTextAreaElement
+      origin instanceof HTMLTextAreaElement ||
+      origin instanceof HTMLButtonElement
     ) {
       return;
     }
@@ -3213,6 +3226,8 @@ export class GnFileStatus extends LitElement {
     // matching file underneath put it there, so no empty folders appear.
     const staged = this.filteredStagedFiles;
     const unstaged = this.filteredUnstagedFiles;
+    const stageableUnstaged = unstaged.filter((f) => !f.isConflicted);
+    const canStageAll = stageableUnstaged.length > 0;
     const filtering = this.isFiltering;
     const noMatches = filtering && staged.length === 0 && unstaged.length === 0;
 
@@ -3273,7 +3288,7 @@ export class GnFileStatus extends LitElement {
             ? `Staged changes, ${staged.length} of ${this.stagedFiles.length} files match the filter`
             : `Staged changes, ${this.stagedFiles.length} files`}
           @click=${() => (this.stagedExpanded = !this.stagedExpanded)}
-          @keydown=${(e: KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.stagedExpanded = !this.stagedExpanded; } }}
+          @keydown=${(e: KeyboardEvent) => { if (e.target !== e.currentTarget) return; if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.stagedExpanded = !this.stagedExpanded; } }}
         >
           <svg
             class="chevron ${this.stagedExpanded ? "expanded" : ""}"
@@ -3342,7 +3357,7 @@ export class GnFileStatus extends LitElement {
             ? `Unstaged changes, ${unstaged.length} of ${this.unstagedFiles.length} files match the filter`
             : `Unstaged changes, ${this.unstagedFiles.length} files`}
           @click=${() => (this.unstagedExpanded = !this.unstagedExpanded)}
-          @keydown=${(e: KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.unstagedExpanded = !this.unstagedExpanded; } }}
+          @keydown=${(e: KeyboardEvent) => { if (e.target !== e.currentTarget) return; if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.unstagedExpanded = !this.unstagedExpanded; } }}
         >
           <svg
             class="chevron ${this.unstagedExpanded ? "expanded" : ""}"
@@ -3363,37 +3378,44 @@ export class GnFileStatus extends LitElement {
               ? `${unstaged.length} of ${this.unstagedFiles.length}`
               : this.unstagedFiles.length}</span
           >
-          ${unstaged.length > 0
-            ? html`
-                <div
-                  class="section-actions"
-                  @click=${(e: Event) => e.stopPropagation()}
-                >
-                  <button
-                    class="section-action"
-                    title=${filtering
-                      ? `Stage ${unstaged.length} file${unstaged.length === 1 ? "" : "s"} matching the filter`
-                      : "Stage all"}
-                    aria-label=${filtering
-                      ? `Stage ${unstaged.length} file${unstaged.length === 1 ? "" : "s"} matching the filter`
-                      : "Stage all files"}
-                    @click=${this.handleStageAllShown}
-                  >
-                    <svg
-                      width="12"
-                      height="12"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    >
-                      <line x1="12" y1="5" x2="12" y2="19"></line>
-                      <line x1="5" y1="12" x2="19" y2="12"></line>
-                    </svg>
-                  </button>
-                </div>
-              `
-            : nothing}
+          <div
+            class="section-actions"
+            @click=${(e: Event) => e.stopPropagation()}
+          >
+            <button
+              class="section-action section-action-labeled"
+              ?disabled=${!canStageAll}
+              title=${filtering
+                ? `Stage ${unstaged.length} file${unstaged.length === 1 ? "" : "s"} matching the filter`
+                : canStageAll
+                  ? "Stage all"
+                  : "No files to stage"}
+              aria-label=${filtering
+                ? `Stage ${unstaged.length} file${unstaged.length === 1 ? "" : "s"} matching the filter`
+                : "Stage all files"}
+              @click=${this.handleStageAllShown}
+            >
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                aria-hidden="true"
+              >
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              <span
+                >${filtering
+                  ? unstaged.length > 0
+                    ? `Stage ${unstaged.length} matching`
+                    : "Stage matching"
+                  : "Stage all"}</span
+              >
+            </button>
+          </div>
         </div>
         ${this.unstagedExpanded ? this.renderSelectionActions(false) : nothing}
         ${unstaged.length > 0 && this.unstagedExpanded
