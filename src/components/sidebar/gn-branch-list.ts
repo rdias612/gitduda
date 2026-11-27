@@ -1961,6 +1961,19 @@ export class GnBranchList extends LitElement {
     this.requestCreateBranch(branch.isRemote ? branch.name : branch.shorthand);
   }
 
+  private handleCreateTagFrom(): void {
+    const branch = this.contextMenu.branch;
+    if (!branch) return;
+
+    this.contextMenu = { ...this.contextMenu, visible: false };
+    const targetRef = branch.isRemote ? branch.name : branch.shorthand;
+    this.dispatchEvent(new CustomEvent('create-tag', {
+      bubbles: true,
+      composed: true,
+      detail: { targetRef },
+    }));
+  }
+
   private async handleTrackRemoteBranch(): Promise<void> {
     const branch = this.contextMenu.branch;
     if (!branch || !branch.isRemote) return;
@@ -2866,6 +2879,14 @@ export class GnBranchList extends LitElement {
             <line x1="5" y1="12" x2="19" y2="12"></line>
           </svg>
           Create branch from here
+        </button>
+
+        <button class="context-menu-item" role="menuitem" @click=${this.handleCreateTagFrom}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"></path>
+            <line x1="7" y1="7" x2="7.01" y2="7"></line>
+          </svg>
+          Create tag from here
         </button>
 
         ${!isHead ? html`

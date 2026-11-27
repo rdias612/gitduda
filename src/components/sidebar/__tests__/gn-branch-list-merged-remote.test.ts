@@ -218,6 +218,123 @@ describe('gn-branch-list create-branch-from remote (Finding 14)', () => {
   });
 });
 
+describe('gn-branch-list "Create tag from here" context menu', () => {
+  beforeEach(() => {
+    invokeCalls.length = 0;
+  });
+
+  function findCreateTagMenuItem(el: GnBranchList): HTMLButtonElement | undefined {
+    const items = Array.from(
+      el.shadowRoot!.querySelectorAll<HTMLButtonElement>('button.context-menu-item[role="menuitem"]')
+    );
+    return items.find((btn) => btn.textContent?.trim() === 'Create tag from here');
+  }
+
+  it('renders the "Create tag from here" menu item for local (including HEAD) and remote branches and closes the menu on click', async () => {
+    const headBranch = makeBranch({ name: 'main', shorthand: 'main', isHead: true });
+    const localBranch = makeBranch({ name: 'feature/x', shorthand: 'feature/x' });
+    const remoteBranch = makeBranch({
+      name: 'origin/feature',
+      shorthand: 'feature',
+      isRemote: true,
+    });
+
+    const el = await createComponent([headBranch, localBranch, remoteBranch]);
+
+    for (const branch of [headBranch, localBranch, remoteBranch]) {
+      (el as unknown as { contextMenu: unknown }).contextMenu = {
+        visible: true,
+        x: 0,
+        y: 0,
+        branch,
+      };
+      await el.updateComplete;
+
+      const btn = findCreateTagMenuItem(el);
+      expect(btn, `menu item rendered for ${branch.name}`).to.not.be.undefined;
+      expect(btn!.disabled).to.equal(false);
+
+      btn!.click();
+      await el.updateComplete;
+
+      const state = (el as unknown as { contextMenu: { visible: boolean } }).contextMenu;
+      expect(state.visible, `menu closed after clicking for ${branch.name}`).to.equal(false);
+    }
+  });
+
+  it('dispatches a bubbling, composed create-tag event with targetRef="feature/x" for a local branch', async () => {
+    const localBranch = makeBranch({ name: 'feature/x', shorthand: 'feature/x' });
+    const el = await createComponent([
+      makeBranch({ name: 'main', shorthand: 'main', isHead: true }),
+      localBranch,
+    ]);
+
+    let capturedEvent: CustomEvent<{ targetRef?: string }> | undefined;
+    el.addEventListener('create-tag', (e) => {
+      capturedEvent = e as CustomEvent<{ targetRef?: string }>;
+    });
+
+    (el as unknown as { contextMenu: unknown }).contextMenu = {
+      visible: true,
+      x: 0,
+      y: 0,
+      branch: localBranch,
+    };
+    await el.updateComplete;
+
+    const btn = findCreateTagMenuItem(el);
+    expect(btn).to.not.be.undefined;
+    btn!.click();
+
+    expect(capturedEvent).to.not.be.undefined;
+    expect(capturedEvent!.bubbles).to.equal(true);
+    expect(capturedEvent!.composed).to.equal(true);
+    expect(capturedEvent!.detail).to.deep.equal({ targetRef: 'feature/x' });
+  });
+
+  it('dispatches create-tag with the full remote-tracking name ("origin/feature") for a remote branch', async () => {
+    const remoteBranch = makeBranch({
+      name: 'origin/feature',
+      shorthand: 'feature',
+      isRemote: true,
+    });
+    const el = await createComponent([
+      makeBranch({ name: 'main', shorthand: 'main', isHead: true }),
+      remoteBranch,
+    ]);
+
+    let capturedEvent: CustomEvent<{ targetRef?: string }> | undefined;
+    el.addEventListener('create-tag', (e) => {
+      capturedEvent = e as CustomEvent<{ targetRef?: string }>;
+    });
+
+    (el as unknown as { contextMenu: unknown }).contextMenu = {
+      visible: true,
+      x: 0,
+      y: 0,
+      branch: remoteBranch,
+    };
+    await el.updateComplete;
+
+    const btn = findCreateTagMenuItem(el);
+    expect(btn).to.not.be.undefined;
+    btn!.click();
+
+    expect(capturedEvent).to.not.be.undefined;
+    expect(capturedEvent!.bubbles).to.equal(true);
+    expect(capturedEvent!.composed).to.equal(true);
+    expect(capturedEvent!.detail).to.deep.equal({ targetRef: 'origin/feature' });
+  });
+
+  it('does not mount a gn-create-tag-dialog inside gn-branch-list', async () => {
+    const el = await createComponent([
+      makeBranch({ name: 'main', shorthand: 'main', isHead: true }),
+    ]);
+
+    expect(el.shadowRoot!.querySelector('gn-create-tag-dialog')).to.be.null;
+  });
+});
+
 describe('gn-branch-list drop onto remote target (Finding 16)', () => {
   beforeEach(() => {
     invokeCalls.length = 0;
