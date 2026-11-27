@@ -3,390 +3,557 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Gitduda — a fast, privacy-first Git GUI</title>
-  <meta name="description" content="Gitduda is a free, open-source Git client for macOS, Windows and Linux. Runs entirely on your machine: no telemetry, no account, local AI.">
-  <meta name="color-scheme" content="dark">
-  <meta name="theme-color" content="#0b1630">
+  <meta name="description" content="Gitduda is a lightweight Git client for Windows, macOS, and Linux, with a Rust core, a virtualized commit graph, local semantic search, and MCP integration." data-pt-attribute="content" data-pt="Gitduda é um cliente Git leve para Windows, macOS e Linux, com núcleo em Rust, grafo virtualizado, busca semântica local e integração MCP.">
+  <meta name="theme-color" content="#f5f5f1">
   <link rel="icon" type="image/png" sizes="64x64" href="assets/favicon-64.png">
   <link rel="apple-touch-icon" href="assets/icon-256.png">
   <link rel="canonical" href="https://gitduda.dev.br/">
   <meta property="og:type" content="website">
-  <meta property="og:title" content="Gitduda — a fast, privacy-first Git GUI">
-  <meta property="og:description" content="Free, open-source Git client for macOS, Windows and Linux. No telemetry, no account, local AI.">
+  <meta property="og:locale" content="en_US" data-pt-attribute="content" data-pt="pt_BR">
+  <meta property="og:title" content="Gitduda — Lightweight Git client with a Rust core" data-pt-attribute="content" data-pt="Gitduda — Cliente Git leve, com núcleo em Rust">
+  <meta property="og:description" content="Open-source Git client for Windows, macOS, and Linux, with a virtualized commit graph, local semantic search, and MCP." data-pt-attribute="content" data-pt="Cliente Git de código aberto para Windows, macOS e Linux, com grafo virtualizado, busca semântica local e MCP.">
   <meta property="og:url" content="https://gitduda.dev.br/">
   <meta property="og:image" content="https://gitduda.dev.br/assets/main-window.webp">
   <meta name="twitter:card" content="summary_large_image">
+  <title data-pt="Gitduda — Cliente Git leve, com núcleo em Rust">Gitduda — Lightweight Git client with a Rust core</title>
   <style>
     :root {
-      --bg: #0b1630;
-      --bg-2: #0f1d3d;
-      --panel: #132447;
-      --line: #22375f;
-      --text: #e7edf7;
-      --muted: #9fb0cc;
-      --teal: #5fd3c9;
-      --teal-2: #3aa9b8;
-      --teal-ink: #062a2c;
-      --radius: 14px;
-      --max: 1100px;
+      color-scheme: light;
+      --paper: #f5f5f1;
+      --ink: #171820;
+      --muted: #505362;
+      --line: #c9cbd1;
+      --blue: #2445e7;
+      --blue-dark: #1933b4;
+      --night: #171e32;
+      --mint: #9df5ce;
+      --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
     }
-    * { box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
-    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
-    body {
-      margin: 0;
-      font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
-      color: var(--text);
-      background:
-        radial-gradient(1200px 600px at 70% -10%, rgba(95, 211, 201, .18), transparent 60%),
-        radial-gradient(900px 500px at 0% 20%, rgba(58, 169, 184, .12), transparent 60%),
-        var(--bg);
+
+    *, *::before, *::after { box-sizing: border-box; }
+    body { margin: 0; background: var(--paper); color: var(--ink); font: 1rem/1.6 "Segoe UI", system-ui, sans-serif; }
+    a { color: inherit; text-underline-offset: .24em; }
+    a:hover { color: var(--blue); }
+    :focus-visible { outline: 2px solid currentColor; outline-offset: 5px; }
+    img { display: block; max-width: 100%; }
+    h1, h2, h3, p, figure { margin: 0; }
+    code, kbd { font-family: var(--mono); }
+    .wrap { width: min(100% - 7rem, 80rem); margin-inline: auto; }
+    .skip { position: absolute; top: .6rem; left: .75rem; z-index: 1; transform: translateY(-200%); background: var(--paper); padding: .4rem .75rem; }
+    .skip:focus { transform: none; }
+    .masthead { border-bottom: 1px solid var(--line); }
+    .footer .wrap { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .9rem 2rem; }
+    .masthead .wrap { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: .9rem 1.65rem; min-height: 4.5rem; padding-block: .8rem; }
+    .brand { display: inline-flex; align-items: center; gap: .65rem; font-size: 1.2rem; font-weight: 750; letter-spacing: -.04em; text-decoration: none; }
+    .brand img { border-radius: .4rem; }
+    nav, .footer-links { display: flex; flex-wrap: wrap; gap: .65rem 1.65rem; }
+    nav { justify-content: flex-end; }
+    nav a, .footer-links a { font-size: .95rem; font-weight: 650; text-decoration: none; }
+    nav a:hover, .footer-links a:hover { text-decoration: underline; }
+    .header-actions { display: flex; align-items: center; gap: .8rem; }
+    .top-source { display: grid; place-items: center; width: 2.4rem; height: 2.4rem; border: 1px solid transparent; border-radius: .4rem; }
+    .top-source:hover { border-color: var(--line); }
+    .language-switch { display: inline-flex; gap: .15rem; padding: .15rem; border: 1px solid var(--line); border-radius: .4rem; }
+    .language-switch[hidden] { display: none; }
+    .language-switch button { min-width: 2.15rem; min-height: 2rem; padding: .1rem .3rem; border: 0; border-radius: .25rem; background: transparent; color: var(--muted); font: inherit; font-size: .875rem; font-weight: 700; cursor: pointer; }
+    .language-switch button:hover { color: var(--blue-dark); }
+    .language-switch button[aria-pressed="true"] { background: var(--blue); color: white; }
+
+    .hero { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, .8fr); gap: 2.1rem clamp(1.75rem, 5vw, 5.5rem); align-items: center; padding-block: clamp(2.6rem, 6vw, 5.2rem) clamp(2.8rem, 5vw, 4.4rem); }
+    .eyebrow { font: 600 .875rem/1.5 var(--mono); letter-spacing: .035em; }
+    .hero-label { margin-bottom: 1.15rem; color: var(--blue); }
+    h1 { font-size: clamp(3.25rem, 7.35vw, 7rem); font-weight: 760; letter-spacing: -.055em; line-height: .94; }
+    .title-second { display: block; margin-top: .12em; color: var(--blue); font-size: .78em; }
+    .hero-lede { max-width: 34rem; margin: 1.4rem 0 1.45rem; font-size: clamp(1.1rem, 1.65vw, 1.35rem); line-height: 1.45; }
+    .button { display: inline-flex; min-height: 3.15rem; padding: .65rem 1.05rem; align-items: center; border: 1px solid transparent; border-radius: .35rem; background: var(--blue); color: white; font-weight: 700; text-decoration: none; }
+    .button:hover { background: var(--blue-dark); color: white; }
+    .button:focus-visible { outline-color: var(--blue-dark); }
+    .platforms { margin-top: .85rem; color: var(--muted); font-size: .94rem; }
+
+    .render-panel { background: var(--night); color: white; border: 1px solid #2e3a5a; border-radius: .8rem; box-shadow: .75rem .75rem 0 #daddf0; overflow: hidden; }
+    .render-heading { padding: 1.15rem 1.2rem; border-bottom: 1px solid #384765; color: var(--mint); }
+    .render-demo { padding: .85rem 1.2rem; background-image: radial-gradient(#465574 1px, transparent 1px); background-size: 14px 14px; }
+    .render-window { margin-block: .55rem; padding: .24rem .58rem; border: 1px solid #6acead; border-radius: .32rem; background: #223b3e; }
+    .render-row { display: grid; grid-template-columns: 2.25rem minmax(0, 1fr); gap: .65rem; align-items: center; min-height: 1.65rem; padding-inline: .6rem; }
+    .render-window .render-row { padding-inline: 0; }
+    .render-node { position: relative; justify-self: center; z-index: 0; width: .6rem; height: .6rem; border: 2px solid currentColor; border-radius: 50%; color: var(--mint); }
+    .render-node::after { position: absolute; content: ""; width: 1px; left: 50%; top: calc(100% + 2px); height: 1.05rem; background: currentColor; }
+    .render-window .render-row:nth-child(2) .render-node { color: #9bb0ff; transform: translateX(.35rem); }
+    .render-window .render-row:last-child .render-node::after, .render-muted:last-child .render-node::after { content: none; }
+    .render-line { display: block; width: var(--length, 66%); height: .3rem; border-radius: 2rem; background: #b8c6d7; }
+    .render-muted { opacity: .42; }
+    .render-muted .render-node, .render-muted .render-line { color: #7786a5; background-color: #7786a5; }
+    .render-caption { padding: 1rem 1.2rem; border-top: 1px solid #384765; color: #d1dcf5; font-size: .94rem; }
+    .render-caption strong { color: var(--mint); }
+
+    .architecture { margin-bottom: clamp(3.1rem, 6vw, 5.4rem); border-block: 1px solid var(--line); }
+    .architecture h2 { margin-top: 1.55rem; font-size: 1.24rem; letter-spacing: -.025em; }
+    .architecture-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: .3rem; }
+    .architecture-list article { padding: 1.05rem 1.65rem 1.65rem 0; }
+    .architecture-list article + article { border-left: 1px solid var(--line); padding-left: 1.65rem; }
+    .architecture-list h3 { margin-bottom: .4rem; color: var(--blue-dark); }
+    .architecture-list p { color: var(--muted); }
+
+    .showcase { padding: clamp(1rem, 3vw, 2.65rem) clamp(1rem, 5.2vw, 5rem); color: white; background-color: var(--blue); background-image: radial-gradient(rgb(255 255 255 / .25) 1px, transparent 1px); background-size: 16px 16px; }
+    .showcase figcaption { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: .4rem 1.15rem; margin-bottom: .9rem; }
+    .showcase figcaption a { padding-block: .22rem; font-weight: 650; }
+    .showcase a:hover { color: white; text-decoration-thickness: .13em; }
+    .screenshot { display: block; overflow: hidden; max-height: 23rem; border: 1px solid #0d1025; border-radius: .55rem; background: #202020; box-shadow: 0 1rem 2rem rgb(15 25 90 / .36); }
+    .screenshot img { width: 100%; height: auto; }
+
+    .section { padding-block: clamp(3.4rem, 7vw, 6.3rem); }
+    .section-title { font-size: clamp(2.4rem, 5.2vw, 4.75rem); letter-spacing: -.043em; line-height: 1; text-wrap: balance; }
+    .flow-header { margin-bottom: 2.05rem; }
+    .flow-list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+    .flow-list li { display: grid; grid-template-columns: minmax(12rem, .6fr) minmax(0, 1.4fr); column-gap: 2.75rem; row-gap: .55rem; padding-block: 1.5rem; border-bottom: 1px solid var(--line); }
+    .flow-list h3 { position: relative; padding-left: 1.38rem; font-size: clamp(1.18rem, 2vw, 1.55rem); line-height: 1.35; letter-spacing: -.025em; }
+    .flow-list h3::before { position: absolute; top: .88em; left: 0; width: .55rem; aspect-ratio: 1; border-radius: 100%; background: var(--blue); content: ""; transform: translateY(-50%); }
+    .flow-list p { max-width: 44rem; color: var(--muted); }
+    .shortcut { white-space: nowrap; }
+
+    .toolkit { padding-top: 0; }
+    .toolkit-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); }
+    .toolkit-grid article { padding: clamp(1.15rem, 4vw, 2.5rem); background: #edeeff; }
+    .toolkit-grid article:nth-child(2), .toolkit-grid article:nth-child(3) { background: #fafaf8; }
+    .toolkit-grid h3 { margin-bottom: .55rem; font-size: clamp(1.25rem, 2.2vw, 1.75rem); letter-spacing: -.025em; }
+    .toolkit-grid p { max-width: 35rem; color: var(--muted); }
+
+    .local { background: var(--night); color: white; }
+    .local-lede { margin-top: 1rem; color: #dce0fa; }
+    .local-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem 1.5rem; margin-top: 2.25rem; }
+    .local-list article { padding-top: 1rem; border-top: 2px solid #5f759f; }
+    .local-list h3 { margin-bottom: .55rem; color: var(--mint); font-size: 1.25rem; }
+    .local-list p { color: #dce0fa; }
+    .local-list a { display: inline-block; margin-top: .7rem; font-weight: 650; }
+    .local-list a:hover { color: var(--mint); }
+    .install .wrap { display: grid; grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); column-gap: clamp(2rem, 7vw, 7rem); row-gap: 1.5rem; align-items: start; }
+    .install-intro p { margin-top: 1.15rem; color: var(--muted); }
+    .install-intro .source-link { display: inline-block; margin-top: .9rem; color: var(--blue-dark); font-weight: 650; }
+    .requirements { margin-top: 1.2rem; color: var(--muted); }
+    .requirements summary { cursor: pointer; color: var(--ink); font-weight: 650; }
+    .requirements ul { margin: .5rem 0 0; padding-left: 1.2rem; }
+    .packages { border-top: 1px solid var(--line); }
+    .packages details { border-bottom: 1px solid var(--line); }
+    .packages summary { cursor: pointer; padding-block: 1rem; font-size: 1.15rem; font-weight: 750; }
+    .packages summary:hover { color: var(--blue); }
+    .package-body { padding-bottom: 1.35rem; }
+    .package-body p { color: var(--muted); }
+    .download-assets { display: grid; gap: .35rem; margin: .65rem 0 .9rem; padding-left: 1.2rem; }
+    .release-link { color: var(--blue-dark); font-weight: 650; }
+    .command { display: flex; flex-wrap: wrap; align-items: baseline; gap: .45rem .75rem; margin-top: .45rem; padding: .6rem .75rem; border: 1px solid var(--line); border-radius: .3rem; }
+    .command code { flex: 1 1 13rem; min-width: 0; overflow-wrap: anywhere; font-size: .9rem; }
+    .command button { min-height: 2rem; padding: .1rem .45rem; border: 1px solid var(--line); border-radius: .25rem; background: white; color: var(--blue-dark); font: inherit; font-size: .875rem; font-weight: 650; cursor: pointer; }
+    .command button:hover { border-color: var(--blue); }
+    .command [hidden] { display: none; }
+    .command + p { margin-top: .7rem; }
+    .copy-status:empty { display: none; }
+    .copy-status { margin-top: .45rem; }
+    .footer { border-top: 1px solid var(--line); padding-block: 1.45rem; color: var(--muted); }
+    .footer p { font-size: .94rem; }
+
+    @media (max-width: 70rem) { .wrap { width: min(100% - 4rem, 80rem); } }
+    @media (max-width: 51rem) {
+      .hero, .install .wrap { grid-template-columns: 1fr; }
+      .render-panel { max-width: 33rem; }
+      h1 { font-size: clamp(3.2rem, 12vw, 6.3rem); }
     }
-    a { color: var(--teal); }
-    a:hover { color: #8be7df; }
-    :focus-visible { outline: 2px solid var(--teal); outline-offset: 3px; border-radius: 4px; }
-    .wrap { max-width: var(--max); margin: 0 auto; padding: 0 24px; }
-    code, kbd, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
-
-    /* Header */
-    header { padding: 18px 0; }
-    header .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-    .brand { display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 20px; color: var(--text); text-decoration: none; }
-    .brand img { width: 36px; height: 36px; }
-    nav a { color: var(--muted); text-decoration: none; margin-left: 22px; font-weight: 500; }
-    nav a:hover { color: var(--text); }
-    @media (max-width: 560px) { nav a { margin-left: 14px; font-size: 15px; } .brand span { display: none; } }
-
-    /* Hero */
-    .hero { padding: 56px 0 24px; }
-    .hero .wrap { display: grid; grid-template-columns: 1.15fr .85fr; gap: 40px; align-items: center; }
-    @media (max-width: 860px) { .hero .wrap { grid-template-columns: 1fr; } .hero-art { order: -1; max-width: 260px; margin: 0 auto; } }
-    .eyebrow { display: inline-block; color: var(--teal); font-weight: 600; letter-spacing: .04em; text-transform: uppercase; font-size: 12px; margin-bottom: 14px; }
-    h1 { font-size: clamp(34px, 5vw, 56px); line-height: 1.08; margin: 0 0 18px; letter-spacing: -.02em; }
-    .lede { font-size: 19px; color: var(--muted); margin: 0 0 28px; max-width: 34em; }
-    .hero-art img { width: 100%; max-width: 360px; height: auto; aspect-ratio: 1 / 1; display: block; margin: 0 auto; filter: drop-shadow(0 30px 60px rgba(0, 0, 0, .45)); }
-
-    .cta { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
-    .btn {
-      display: inline-flex; align-items: center; gap: 10px;
-      padding: 12px 20px; border-radius: 10px; font-weight: 600; text-decoration: none;
-      border: 1px solid var(--line); color: var(--text); background: var(--panel);
-      transition: transform .12s ease, background .12s ease, border-color .12s ease;
+    @media (max-width: 42rem) {
+      .architecture-list, .local-list { grid-template-columns: 1fr; }
+      .architecture-list article { padding: .8rem 0; }
+      .architecture-list article + article { border-left: 0; border-top: 1px solid var(--line); padding-left: 0; }
     }
-    .btn:hover { transform: translateY(-1px); border-color: var(--teal-2); color: var(--text); }
-    .btn.primary { background: linear-gradient(180deg, #6fe0d6, var(--teal)); color: var(--teal-ink); border-color: transparent; }
-    .btn.primary:hover { background: linear-gradient(180deg, #86ebe2, #6fe0d6); color: var(--teal-ink); }
-    .btn svg { width: 18px; height: 18px; fill: currentColor; flex: none; }
-    .version-note { color: var(--muted); font-size: 14px; margin-top: 12px; min-height: 1.5em; }
-    .version-note a { color: var(--muted); }
-
-    /* Screenshot */
-    .shot { padding: 24px 0 8px; }
-    .shot figure { margin: 0; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--line); box-shadow: 0 40px 100px rgba(0, 0, 0, .5); background: #000; }
-    .shot img { display: block; width: 100%; height: auto; }
-    .shot figcaption { text-align: center; color: var(--muted); font-size: 14px; margin-top: 12px; }
-
-    /* Sections */
-    section { padding: 64px 0; }
-    h2 { font-size: clamp(26px, 3.2vw, 36px); margin: 0 0 10px; letter-spacing: -.01em; }
-    .sub { color: var(--muted); margin: 0 0 32px; max-width: 40em; }
-
-    .grid { display: grid; gap: 18px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
-    @media (max-width: 900px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-    @media (max-width: 560px) { .grid { grid-template-columns: 1fr; } }
-    .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px; }
-    .card h3 { margin: 0 0 8px; font-size: 17px; display: flex; align-items: center; gap: 10px; }
-    .card p { margin: 0; color: var(--muted); font-size: 15px; }
-    .card .ic { width: 30px; height: 30px; border-radius: 8px; background: rgba(95, 211, 201, .14); color: var(--teal); display: inline-grid; place-items: center; flex: none; }
-    .card .ic svg { width: 16px; height: 16px; fill: currentColor; }
-
-    /* Downloads */
-    .dl { display: grid; gap: 18px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
-    @media (max-width: 900px) { .dl { grid-template-columns: 1fr; } }
-    .os { min-width: 0; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px; }
-    .os.current { border-color: var(--teal-2); box-shadow: 0 0 0 1px rgba(95, 211, 201, .35) inset; }
-    .os h3 { margin: 0 0 4px; display: flex; align-items: center; gap: 10px; }
-    .os h3 svg { width: 20px; height: 20px; fill: currentColor; }
-    .os .arch { color: var(--muted); font-size: 14px; margin: 0 0 14px; }
-    .os ul { list-style: none; padding: 0; margin: 0 0 14px; display: grid; gap: 8px; }
-    .os li a { display: flex; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 8px; background: var(--bg-2); border: 1px solid var(--line); text-decoration: none; color: var(--text); font-weight: 500; }
-    .os li a:hover { border-color: var(--teal-2); }
-    .os li a small { color: var(--muted); font-weight: 400; }
-    .os .pm { margin: 0; }
-    .os .pm-label { color: var(--muted); font-size: 13px; margin: 0 0 6px; }
-    .cmd { display: flex; align-items: stretch; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: #0a1327; }
-    .cmd code { flex: 1; min-width: 0; padding: 10px 12px; font-size: 13px; overflow-x: auto; white-space: nowrap; color: #d5e6ff; }
-    .cmd code::before { content: "$ "; color: var(--muted); }
-    .cmd button { border: 0; border-left: 1px solid var(--line); background: var(--panel); color: var(--muted); padding: 0 12px; cursor: pointer; font: inherit; font-size: 13px; }
-    .cmd button:hover { color: var(--text); background: #1a2f5a; }
-    .cmd button.done { color: var(--teal); }
-    .cmd + .cmd { margin-top: 8px; }
-    .fine { color: var(--muted); font-size: 14px; margin-top: 22px; }
-
-    /* Requirements */
-    .req { display: grid; gap: 18px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    @media (max-width: 700px) { .req { grid-template-columns: 1fr; } }
-    .req ul { margin: 0; padding-left: 18px; color: var(--muted); }
-    .req li { margin: 4px 0; }
-
-    footer { border-top: 1px solid var(--line); padding: 32px 0 44px; color: var(--muted); font-size: 14px; }
-    footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 14px; }
-    footer a { color: var(--muted); text-decoration: none; margin-right: 18px; }
-    footer a:hover { color: var(--text); }
-    .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+    @media (max-width: 48rem) {
+      .masthead .wrap { grid-template-columns: 1fr auto; gap: .65rem .9rem; }
+      .header-actions { grid-row: 1; grid-column: 2; }
+      nav { grid-column: 1 / -1; justify-content: space-between; gap: .35rem .5rem; }
+      nav a { font-size: .875rem; }
+    }
+    @media (max-width: 34rem) {
+      .wrap { width: calc(100% - 2rem); }
+      .footer-links { gap: .2rem .95rem; }
+      .flow-list li, .toolkit-grid { grid-template-columns: 1fr; }
+      .screenshot { max-height: 11rem; }
+      .screenshot img { max-width: none; width: 170%; margin-left: -28%; }
+    }
   </style>
 </head>
 <body>
-  <header>
+  <a class="skip" href="#conteudo" data-pt="Pular para o conteúdo">Skip to content</a>
+  <header class="masthead" id="inicio">
     <div class="wrap">
-      <a class="brand" href="/"><img src="assets/icon-256.png" alt="" width="36" height="36"><span>Gitduda</span></a>
-      <nav aria-label="Primary">
-        <a href="#features">Features</a>
-        <a href="#download">Download</a>
-        <a href="https://github.com/rdias612/gitduda">GitHub</a>
+      <a class="brand" href="#inicio"><img src="assets/icon-256.png" width="32" height="32" alt="">Gitduda</a>
+      <nav aria-label="Main navigation" data-pt-attribute="aria-label" data-pt="Navegação principal">
+        <a href="#arquitetura" data-pt="Desempenho">Performance</a>
+        <a href="#features" data-pt="Recursos">Features</a>
+        <a href="#ia" data-pt="IA e MCP">AI and MCP</a>
+        <a href="#download" data-pt="Instalação">Install</a>
       </nav>
+      <div class="header-actions">
+        <a class="top-source" href="https://github.com/rdias612/gitduda" aria-label="Gitduda repository on GitHub" data-pt-attribute="aria-label" data-pt="Repositório do Gitduda no GitHub">
+          <img src="assets/github-invertocat.svg" width="24" height="24" alt="">
+        </a>
+        <div class="language-switch" role="group" aria-label="Site language" data-pt-attribute="aria-label" data-pt="Idioma do site" hidden>
+          <button type="button" data-language="pt-BR" lang="pt-BR" aria-label="Português" aria-pressed="false">PT</button>
+          <button type="button" data-language="en" lang="en" aria-label="English" aria-pressed="true">EN</button>
+        </div>
+      </div>
     </div>
   </header>
 
-  <main id="main">
-    <section class="hero" aria-labelledby="hero-title">
-      <div class="wrap">
-        <div>
-          <span class="eyebrow">Free &amp; open source · macOS · Windows · Linux</span>
-          <h1 id="hero-title">A Git client that runs on your machine,<br>not someone else's cloud.</h1>
-          <p class="lede">Gitduda is a fast, privacy-first Git GUI. Interactive rebase, a 3-way merge editor, worktrees, GitHub/GitLab/Azure DevOps/Bitbucket integrations, and AI commit messages that can run entirely on your own GPU. No telemetry. No account. No subscription.</p>
-          <div class="cta">
-            <a class="btn primary" id="primary-download" href="https://github.com/rdias612/gitduda/releases/latest">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v10.6l3.3-3.3 1.4 1.4L12 16.4 7.3 11.7l1.4-1.4 2.3 2.3V3h1zM4 15h2v4h12v-4h2v6H4v-6z"/></svg>
-              <span id="primary-label">Download</span>
-            </a>
-            <a class="btn" href="#download">All downloads</a>
-            <a class="btn" href="https://github.com/rdias612/gitduda">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .5A12 12 0 0 0 0 12.6c0 5.3 3.4 9.9 8.2 11.5.6.1.8-.3.8-.6v-2.2c-3.3.7-4-1.6-4-1.6-.6-1.4-1.4-1.8-1.4-1.8-1.1-.8.1-.8.1-.8 1.2.1 1.8 1.3 1.8 1.3 1.1 1.9 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.4-5.5-6a4.7 4.7 0 0 1 1.2-3.3 4.4 4.4 0 0 1 .1-3.2s1-.3 3.3 1.3a11.2 11.2 0 0 1 6 0c2.3-1.6 3.3-1.3 3.3-1.3a4.4 4.4 0 0 1 .1 3.2 4.7 4.7 0 0 1 1.2 3.3c0 4.6-2.8 5.7-5.5 6 .4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 24 12.6 12 12 0 0 0 12 .5z"/></svg>
-              Source
-            </a>
+  <main id="conteudo" tabindex="-1">
+    <section class="hero wrap" aria-labelledby="title">
+      <div>
+        <p class="eyebrow hero-label" data-pt="Cliente Git para desktop">Desktop Git client</p>
+        <h1 id="title"><span data-pt="Git leve.">Lean Git.</span> <span class="title-second" data-pt="Fluxo completo.">Full workflow.</span></h1>
+        <p class="hero-lede"><span data-pt="Com núcleo em">Built around a</span> <strong>Rust</strong><span data-pt=", o Gitduda foi pensado para poupar memória enquanto você explora históricos grandes, revisa diffs e prepara o próximo commit."> core, Gitduda is designed to use memory efficiently as you explore large histories, review diffs, and prepare your next commit.</span></p>
+        <a class="button" href="#download" data-pt="Ver opções de instalação">See install options</a>
+        <p class="platforms" data-pt="Windows, macOS e Linux · Código aberto sob licença MIT">Windows, macOS, and Linux · Open source under the MIT license</p>
+      </div>
+      <figure class="render-panel">
+        <p class="render-heading eyebrow" data-pt="Renderização virtualizada">Virtualized rendering</p>
+        <div class="render-demo" aria-hidden="true">
+          <div class="render-row render-muted"><span class="render-node"></span><span class="render-line"></span></div>
+          <div class="render-row render-muted"><span class="render-node"></span><span class="render-line" style="--length: 48%"></span></div>
+          <div class="render-window">
+            <div class="render-row"><span class="render-node"></span><span class="render-line" style="--length: 82%"></span></div>
+            <div class="render-row"><span class="render-node"></span><span class="render-line" style="--length: 72%"></span></div>
+            <div class="render-row"><span class="render-node"></span><span class="render-line" style="--length: 52%"></span></div>
           </div>
-          <p class="version-note" id="version-note"><a href="https://github.com/rdias612/gitduda/releases">All releases</a></p>
+          <div class="render-row render-muted"><span class="render-node"></span><span class="render-line" style="--length: 60%"></span></div>
+          <div class="render-row render-muted"><span class="render-node"></span><span class="render-line" style="--length: 43%"></span></div>
         </div>
-        <div class="hero-art">
-          <img src="assets/icon-512.png" srcset="assets/icon-256.png 256w, assets/icon-512.png 512w" sizes="(max-width: 860px) 260px, 360px" alt="Gitduda icon: code brackets framing a git branch graph" width="512" height="512">
+        <figcaption class="render-caption"><span data-pt="No grafo de commits e em diffs grandes, a interface desenha as">In the commit graph and large diffs, the interface draws</span> <strong data-pt="linhas visíveis e próximas">visible and nearby lines</strong> <span data-pt="conforme você rola.">as you scroll.</span></figcaption>
+      </figure>
+    </section>
+
+    <section class="architecture wrap" id="arquitetura" aria-labelledby="architecture-title">
+      <h2 id="architecture-title" data-pt="Por que o Gitduda é leve">Why Gitduda is lightweight</h2>
+      <div class="architecture-list">
+        <article>
+          <h3 data-pt="Núcleo em Rust">Rust core</h3>
+          <p data-pt="O backend usa Rust e libgit2 para ler o histórico e operar sobre o repositório.">The backend uses Rust and libgit2 to read history and work with the repository.</p>
+        </article>
+        <article>
+          <h3 data-pt="WebView do sistema">System WebView</h3>
+          <p data-pt="O Tauri usa a WebView da plataforma para exibir a interface do aplicativo.">Tauri uses your platform's WebView to display the app interface.</p>
+        </article>
+        <article>
+          <h3 data-pt="IA sob demanda">AI on demand</h3>
+          <p data-pt="A geração de texto usa o provedor que você configurar. O aplicativo vem sem motor de modelos de linguagem embutido.">Text generation uses the provider you configure. The app ships without a bundled language model engine.</p>
+        </article>
+      </div>
+    </section>
+
+    <figure class="showcase wrap">
+      <figcaption><span class="eyebrow" data-pt="Histórico de commits">Commit history</span><a href="assets/main-window.webp" data-pt="Ver captura inteira">View full screenshot</a></figcaption>
+      <div class="screenshot">
+        <img src="assets/main-window.webp" width="1600" height="941" alt="Gitduda window with branches on the left, the commit graph in the center, and the selected commit's details on the right." data-pt-attribute="alt" data-pt="Janela do Gitduda com a lista de branches à esquerda, o grafo de commits no centro e os detalhes do commit selecionado à direita.">
+      </div>
+    </figure>
+
+    <section class="section wrap" id="features" aria-labelledby="fluxo-title">
+      <h2 class="section-title flow-header" id="fluxo-title" data-pt="Do diff ao commit">From diff to commit</h2>
+      <ol class="flow-list">
+        <li>
+          <h3 data-pt="Revise as mudanças">Review your changes</h3>
+          <p data-pt="Leia diffs com destaque de sintaxe e selecione arquivos, trechos ou linhas para incluir no próximo commit. Coloque ou tire tudo do stage de uma vez quando precisar.">Read syntax-highlighted diffs and stage individual files, hunks, or lines for your next commit. Stage or unstage everything at once when you need to.</p>
+        </li>
+        <li>
+          <h3 data-pt="Escreva o commit">Write your commit message</h3>
+          <p data-pt="O painel oferece uma mensagem inicial com base nos arquivos em stage. Ajuste o texto e use o contador com limite configurável como referência para o título.">Start with a message based on your staged files. Edit it and use the character counter with a configurable limit to guide the subject length.</p>
+        </li>
+        <li>
+          <h3 data-pt="Volte ao editor">Return to your editor</h3>
+          <p><span data-pt="Abra o repositório ativo no editor configurado com">Open the active repository in your configured editor with</span> <span class="shortcut"><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>A</kbd></span> <span data-pt="no Windows e Linux ou">on Windows and Linux, or</span> <span class="shortcut"><kbd>⌘</kbd> + <kbd>Shift</kbd> + <kbd>A</kbd></span> <span data-pt="no macOS.">on macOS.</span></p>
+        </li>
+        <li>
+          <h3 data-pt="Organize o histórico">Organize your history</h3>
+          <p data-pt="Reordene ou combine commits com rebase interativo, resolva conflitos com o editor de merge em três vias e crie branches a partir de tags.">Reorder or combine commits with interactive rebase, resolve conflicts in the three-way merge editor, and create branches from tags.</p>
+        </li>
+      </ol>
+    </section>
+
+    <section class="section toolkit wrap" aria-labelledby="toolkit-title">
+      <h2 class="section-title flow-header" id="toolkit-title" data-pt="Além do commit">Beyond the commit</h2>
+      <div class="toolkit-grid">
+        <article>
+          <h3 data-pt="Worktrees e Git avançado">Worktrees and advanced Git</h3>
+          <p data-pt="Trabalhe em várias branches com Git worktrees, troque de workspace pelo seletor de repositórios e gerencie stashes, submódulos e Git LFS. Use o reflog para desfazer operações.">Work across branches with Git worktrees, switch workspaces from the repository picker, and manage stashes, submodules, and Git LFS. Use the reflog to undo operations.</p>
+        </article>
+        <article>
+          <h3 data-pt="Comparação de imagens">Image comparison</h3>
+          <p data-pt="Veja imagens lado a lado, sobrepostas, com divisor deslizante ou em modo de diferença. Investigue arquivos de texto com blame e histórico por arquivo.">Compare images side by side, with an overlay or a slider, or in difference mode. Inspect text files with blame and per-file history.</p>
+        </article>
+        <article>
+          <h3 data-pt="Pull requests e issues">Pull requests and issues</h3>
+          <p data-pt="Acompanhe pull requests, issues, releases e pipelines com integrações para GitHub, GitLab, Azure DevOps e Bitbucket. Vincule tarefas do Jira ao trabalho.">Track pull requests, issues, releases, and pipelines with integrations for GitHub, GitLab, Azure DevOps, and Bitbucket. Link your work to Jira tasks.</p>
+        </article>
+        <article>
+          <h3 data-pt="Perfis e atalhos">Profiles and shortcuts</h3>
+          <p data-pt="Separe identidades de trabalho e pessoais, assine commits com GPG e use o terminal integrado. A paleta de comandos e a busca rápida ajudam a encontrar branches, arquivos e commits.">Keep work and personal identities separate, sign commits with GPG, and use the built-in terminal. Find branches, files, and commits with the command palette and quick search.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section local" id="ia" aria-labelledby="local-title">
+      <div class="wrap">
+        <h2 class="section-title" id="local-title" data-pt="Busca local, IA opcional">Local search, optional AI</h2>
+        <p class="local-lede" data-pt="Use o Gitduda sem conta, assinatura ou telemetria.">Use Gitduda without an account, a subscription, or telemetry.</p>
+        <div class="local-list">
+          <article>
+            <h3 data-pt="Busca semântica de commits">Semantic commit search</h3>
+            <p data-pt="Encontre mudanças pelo significado da busca. A indexação e a busca usam Candle e SQLite no seu computador.">Find changes based on the meaning of your query. Candle and SQLite handle indexing and search on your computer.</p>
+          </article>
+          <article>
+            <h3 data-pt="Seis provedores de IA">Six AI providers</h3>
+            <p data-pt="Gere mensagens de commit, changelogs e sugestões para conflitos. Escolha Ollama ou LM Studio para rodar localmente, ou um dos quatro provedores na nuvem.">Generate commit messages, changelogs, and suggestions for resolving conflicts. Run Ollama or LM Studio locally, or choose from four cloud providers.</p>
+          </article>
+          <article>
+            <h3 data-pt="Servidor MCP integrado">Built-in MCP server</h3>
+            <p data-pt="Conecte seu assistente de código ao Gitduda usando um token. Operações de escrita ficam desativadas por padrão.">Connect your coding assistant to Gitduda using a token. Write operations are disabled by default.</p>
+            <a href="https://github.com/rdias612/gitduda#essential-features" data-pt="Ver como conectar um assistente">See how to connect an assistant</a>
+          </article>
         </div>
       </div>
     </section>
 
-    <div class="shot">
+    <section class="section install" id="download" aria-labelledby="install-title">
       <div class="wrap">
-        <figure>
-          <img src="assets/main-window.webp" alt="Gitduda main window showing the branch list, commit graph with branch labels and diff stats, and the commit details panel" width="1600" height="941" loading="eager" decoding="async">
-          <figcaption>Commit graph, branches and commit details in one window.</figcaption>
-        </figure>
-      </div>
-    </div>
-
-    <section id="features" aria-labelledby="features-title">
-      <div class="wrap">
-        <h2 id="features-title">Everything you'd drop to the terminal for, without dropping to the terminal.</h2>
-        <p class="sub">Built with Rust and libgit2 for speed on large repositories, and a UI that stays out of your way.</p>
-        <div class="grid">
-          <div class="card"><h3><span class="ic"><svg viewBox="0 0 24 24"><path d="M12 2l8 4v6c0 5-3.4 9.4-8 10.5C7.4 21.4 4 17 4 12V6l8-4zm-1 13.6l6-6-1.4-1.4L11 12.8 8.4 10.2 7 11.6l4 4z"/></svg></span>Privacy first</h3><p>No telemetry, no analytics, no account. Network only when you fetch, pull or push. Your code never leaves your machine.</p></div>
-          <div class="card"><h3><span class="ic"><svg viewBox="0 0 24 24"><path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z"/></svg></span>Fast on big repos</h3><p>Rust backend, virtualised graph and diff rendering, background indexing. Comfortable at 100k+ commits.</p></div>
-          <div class="card"><h3><span class="ic"><svg viewBox="0 0 24 24"><path d="M7 4h2v4.1a4 4 0 0 1 6 0V4h2v5a4 4 0 0 1-3 3.9V20h-2v-7.1A4 4 0 0 1 9 9V4H7zm5 3a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg></span>Interactive rebase</h3><p>Reorder, squash, fixup, edit and drop commits visually, with a preview of the result and conflict handling built in.</p></div>
-          <div class="card"><h3><span class="ic"><svg viewBox="0 0 24 24"><path d="M3 4h7v16H3zm11 0h7v7h-7zm0 9h7v7h-7z"/></svg></span>3-way merge editor</h3><p>Base, ours and theirs side by side, chunk-by-chunk resolution, and optional AI suggestions for the tricky ones.</p></div>
-          <div class="card"><h3><span class="ic"><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zm1 4v4.6l3.5 2-1 1.7L11 12.7V7h2z"/></svg></span>Local AI, your choice</h3><p>Commit messages, changelogs and conflict help from Ollama or LM Studio running on your machine — or bring a cloud key if you prefer.</p></div>
-          <div class="card"><h3><span class="ic"><svg viewBox="0 0 24 24"><path d="M4 5h16v3H4zm0 5h16v3H4zm0 5h10v3H4z"/></svg></span>Integrations</h3><p>Pull requests, issues, releases and pipelines from GitHub, GitLab, Azure DevOps and Bitbucket. JIRA linking. An MCP server for your AI tools.</p></div>
-          <div class="card"><h3><span class="ic"><svg viewBox="0 0 24 24"><path d="M4 4h6v6H4zm10 0h6v6h-6zM4 14h6v6H4zm10 0h6v6h-6z"/></svg></span>Worktrees, submodules, LFS</h3><p>The advanced stuff, handled: worktree management, submodules, Git LFS, sparse checkout, bisect, reflog undo.</p></div>
-          <div class="card"><h3><span class="ic"><svg viewBox="0 0 24 24"><path d="M5 3h14v18H5zm2 2v14h10V5zm2 2h6v2H9zm0 4h6v2H9zm0 4h4v2H9z"/></svg></span>Diffs that read well</h3><p>Syntax-highlighted diffs, hunk and line-level staging, image diffs (side-by-side, onion skin, swipe), blame, file history.</p></div>
-          <div class="card"><h3><span class="ic"><svg viewBox="0 0 24 24"><path d="M3 5h18v4H3zm0 6h18v8H3zm2 2v4h6v-4z"/></svg></span>Keyboard-driven</h3><p>Command palette, fuzzy switcher for branches, files and commits, vim-style navigation and fully customisable shortcuts.</p></div>
+        <div class="install-intro">
+          <h2 class="section-title" id="install-title" data-pt="Instale o Gitduda">Install Gitduda</h2>
+          <p id="release-status" role="status">Installers are available on GitHub Releases.</p>
+          <a class="source-link" href="https://github.com/rdias612/gitduda#build--development" data-pt="Compilar pelo código-fonte">Build from source</a>
+          <details class="requirements">
+            <summary id="requirements" data-pt="Requisitos do sistema">System requirements</summary>
+            <ul>
+              <li data-pt="Git 2.20 ou superior no PATH.">Git 2.20 or later on your PATH.</li>
+              <li data-pt="4 GB de RAM (8 GB recomendados para repositórios grandes).">4 GB of RAM (8 GB recommended for large repositories).</li>
+              <li data-pt="500 MB de espaço em disco.">500 MB of disk space.</li>
+            </ul>
+          </details>
         </div>
-      </div>
-    </section>
-
-    <section id="download" aria-labelledby="download-title">
-      <div class="wrap">
-        <h2 id="download-title">Download</h2>
-        <p class="sub" id="download-sub">Installers for every release are on GitHub, or use your package manager.</p>
-        <div class="dl">
-          <div class="os" data-os="mac">
-            <h3><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16.4 12.6c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.1-2.8.9-3.5.9-.7 0-1.9-.8-3.1-.8-1.6 0-3 .9-3.9 2.4-1.6 2.8-.4 7 1.2 9.3.8 1.1 1.7 2.4 2.9 2.3 1.2 0 1.6-.7 3-.7s1.8.7 3.1.7c1.3 0 2.1-1.1 2.8-2.3.9-1.3 1.3-2.6 1.3-2.6s-2.4-1-2.4-3.9zM14.1 5.8c.6-.8 1.1-1.8 1-2.8-.9 0-2 .6-2.7 1.4-.6.7-1.1 1.8-1 2.8 1 .1 2-.5 2.7-1.4z"/></svg>macOS</h3>
-            <p class="arch">Apple Silicon (M1 and later), macOS 11+</p>
-            <ul id="assets-mac"><li><a href="https://github.com/rdias612/gitduda/releases/latest">Latest release on GitHub <small>.dmg</small></a></li></ul>
-            <div class="pm"><p class="pm-label">Homebrew</p>
-              <div class="cmd"><code>brew install --cask rdias612/gitduda/gitduda</code><button type="button" data-copy>Copy</button></div>
+        <div class="packages" id="pacotes">
+          <details data-os="windows" open>
+            <summary>Windows</summary>
+            <div class="package-body">
+              <p data-pt="Windows 10 ou superior, x64">Windows 10 or later, x64</p>
+              <ul class="download-assets"><li><a class="release-link" href="https://github.com/rdias612/gitduda/releases" data-pt="Consultar releases no GitHub">View releases on GitHub</a></li></ul>
+              <p>Via winget</p>
+              <div class="command"><code>winget install rdias612.Gitduda</code><button type="button" data-pt="Copiar" hidden>Copy</button></div>
+              <p>Via Scoop</p>
+              <div class="command"><code>scoop install https://raw.githubusercontent.com/rdias612/gitduda/main/packaging/scoop/gitduda.json</code><button type="button" data-pt="Copiar" hidden>Copy</button></div>
+              <p class="copy-status" role="status"></p>
             </div>
-          </div>
-          <div class="os" data-os="windows">
-            <h3><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5.5l7.5-1v7H3zm8.5-1.2L21 3v8.5h-9.5zM3 12.5h7.5v7L3 18.5zm8.5 0H21V21l-9.5-1.3z"/></svg>Windows</h3>
-            <p class="arch">64-bit, Windows 10 or later</p>
-            <ul id="assets-windows"><li><a href="https://github.com/rdias612/gitduda/releases/latest">Latest release on GitHub <small>.msi / .exe</small></a></li></ul>
-            <div class="pm"><p class="pm-label">winget · Scoop</p>
-              <div class="cmd"><code>winget install rdias612.Gitduda</code><button type="button" data-copy>Copy</button></div>
-              <div class="cmd"><code>scoop install https://raw.githubusercontent.com/rdias612/gitduda/main/packaging/scoop/gitduda.json</code><button type="button" data-copy>Copy</button></div>
+          </details>
+          <details data-os="macos">
+            <summary>macOS</summary>
+            <div class="package-body">
+              <p data-pt="macOS 11 ou superior, Apple Silicon">macOS 11 or later, Apple Silicon</p>
+              <ul class="download-assets"><li><a class="release-link" href="https://github.com/rdias612/gitduda/releases" data-pt="Consultar releases no GitHub">View releases on GitHub</a></li></ul>
+              <p>Via Homebrew</p>
+              <div class="command"><code>brew install --cask rdias612/gitduda/gitduda</code><button type="button" data-pt="Copiar" hidden>Copy</button></div>
+              <p class="copy-status" role="status"></p>
             </div>
-          </div>
-          <div class="os" data-os="linux">
-            <h3><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2c2.5 0 4 2 4 4.6 0 1.4-.3 2.3.3 3.4.9 1.6 2.7 3.4 2.7 6 0 1.1-.4 1.9-1 2.4.5.8.8 1.6.3 2.2-.7.9-2.3.6-3.4-.2-.9.4-1.9.6-2.9.6s-2-.2-2.9-.6c-1.1.8-2.7 1.1-3.4.2-.5-.6-.2-1.4.3-2.2-.6-.5-1-1.3-1-2.4 0-2.6 1.8-4.4 2.7-6 .6-1.1.3-2 .3-3.4C8 4 9.5 2 12 2zm-1.7 4.3c-.4 0-.7.5-.7 1.1s.3 1.1.7 1.1.7-.5.7-1.1-.3-1.1-.7-1.1zm3.4 0c-.4 0-.7.5-.7 1.1s.3 1.1.7 1.1.7-.5.7-1.1-.3-1.1-.7-1.1z"/></svg>Linux</h3>
-            <p class="arch">x86_64, GTK 3.24+</p>
-            <ul id="assets-linux"><li><a href="https://github.com/rdias612/gitduda/releases/latest">Latest release on GitHub <small>.deb / .AppImage / .rpm</small></a></li></ul>
-          </div>
-        </div>
-        <p class="fine">Gitduda updates itself in-app from signed releases. Requires Git 2.20+.</p>
-      </div>
-    </section>
-
-    <section aria-labelledby="req-title">
-      <div class="wrap">
-        <h2 id="req-title">System requirements</h2>
-        <div class="req">
-          <div class="card"><h3>Minimum</h3><ul>
-            <li>macOS 11 (Apple Silicon), Windows 10 64-bit, or Linux with GTK 3.24+</li>
-            <li>4 GB RAM (8 GB recommended for large repositories)</li>
-            <li>500 MB disk space</li>
-            <li>Git 2.20 or later on your PATH</li>
-          </ul></div>
-          <div class="card"><h3>For AI &amp; semantic search</h3><ul>
-            <li>Local LLMs via Ollama or LM Studio (runs fully offline on your hardware)</li>
-            <li>Cloud providers (OpenAI, Anthropic, GitHub Models, Google Gemini) with your own API key</li>
-            <li>Semantic commit search uses local Candle embeddings with automatic Metal/CUDA acceleration and CPU fallback</li>
-          </ul></div>
+          </details>
+          <details data-os="linux">
+            <summary>Linux</summary>
+            <div class="package-body">
+              <p data-pt="Linux x64 com GTK 3.24 ou superior">Linux x64 with GTK 3.24 or later</p>
+              <ul class="download-assets"><li><a class="release-link" href="https://github.com/rdias612/gitduda/releases" data-pt="Consultar releases no GitHub">View releases on GitHub</a></li></ul>
+            </div>
+          </details>
         </div>
       </div>
     </section>
   </main>
 
-  <footer>
+  <footer class="footer">
     <div class="wrap">
-      <div>
-        <a href="https://github.com/rdias612/gitduda">GitHub</a>
-        <a href="https://github.com/rdias612/gitduda/releases">Releases</a>
+      <p>Gitduda · <span data-pt="Derivado do">Forked from</span> <a href="https://github.com/hegsie/gitnado">Gitnado</a><span data-pt=", de Ben Hegarty"> by Ben Hegarty</span></p>
+      <div class="footer-links">
+        <a href="https://github.com/rdias612/gitduda/releases" data-pt="Versões">Releases</a>
         <a href="https://github.com/rdias612/gitduda/issues">Issues</a>
-        <a href="https://github.com/rdias612/gitduda/blob/main/LICENSE">MIT License</a>
+        <a href="https://github.com/rdias612/gitduda/blob/main/LICENSE" data-pt="Licença MIT">MIT License</a>
       </div>
-      <div>© <span id="year">2026</span> Gitduda Contributors · Forked from <a href="https://github.com/hegsie/gitnado">Gitnado</a></div>
     </div>
   </footer>
 
   <script>
-    (function () {
-      'use strict';
-      var REPO = 'rdias612/gitduda';
-      var RELEASES = 'https://github.com/' + REPO + '/releases';
+    const languageKey = 'gitduda-site-language';
+    const languageSwitch = document.querySelector('.language-switch');
+    const languageButtons = languageSwitch.querySelectorAll('[data-language]');
+    const translations = Array.from(document.querySelectorAll('[data-pt]'), (element) => {
+      const attribute = element.dataset.ptAttribute;
+      const english = attribute ? element.getAttribute(attribute) : element.textContent;
+      return { element, attribute, english };
+    });
+    const releaseStatus = document.getElementById('release-status');
+    const messages = {
+      en: {
+        releases: releaseStatus.textContent,
+        noRelease: 'No stable version was found on GitHub Releases.',
+        latest: 'Latest release',
+        copied: 'Command copied.',
+        selected: 'Command selected for copying.',
+      },
+      'pt-BR': {
+        releases: 'Os instaladores publicados ficam no GitHub Releases.',
+        noRelease: 'Nenhuma versão estável foi encontrada no GitHub Releases.',
+        latest: 'Última versão publicada',
+        copied: 'Comando copiado.',
+        selected: 'Comando selecionado para copiar.',
+      },
+    };
 
-      document.getElementById('year').textContent = String(new Date().getFullYear());
+    const releasesUrl = 'https://github.com/rdias612/gitduda/releases';
+    const installerLinks = [];
+    const copyStatuses = document.querySelectorAll('.copy-status');
+    let language;
+    let latestRelease;
 
-      // Which OS is the visitor on? Used only to highlight a card and label the
-      // primary button; every platform is always one click away.
-      function detectOS() {
-        var ua = navigator.userAgent || '';
-        var plat = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || '';
-        if (/Mac/i.test(plat) && !/iPhone|iPad/i.test(ua)) return 'mac';
-        if (/Win/i.test(plat)) return 'windows';
-        if (/Linux|X11/i.test(plat) && !/Android/i.test(ua)) return 'linux';
-        return null;
+    function preferredLanguage() {
+      try {
+        const saved = localStorage.getItem(languageKey);
+        if (saved === 'pt-BR' || saved === 'en') return saved;
+      } catch {
+        // Storage can be unavailable, including for local files.
       }
-      var os = detectOS();
-      var labels = { mac: 'Download for macOS', windows: 'Download for Windows', linux: 'Download for Linux' };
-      if (os) {
-        var card = document.querySelector('.os[data-os="' + os + '"]');
-        if (card) card.classList.add('current');
-        document.getElementById('primary-label').textContent = labels[os];
+      return /^pt(?:-|$)/i.test(navigator.language) ? 'pt-BR' : 'en';
+    }
+
+    function updateReleaseText() {
+      const copy = messages[language];
+      const sizeFormatter = new Intl.NumberFormat(language, { maximumFractionDigits: 1 });
+      for (const { link, label, portuguese, size } of installerLinks) {
+        const name = language === 'pt-BR' ? (portuguese ?? label) : label;
+        link.textContent = size > 0 ? name + ' · ' + sizeFormatter.format(size) + ' MB' : name;
       }
 
-      // Asset name patterns produced by the release build (see docs/packaging.md).
-      var groups = {
-        mac: [{ re: /_aarch64\.dmg$/, label: 'Apple Silicon', kind: '.dmg' }],
-        windows: [
-          { re: /_x64_en-US\.msi$/, label: 'Installer (MSI)', kind: '.msi' },
-          { re: /_x64-setup\.exe$/, label: 'Installer (EXE)', kind: '.exe' }
-        ],
-        linux: [
-          { re: /_amd64\.deb$/, label: 'Debian / Ubuntu', kind: '.deb' },
-          { re: /_amd64\.AppImage$/, label: 'AppImage', kind: '.AppImage' },
-          { re: /\.x86_64\.rpm$/, label: 'Fedora / RHEL', kind: '.rpm' }
-        ]
-      };
-
-      function fmtSize(bytes) {
-        if (!bytes) return '';
-        var mb = bytes / (1024 * 1024);
-        return mb >= 100 ? Math.round(mb) + ' MB' : mb.toFixed(1) + ' MB';
+      if (!latestRelease?.tag_name) {
+        releaseStatus.textContent = latestRelease === null ? copy.noRelease : copy.releases;
+        return;
       }
 
-      function render(release) {
-        var version = (release.tag_name || '').replace(/^v/, '');
-        var assets = release.assets || [];
-        var primaryHref = null;
-        Object.keys(groups).forEach(function (key) {
-          var list = document.getElementById('assets-' + key);
-          var items = [];
-          groups[key].forEach(function (g) {
-            var a = assets.filter(function (x) { return g.re.test(x.name); })[0];
-            if (!a) return;
-            if (key === os && !primaryHref) primaryHref = a.browser_download_url;
-            var li = document.createElement('li');
-            var link = document.createElement('a');
-            link.href = a.browser_download_url;
-            link.textContent = g.label + ' ';
-            var small = document.createElement('small');
-            small.textContent = g.kind + (a.size ? ' · ' + fmtSize(a.size) : '');
-            link.appendChild(small);
-            li.appendChild(link);
-            items.push(li);
-          });
-          if (items.length) {
-            list.innerHTML = '';
-            items.forEach(function (li) { list.appendChild(li); });
-          }
-        });
-        if (primaryHref) document.getElementById('primary-download').href = primaryHref;
-        var note = document.getElementById('version-note');
-        note.innerHTML = '';
-        note.appendChild(document.createTextNode('Latest: '));
-        var vlink = document.createElement('a');
-        vlink.href = release.html_url || RELEASES;
-        vlink.textContent = 'v' + version;
-        note.appendChild(vlink);
-        if (release.published_at) {
-          var d = new Date(release.published_at);
-          if (!isNaN(d)) note.appendChild(document.createTextNode(' · ' + d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })));
+      const published = new Date(latestRelease.published_at ?? NaN);
+      const date = Number.isNaN(published.getTime())
+        ? ''
+        : ' · ' + new Intl.DateTimeFormat(language, { dateStyle: 'medium' }).format(published);
+      const releaseLink = document.createElement('a');
+      releaseLink.className = 'release-link';
+      releaseLink.href = latestRelease.html_url || releasesUrl + '/latest';
+      releaseLink.textContent = latestRelease.tag_name;
+      releaseStatus.replaceChildren(copy.latest + ' ', releaseLink, date);
+    }
+
+    function setLanguage(nextLanguage) {
+      if (nextLanguage === language) return;
+      language = nextLanguage;
+      document.documentElement.lang = language;
+      for (const { element, attribute, english } of translations) {
+        const text = language === 'pt-BR' ? element.dataset.pt : english;
+        if (attribute) element.setAttribute(attribute, text);
+        else element.textContent = text;
+      }
+      for (const button of languageButtons) {
+        button.setAttribute('aria-pressed', String(button.dataset.language === language));
+      }
+      for (const status of copyStatuses) {
+        if (status.dataset.feedback) status.textContent = messages[language][status.dataset.feedback];
+      }
+      updateReleaseText();
+    }
+
+    for (const button of languageButtons) {
+      button.addEventListener('click', () => {
+        setLanguage(button.dataset.language);
+        try {
+          localStorage.setItem(languageKey, language);
+        } catch {
+          // The language can still be changed for the current visit.
         }
-        note.appendChild(document.createTextNode(' · '));
-        var all = document.createElement('a');
-        all.href = RELEASES;
-        all.textContent = 'All releases';
-        note.appendChild(all);
-      }
-
-      // Populate real download links from the latest release. Any failure
-      // (offline, API rate limit) leaves the GitHub fallbacks in place.
-      if (window.fetch) {
-        var ctl = window.AbortController ? new AbortController() : null;
-        var timer = ctl && setTimeout(function () { ctl.abort(); }, 6000);
-        fetch('https://api.github.com/repos/' + REPO + '/releases/latest', {
-          headers: { Accept: 'application/vnd.github+json' },
-          signal: ctl ? ctl.signal : undefined
-        }).then(function (r) { return r.ok ? r.json() : null; })
-          .then(function (rel) { if (rel && rel.assets) render(rel); })
-          .catch(function () { /* fallbacks stay */ })
-          .then(function () { if (timer) clearTimeout(timer); });
-      }
-
-      // Copy buttons for the package-manager one-liners.
-      Array.prototype.forEach.call(document.querySelectorAll('[data-copy]'), function (btn) {
-        btn.addEventListener('click', function () {
-          var text = btn.parentNode.querySelector('code').textContent;
-          var done = function () {
-            btn.textContent = 'Copied';
-            btn.classList.add('done');
-            setTimeout(function () { btn.textContent = 'Copy'; btn.classList.remove('done'); }, 1600);
-          };
-          if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(text).then(done, function () { window.prompt('Copy this command:', text); });
-          } else {
-            window.prompt('Copy this command:', text);
-          }
-        });
       });
-    })();
+    }
+
+    setLanguage(preferredLanguage());
+    languageSwitch.hidden = false;
+
+    const packages = document.querySelectorAll('#pacotes details');
+    const platform = navigator.userAgentData?.platform || navigator.platform;
+    const mobile = navigator.userAgentData?.mobile || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    const platformNames = { windows: /Win/i, macos: /Mac/i, linux: /Linux|X11/i };
+    if (!mobile) {
+      const current = Object.keys(platformNames).find((name) => platformNames[name].test(platform));
+      if (current) packages.forEach((item) => { item.open = item.dataset.os === current; });
+    }
+
+    document.querySelectorAll('.command button').forEach((button) => {
+      if (!navigator.clipboard?.writeText) return;
+      button.hidden = false;
+      button.addEventListener('click', async () => {
+        const code = button.previousElementSibling;
+        const status = button.closest('.package-body').querySelector('.copy-status');
+        let feedback = 'copied';
+        try {
+          await navigator.clipboard.writeText(code.textContent);
+        } catch {
+          const range = document.createRange();
+          range.selectNodeContents(code);
+          const selection = window.getSelection();
+          selection.removeAllRanges();
+          selection.addRange(range);
+          feedback = 'selected';
+        }
+        status.dataset.feedback = feedback;
+        status.textContent = messages[language][feedback];
+      });
+    });
+
+    // Asset names follow the release workflow (see docs/packaging.md).
+    const groups = {
+      windows: [[/_x64_en-US\.msi$/, 'MSI installer', 'Instalador MSI'], [/_x64-setup\.exe$/, 'EXE installer', 'Instalador EXE']],
+      macos: [[/_aarch64\.dmg$/, 'DMG image', 'Imagem DMG']],
+      linux: [[/_amd64\.deb$/, 'Debian / Ubuntu (.deb)'], [/_amd64\.AppImage$/, 'AppImage'], [/\.x86_64\.rpm$/, 'Fedora / RHEL (.rpm)']],
+    };
+
+    async function loadRelease() {
+      const endpoint = 'https://api.github.com/repos/rdias612/gitduda/releases/latest';
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 6000);
+      try {
+        const response = await fetch(endpoint, { signal: controller.signal });
+        if (response.status === 404) {
+          latestRelease = null;
+          updateReleaseText();
+          return;
+        }
+        if (!response.ok) return;
+        const release = await response.json();
+        if (!Array.isArray(release.assets)) return;
+        for (const item of packages) {
+          const links = [];
+          for (const [pattern, label, portuguese] of groups[item.dataset.os]) {
+            const asset = release.assets.find((entry) => pattern.test(entry.name));
+            if (!asset?.browser_download_url) continue;
+            const row = document.createElement('li');
+            const link = document.createElement('a');
+            link.className = 'release-link';
+            link.href = asset.browser_download_url;
+            installerLinks.push({ link, label, portuguese, size: asset.size / (1024 * 1024) });
+            row.append(link);
+            links.push(row);
+          }
+          if (links.length) item.querySelector('.download-assets').prepend(...links);
+        }
+        latestRelease = release;
+        updateReleaseText();
+      } catch {
+        // Keep the static links when GitHub cannot be reached.
+      } finally {
+        clearTimeout(timeout);
+      }
+    }
+
+    loadRelease();
   </script>
 </body>
 </html>
