@@ -748,6 +748,134 @@
   <source>Recommended maximum characters for the commit subject line, including the conventional type(scope) prefix. Going over only shows a warning. A repository commit-rules file overrides this.</source>
   <target>Nombre maximal recommandé de caractères pour la ligne de sujet du commit, y compris le préfixe conventionnel type(scope). Un dépassement affiche uniquement un avertissement. Un fichier de règles de commit du dépôt remplace cette valeur.</target>
 </trans-unit>
+<trans-unit id="seb583a6c05c719f8">
+  <source>Could not load remotes.</source>
+  <target>Impossible de charger les dépôts distants.</target>
+</trans-unit>
+<trans-unit id="s3c8f331d0345082f">
+  <source>Could not load the comparison.</source>
+  <target>Impossible de charger la comparaison.</target>
+</trans-unit>
+<trans-unit id="s0726fc52144f9f91">
+  <source>Could not synchronize references.</source>
+  <target>Impossible de synchroniser les références.</target>
+</trans-unit>
+<trans-unit id="s3bd06bc617e372da">
+  <source>Local references synchronized.</source>
+  <target>Les références locales ont été synchronisées.</target>
+</trans-unit>
+<trans-unit id="sa873b7ff0e3002be">
+  <source>Current branch</source>
+  <target>Branche actuelle</target>
+</trans-unit>
+<trans-unit id="scb2ef001d78a4f08">
+  <source>Local hash</source>
+  <target>Empreinte locale</target>
+</trans-unit>
+<trans-unit id="s8695749e2171a9d5">
+  <source>Remote hash</source>
+  <target>Empreinte distante</target>
+</trans-unit>
+<trans-unit id="s35fd2edfe27209c3">
+  <source>Local commits leaving this branch (<x id="0" equiv-text="${change.outgoingCommits}"/>)</source>
+  <target>Commits locaux qui ne seront plus accessibles depuis cette branche (<x id="0" equiv-text="${change.outgoingCommits}"/>)</target>
+</trans-unit>
+<trans-unit id="s42be4ca16b9b22ab">
+  <source>Branch in use by another worktree at <x id="0" equiv-text="${change.worktree}"/></source>
+  <target>Branche utilisée dans un autre espace de travail à l’emplacement <x id="0" equiv-text="${change.worktree}"/></target>
+</trans-unit>
+<trans-unit id="sddbb468b7b6ad105">
+  <source>Branch protected from deletion.</source>
+  <target>Branche protégée contre la suppression.</target>
+</trans-unit>
+<trans-unit id="s6f0931b55069d37d">
+  <source>This remote has no tags.</source>
+  <target>Ce dépôt distant ne contient aucune étiquette.</target>
+</trans-unit>
+<trans-unit id="sefd3fc8468447706">
+  <source>This remote has no branches.</source>
+  <target>Ce dépôt distant ne contient aucune branche.</target>
+</trans-unit>
+<trans-unit id="s12e8393de74dd4a7">
+  <source>The clone is already synchronized.</source>
+  <target>Le clone est déjà synchronisé.</target>
+</trans-unit>
+<trans-unit id="s3a80ecd7c5785017">
+  <source>These changes apply only to this clone.</source>
+  <target>Ces modifications s’appliquent uniquement à ce clone.</target>
+</trans-unit>
+<trans-unit id="s2dfdbf2ef572ce8c">
+  <source>The current branch cannot change while the worktree is unavailable or a Git operation is in progress.</source>
+  <target>La branche actuelle ne peut pas être modifiée si l’espace de travail est indisponible ou qu’une opération Git est en cours.</target>
+</trans-unit>
+<trans-unit id="s0f16a6d7054b737e">
+  <source>Uncommitted changes in the current worktree may be discarded.</source>
+  <target>Les modifications non validées dans l’espace de travail actuel peuvent être perdues.</target>
+</trans-unit>
+<trans-unit id="s3741f519c32ac391">
+  <source>New</source>
+  <target>À créer</target>
+</trans-unit>
+<trans-unit id="s2ae69d431e3b2d67">
+  <source>To delete</source>
+  <target>À supprimer</target>
+</trans-unit>
+<trans-unit id="s17e1b7b982394c49">
+  <source>To overwrite</source>
+  <target>À remplacer</target>
+</trans-unit>
+<trans-unit id="s8623920b86187572">
+  <source>No branch is available to switch to before deleting the current branch.</source>
+  <target>Aucune autre branche n’est disponible pour remplacer la branche actuelle avant sa suppression.</target>
+</trans-unit>
+<trans-unit id="sd8d5b06214cfec54">
+  <source>Switch to another branch before deleting the current branch</source>
+  <target>Basculez vers une autre branche avant de supprimer la branche actuelle</target>
+</trans-unit>
+<trans-unit id="sd8d138cd0a124311">
+  <source>Choose a branch</source>
+  <target>Choisir une branche</target>
+</trans-unit>
+<trans-unit id="s9efcc8a251b73055">
+  <source>Sync Tags with Remote…</source>
+  <target>Synchroniser les étiquettes avec le dépôt distant…</target>
+</trans-unit>
+<trans-unit id="sa90f34b694e1c772">
+  <source>Sync Branches with Remote…</source>
+  <target>Synchroniser les branches avec le dépôt distant…</target>
+</trans-unit>
+<trans-unit id="sea47f4110bb2b0b3">
+  <source>Remote</source>
+  <target>Dépôt distant</target>
+</trans-unit>
+<trans-unit id="sc436f838beda393f">
+  <source>Choose a remote</source>
+  <target>Choisir un dépôt distant</target>
+</trans-unit>
+<trans-unit id="sac73527cd7816bd6">
+  <source>Loading comparison…</source>
+  <target>Chargement de la comparaison…</target>
+</trans-unit>
+<trans-unit id="s63aa4e9010988c1d">
+  <source>Synchronizing local references…</source>
+  <target>Synchronisation des références locales…</target>
+</trans-unit>
+<trans-unit id="s1103a7d0425ac02b">
+  <source>No remotes configured.</source>
+  <target>Aucun dépôt distant configuré.</target>
+</trans-unit>
+<trans-unit id="s628324f727f5ee65">
+  <source>The comparison changed. Review it before confirming again.</source>
+  <target>La comparaison a changé. Vérifiez-la avant de confirmer à nouveau.</target>
+</trans-unit>
+<trans-unit id="s2ceb11be2290bb1b">
+  <source>Cancel</source>
+  <target>Annuler</target>
+</trans-unit>
+<trans-unit id="s1acedb3801bee9f2">
+  <source>Confirm Sync</source>
+  <target>Confirmer la synchronisation</target>
+</trans-unit>
 </body>
 </file>
 </xliff>

@@ -19,6 +19,8 @@ call site is here, and nothing else in `src/` has one.
 - `src/components/dialogs/gn-settings-dialog.ts` — everything the dialog
   renders (section titles, setting names and descriptions, options, buttons,
   status text) plus the language picker's own error toast.
+- `src/components/dialogs/gn-sync-refs-dialog.ts` — branch and tag sync
+  previews, risk warnings, and confirmation controls.
 - `src/components/toolbar/gn-toolbar.ts` — the workspace and repository
   switcher, including its accessible labels and empty states.
 - `src/components/welcome/gn-welcome.ts` — the whole component, including its

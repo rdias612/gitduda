@@ -34,6 +34,7 @@ pub enum RemoteOp {
     Fetch,
     Pull,
     Push,
+    SyncRefs,
 }
 
 impl RemoteOp {
@@ -43,6 +44,7 @@ impl RemoteOp {
             RemoteOp::Fetch => "fetch",
             RemoteOp::Pull => "pull",
             RemoteOp::Push => "push",
+            RemoteOp::SyncRefs => "reference sync",
         }
     }
 
@@ -53,6 +55,7 @@ impl RemoteOp {
             RemoteOp::Fetch => "Fetch",
             RemoteOp::Pull => "Pull",
             RemoteOp::Push => "Push",
+            RemoteOp::SyncRefs => "Reference sync",
         }
     }
 }

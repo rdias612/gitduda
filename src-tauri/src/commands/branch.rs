@@ -473,7 +473,33 @@ fn branch_checked_out_elsewhere(repo: &git2::Repository, branch_name: &str) -> O
         }
         _ => branch_name,
     };
-    let target = format!("refs/heads/{}", local_name);
+    local_branch_worktree(repo, local_name)
+}
+
+/// Look up an exact local name, including names containing slashes.
+pub(super) fn local_branch_worktree(repo: &git2::Repository, name: &str) -> Option<String> {
+    let target = format!("refs/heads/{}", name);
+    let holds_branch = |worktree: &git2::Repository| {
+        let head = worktree.find_reference("HEAD").ok();
+        if head
+            .as_ref()
+            .and_then(|head| head.symbolic_target().ok().flatten())
+            == Some(target.as_str())
+        {
+            return true;
+        }
+        // A rebase or bisect can detach HEAD while holding its original branch.
+        [
+            ("rebase-merge/head-name", target.as_str()),
+            ("rebase-apply/head-name", target.as_str()),
+            ("BISECT_START", name),
+        ]
+        .iter()
+        .any(|(file, expected)| {
+            std::fs::read_to_string(worktree.path().join(file))
+                .is_ok_and(|value| value.trim_end() == *expected)
+        })
+    };
 
     // The MAIN worktree first. git_worktree_list enumerates only
     // $GIT_COMMON_DIR/worktrees/, which the main worktree has no entry in — so
@@ -485,11 +511,7 @@ fn branch_checked_out_elsewhere(repo: &git2::Repository, branch_name: &str) -> O
         let common = repo.commondir().to_path_buf();
         if let Some(main_workdir) = common.parent() {
             if let Ok(main_repo) = git2::Repository::open(main_workdir) {
-                let head_name = main_repo
-                    .head()
-                    .ok()
-                    .and_then(|h| h.name().ok().map(|n| n.to_string()));
-                if head_name.as_deref() == Some(target.as_str()) {
+                if holds_branch(&main_repo) {
                     return Some(main_workdir.to_string_lossy().to_string());
                 }
             }
@@ -514,11 +536,7 @@ fn branch_checked_out_elsewhere(repo: &git2::Repository, branch_name: &str) -> O
         let Ok(wt_repo) = git2::Repository::open_from_worktree(&wt) else {
             continue;
         };
-        let head_name = wt_repo
-            .head()
-            .ok()
-            .and_then(|h| h.name().ok().map(|n| n.to_string()));
-        if head_name.as_deref() == Some(target.as_str()) {
+        if holds_branch(&wt_repo) {
             return Some(wt.path().to_string_lossy().to_string());
         }
     }

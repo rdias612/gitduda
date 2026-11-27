@@ -473,6 +473,8 @@ pub fn run() {
             commands::tags::get_tag_details,
             commands::tags::create_tag,
             commands::tags::delete_tag,
+            commands::remote::preview_sync_refs,
+            commands::remote::apply_sync_refs,
             commands::tags::push_tag,
             commands::tags::delete_remote_tag,
             commands::tags::edit_tag_message,

@@ -137,6 +137,7 @@ const NETWORK_COMMANDS = new Set([
   'push_to_multiple_remotes', 'fetch_all_remotes', 'add_submodule',
   'update_submodules', 'lfs_pull', 'lfs_fetch',
   'prune_remote_tracking_branches', 'start_auto_fetch',
+  'preview_sync_refs', 'apply_sync_refs',
   // `deepen_repository` and `unshallow_repository` both shell out to
   // `git fetch` (`--deepen` / `--unshallow`); `test_credentials` opens an
   // `ssh -T` session to the remote's host when the remote is an SSH one. All

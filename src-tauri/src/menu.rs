@@ -105,10 +105,9 @@ pub const APP_MENU: &[MenuSection] = &[
             repo_item("pull", "Pull"),
             repo_item("push", "Push"),
             MenuEntry::Separator,
-            // The three above are refused outright for a repository with no
-            // remote, and that refusal tells the user to add one — so the
-            // dialog that adds one belongs beside them, not only in the
-            // command palette, which is where it used to live alone.
+            repo_item("sync-branches", "Sync Branches with Remote…"),
+            repo_item("sync-tags", "Sync Tags with Remote…"),
+            MenuEntry::Separator,
             repo_item("remotes", "Remotes…"),
             MenuEntry::Separator,
             repo_item("clean", "Clean Working Directory…"),

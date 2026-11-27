@@ -1,6 +1,8 @@
 //! Remote command handlers
 
 mod fetch_pull;
+mod sync_refs;
+pub use sync_refs::*;
 #[path = "remote/push.rs"]
 mod push_ops;
 #[cfg(test)]

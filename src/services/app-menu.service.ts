@@ -65,8 +65,8 @@ export const APP_MENU_ACTIONS: readonly AppMenuAction[] = [
   { id: 'fetch', paletteId: 'fetch', shortcutId: 'fetch', repositoryScoped: true },
   { id: 'pull', paletteId: 'pull', shortcutId: 'pull', repositoryScoped: true },
   { id: 'push', paletteId: 'push', shortcutId: 'push', repositoryScoped: true },
-  // Beside the three operations that refuse without a remote and tell the user
-  // to add one: the palette was the only route to the dialog that adds one.
+  { id: 'sync-branches', paletteId: 'sync-branches', repositoryScoped: true },
+  { id: 'sync-tags', paletteId: 'sync-tags', repositoryScoped: true },
   { id: 'remotes', paletteId: 'remotes', repositoryScoped: true },
   { id: 'clean', paletteId: 'clean', repositoryScoped: true },
   { id: 'bisect', paletteId: 'bisect', repositoryScoped: true },

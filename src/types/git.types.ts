@@ -619,6 +619,34 @@ export type SortDirection = 'asc' | 'desc';
  * A branch that is a candidate for cleanup, returned by the backend.
  * Uses graph_descendant_of for accurate merge detection.
  */
+export type SyncRefKind = 'branches' | 'tags';
+
+export interface SyncRefChange {
+  name: string;
+  localOid: string | null;
+  remoteOid: string | null;
+  outgoingCommits: number;
+  worktree: string | null;
+  protected: boolean;
+}
+
+export interface SyncRefsPreview {
+  revision: string;
+  remoteCount: number;
+  newRefs: SyncRefChange[];
+  deletions: SyncRefChange[];
+  overwrites: SyncRefChange[];
+  currentBranch: string | null;
+  currentBranchDeleted: boolean;
+  workingChanges: boolean;
+  worktreeBusy: boolean;
+  replacements: string[];
+}
+
+export type ApplySyncRefsResult =
+  | { status: 'applied' }
+  | { status: 'changed'; preview: SyncRefsPreview };
+
 export interface CleanupCandidate {
   name: string;
   shorthand: string;

@@ -128,6 +128,7 @@ import './components/dialogs/gn-init-dialog.ts';
 import './components/dialogs/gn-hooks-dialog.ts';
 import './components/dialogs/gn-jira-dialog.ts';
 import './components/dialogs/gn-create-tag-dialog.ts';
+import './components/dialogs/gn-sync-refs-dialog.ts';
 import './components/dialogs/gn-create-branch-dialog.ts';
 import './components/dialogs/gn-cherry-pick-dialog.ts';
 import './components/dialogs/gn-interactive-rebase-dialog.ts';
@@ -160,7 +161,7 @@ import type { GnRemoteDialog } from './components/dialogs/gn-remote-dialog.ts';
 import type { GnRepositoryHealthDialog } from './components/dialogs/gn-repository-health-dialog.ts';
 import type { GnChangelogDialog } from './components/dialogs/gn-changelog-dialog.ts';
 import type { IntegrationOpenContext, IntegrationType } from './types/integration-accounts.types.ts';
-import type { Commit, RefInfo, StatusEntry, Tag, Branch, RepositoryState } from './types/git.types.ts';
+import type { Commit, RefInfo, StatusEntry, Tag, Branch, RepositoryState, SyncRefKind } from './types/git.types.ts';
 import type { SearchFilter } from './components/toolbar/gn-search-bar.ts';
 import type { PaletteCommand } from './components/dialogs/gn-command-palette.ts';
 import { buildPaletteCommands, type PaletteCommandHost } from './palette-commands.ts';
@@ -4640,6 +4641,14 @@ export class AppShell extends LitElement {
     this.refreshConflictDialogRepo(pinnedPath);
   }
 
+  openSyncRefs(kind: SyncRefKind): void {
+    const path = this.activeRepository?.repository.path;
+    const dialog = this.shadowRoot?.querySelector<HTMLElementTagNameMap['gn-sync-refs-dialog']>(
+      `#sync-${kind}-dialog`,
+    );
+    if (path) dialog?.open(path);
+  }
+
   /**
    * Refresh the repo a conflict dialog operates/operated ON — used both
    * when a conflict opens the dialog and when Complete/Abort closes it.
@@ -7027,6 +7036,14 @@ export class AppShell extends LitElement {
           @remotes-changed=${(e: CustomEvent<{ repositoryPath?: string }>) =>
             this.refreshConflictDialogRepo(e.detail?.repositoryPath ?? null)}
         ></gn-remote-dialog>
+        <gn-sync-refs-dialog id="sync-branches-dialog" kind="branches"
+          @refs-synced=${(e: CustomEvent<{ repositoryPath: string }>) =>
+            this.refreshConflictDialogRepo(e.detail.repositoryPath)}
+        ></gn-sync-refs-dialog>
+        <gn-sync-refs-dialog id="sync-tags-dialog" kind="tags"
+          @refs-synced=${(e: CustomEvent<{ repositoryPath: string }>) =>
+            this.refreshConflictDialogRepo(e.detail.repositoryPath)}
+        ></gn-sync-refs-dialog>
       ` : ''}
 
       ${this.activeRepository ? html`

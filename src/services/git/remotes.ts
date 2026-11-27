@@ -4,7 +4,10 @@ import { showToast } from "../notification.service.ts";
 import { showErrorWithSuggestion } from "../error-suggestion.service.ts";
 import { settingsStore } from "../../stores/settings.store.ts";
 import type {
+  ApplySyncRefsResult,
   Remote,
+  SyncRefKind,
+  SyncRefsPreview,
 } from "../../types/git.types.ts";
 import type {
   FetchCommand,
@@ -91,6 +94,33 @@ export async function getRemotes(
   path: string,
 ): Promise<CommandResult<Remote[]>> {
   return invokeCommand<Remote[]>("get_remotes", { path });
+}
+
+interface SyncRefsArgs {
+  path: string;
+  remote: string;
+  kind: SyncRefKind;
+}
+
+export async function previewSyncRefs(args: SyncRefsArgs): Promise<CommandResult<SyncRefsPreview>> {
+  if (!await checkNetworkPermission('reading references', args.path, args.remote)) {
+    return blockedResult();
+  }
+  const token = await getRemoteToken(args.path, args.remote);
+  const timeoutSecs = settingsStore.getState().networkOperationTimeout;
+  return invokeCommand<SyncRefsPreview>("preview_sync_refs", { ...args, token, timeoutSecs });
+}
+
+export async function applySyncRefs(
+  args: SyncRefsArgs & { revision: string; replacement?: string },
+): Promise<CommandResult<ApplySyncRefsResult>> {
+  // The dialog's explicit confirmation already covers this remote read.
+  if (await checkNetworkAllowed(args.path, args.remote)) {
+    return blockedResult();
+  }
+  const token = await getRemoteToken(args.path, args.remote);
+  const timeoutSecs = settingsStore.getState().networkOperationTimeout;
+  return invokeCommand<ApplySyncRefsResult>("apply_sync_refs", { ...args, token, timeoutSecs });
 }
 
 export async function addRemote(

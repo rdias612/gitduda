@@ -1,4 +1,4 @@
-import type { Commit } from './types/git.types.ts';
+import type { Commit, SyncRefKind } from './types/git.types.ts';
 import type { IntegrationType } from './types/integration-accounts.types.ts';
 import type { OpenRepository } from './stores/index.ts';
 import type { PaletteCommand } from './components/dialogs/gn-command-palette.ts';
@@ -59,6 +59,7 @@ export interface PaletteCommandHost {
   handleRunFsck(): Promise<void>;
   handleRunPrune(): Promise<void>;
   openBranchCleanup(): Promise<void>;
+  openSyncRefs(kind: SyncRefKind): void;
   /** Check out the branch one level up or down the current branch's stack. */
   navigateStack(direction: 'up' | 'down'): Promise<void>;
   /** Put the branch back to before the last Commit Composer run ("Revert last recompose"). */
@@ -248,6 +249,20 @@ export function buildPaletteCommands(shell: PaletteCommandHost): PaletteCommand[
       icon: 'settings',
       shortcut: `${mod},`,
       action: () => { dialogs.open('settings'); },
+    },
+    {
+      id: 'sync-branches',
+      label: 'Sync Branches with Remote…',
+      category: 'action',
+      icon: 'branch',
+      action: shell.requiresRepository(() => shell.openSyncRefs('branches')),
+    },
+    {
+      id: 'sync-tags',
+      label: 'Sync Tags with Remote…',
+      category: 'action',
+      icon: 'tag',
+      action: shell.requiresRepository(() => shell.openSyncRefs('tags')),
     },
     {
       id: 'remotes',
