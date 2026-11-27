@@ -23,8 +23,11 @@ import {
   removeRepositoryFromWorkspace,
   updateWorkspaceLastOpened,
   validateWorkspaceRepositories,
+  openWorkspace,
 } from '../workspace.service.ts';
-import type { Workspace, WorkspaceRepoStatus } from '../../types/git.types.ts';
+import { repositoryStore } from '../../stores/repository.store.ts';
+import { workspaceStore } from '../../stores/workspace.store.ts';
+import type { Repository, Workspace, WorkspaceRepoStatus } from '../../types/git.types.ts';
 
 const mockWorkspace: Workspace = {
   id: 'ws-1',
@@ -147,6 +150,79 @@ describe('workspace.service', () => {
       expect(lastInvokedCommand).to.equal('update_workspace_last_opened');
       expect((lastInvokedArgs as Record<string, unknown>).workspaceId).to.equal('ws-1');
       expect(result.success).to.be.true;
+    });
+  });
+
+  describe('switching workspaces', () => {
+    const sharedPath = 'C:\\Repos\\Shared';
+    const oldPath = '/repo/old';
+
+    function makeRepository(path: string): Repository {
+      return {
+        path,
+        name: path.split(/[\\/]/).at(-1) || path,
+        isValid: true,
+        isBare: false,
+        headRef: 'main',
+        detachedHeadOid: null,
+        state: 'clean',
+        isShallow: false,
+        isPartialClone: false,
+        cloneFilter: null,
+      };
+    }
+
+    beforeEach(() => {
+      repositoryStore.getState().reset();
+      workspaceStore.getState().setActiveWorkspaceId('old');
+      repositoryStore.getState().addRepository(makeRepository(oldPath));
+      repositoryStore.getState().addRepository(makeRepository(sharedPath));
+    });
+
+    afterEach(() => {
+      repositoryStore.getState().reset();
+      workspaceStore.getState().reset();
+    });
+
+    it('keeps the shared tab and persists only the destination tabs', async () => {
+      const active = repositoryStore.getState().getActiveRepository();
+      mockInvoke = async (command, args) =>
+        command === 'open_repository' ? makeRepository((args as { path: string }).path) : null;
+
+      await openWorkspace({
+        ...mockWorkspace,
+        repositories: [{ path: 'c:/repos/shared', name: 'Shared' }, ...mockWorkspace.repositories],
+      });
+
+      const store = repositoryStore.getState();
+      expect(store.getActiveRepository()).to.equal(active);
+      expect(store.openRepositories.map(({ repository }) => repository.path)).to.deep.equal([
+        sharedPath,
+        '/repo/one',
+        '/repo/two',
+      ]);
+      expect(store.persistedOpenRepos.map(({ path }) => path)).to.deep.equal([
+        sharedPath,
+        '/repo/one',
+        '/repo/two',
+      ]);
+      expect(store.recentRepositories.map(({ path }) => path)).to.include(oldPath);
+      expect(workspaceStore.getState().activeWorkspaceId).to.equal(mockWorkspace.id);
+    });
+
+    it('keeps the current workspace and tabs if every destination repository fails', async () => {
+      const current = repositoryStore.getState();
+      mockInvoke = async () => {
+        throw new Error('Repository not found');
+      };
+
+      await openWorkspace(mockWorkspace);
+
+      const store = repositoryStore.getState();
+      expect(store.openRepositories).to.equal(current.openRepositories);
+      expect(store.getActiveRepository()).to.equal(current.getActiveRepository());
+      expect(workspaceStore.getState().activeWorkspaceId).to.equal('old');
+      expect(workspaceStore.getState().isLoading).to.be.false;
     });
   });
 

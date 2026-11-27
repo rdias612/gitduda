@@ -535,18 +535,18 @@ export class GnToolbar extends LitElement {
     this.activeIndex = initial.activeIndex;
     this.isLoading = initial.isLoading;
     // Subscribe to store changes
-    this.unsubscribe = repositoryStore.subscribe((state) => {
+    this.unsubscribe = repositoryStore.subscribe((state, previousState) => {
       this.openRepositories = state.openRepositories;
-      const prevIndex = this.activeIndex;
       this.activeIndex = state.activeIndex;
       this.isLoading = state.isLoading;
 
       // Check semantic availability when active repo changes
-      if (state.activeIndex !== prevIndex && state.activeIndex >= 0 && state.activeIndex < state.openRepositories.length) {
-        const activeRepo = state.openRepositories[state.activeIndex];
-        if (activeRepo) {
-          this.checkSemanticAvailability(activeRepo.repository.path);
-        }
+      const activePath = state.openRepositories[state.activeIndex]?.repository.path;
+      const previousPath =
+        previousState.openRepositories[previousState.activeIndex]?.repository.path;
+      if (activePath !== previousPath) {
+        this.semanticAvailable = false;
+        if (activePath) void this.checkSemanticAvailability(activePath);
       }
     });
 
@@ -1011,11 +1011,15 @@ export class GnToolbar extends LitElement {
   }
 
   private async checkSemanticAvailability(repoPath: string): Promise<void> {
+    let isReady = false;
     try {
       const status = await embeddingIndexService.getStatus(repoPath);
-      this.semanticAvailable = status.isReady;
+      isReady = status.isReady;
     } catch {
-      this.semanticAvailable = false;
+      // An unavailable index leaves keyword search enabled.
+    }
+    if (this.activeRepo?.repository.path === repoPath) {
+      this.semanticAvailable = isReady;
     }
   }
 

@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { setupOpenRepository } from '../fixtures/tauri-mock';
+import { defaultMockData, setupOpenRepository } from '../fixtures/tauri-mock';
 import {
   startCommandCaptureWithMocks,
   findCommand,
@@ -219,6 +219,60 @@ test('the toolbar opens a workspace and still switches individual repositories',
   await page.keyboard.press('Escape');
   await expect(trigger).toBeFocused();
   await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+});
+
+test('switching workspaces removes unrelated tabs and keeps the shared tab active', async ({ page }) => {
+  const mobile = ['bus-jam', 'sudoku', 'gate_runner'];
+  const personal = ['gitduda', 'sudoku', 'racha'];
+  const workspaces = [
+    { id: 'personal', name: 'Projetos pessoas', repos: personal },
+    { id: 'mobile', name: 'Jogos Mobile', repos: mobile },
+  ].map(({ id, name, repos }) => ({
+    id,
+    name,
+    color: '#4fc3f7',
+    description: '',
+    repositories: repos.map((name) => ({ name, path: `/work/${name}` })),
+    createdAt: '2026-01-01T00:00:00Z',
+    lastOpened: null,
+  }));
+  const repository = { ...defaultMockData.repository, path: '/work/gitduda', name: 'gitduda' };
+  await setupOpenRepository(page, { repository, workspaces });
+  await page.evaluate((template) => {
+    const tauri = (window as unknown as {
+      __TAURI_INTERNALS__: { invoke: (command: string, args?: { path: string }) => Promise<unknown> };
+    }).__TAURI_INTERNALS__;
+    const invoke = tauri.invoke;
+    tauri.invoke = async (command, args) => {
+      if (command === 'open_repository' && args?.path) {
+        return { ...template, path: args.path, name: args.path.split('/').at(-1) };
+      }
+      return invoke(command, args);
+    };
+  }, repository);
+
+  const trigger = page.getByRole('button', { name: 'Switch workspace or repository' });
+  const toolbar = page.locator('gn-toolbar');
+  const workspacesColumn = page.getByRole('group', { name: 'Workspaces', exact: true });
+  const repositoryColumn = page.getByRole('group', { name: 'Open repositories' });
+  const sharedTab = toolbar.getByRole('tab', { name: 'sudoku', exact: true });
+
+  await trigger.click();
+  await workspacesColumn.getByRole('button', { name: 'Projetos pessoas' }).click();
+  await sharedTab.click();
+
+  await trigger.click();
+  await workspacesColumn.getByRole('button', { name: 'Jogos Mobile' }).click();
+  await expect(toolbar.locator('.tab-name')).toHaveText(mobile);
+  await expect(sharedTab).toHaveAttribute('aria-selected', 'true');
+
+  await trigger.click();
+  await expect(workspacesColumn.getByRole('button', { name: 'Jogos Mobile' }))
+    .toHaveAttribute('aria-current', 'true');
+  await expect(repositoryColumn.locator('.item-name')).toHaveText(mobile);
+  await workspacesColumn.getByRole('button', { name: 'Projetos pessoas' }).click();
+  await expect(toolbar.locator('.tab-name')).toHaveText(personal);
+  await expect(sharedTab).toHaveAttribute('aria-selected', 'true');
 });
 
 test('long workspaces and repositories lists scroll independently', async ({ page }) => {

@@ -1003,6 +1003,47 @@ describe('app-shell multi-repo behavior', () => {
       }
     });
 
+    it('does not restore tabs replaced by a workspace switch during startup', async () => {
+      const previousRepo = mockRepo('/repo/previous', 'previous');
+      const sharedRepo = mockRepo('/repo/shared', 'shared');
+      const destinationRepo = mockRepo('/repo/destination', 'destination');
+      let finishOpen!: (repo: Repository) => void;
+      const pendingOpen = new Promise<Repository>((resolve) => {
+        finishOpen = resolve;
+      });
+      mockResponses.open_repository = ({ path }) =>
+        path === previousRepo.path
+          ? pendingOpen
+          : pendingOpen.then(() => {
+              throw new Error('Repository not found');
+            });
+      repositoryStore.setState({
+        persistedOpenRepos: [previousRepo, sharedRepo].map(({ path, name }) => ({ path, name })),
+      });
+
+      const el = createAppShell();
+      document.body.appendChild(el);
+      try {
+        await waitUntil(() => invokeCallArgs.some(({ command }) => command === 'open_repository'));
+        repositoryStore.getState().replaceRepositories([sharedRepo, destinationRepo]);
+        finishOpen(previousRepo);
+        await waitUntil(() => !uiStore.getState().globalLoading);
+
+        const store = repositoryStore.getState();
+        expect(store.openRepositories.map(({ repository }) => repository.path)).to.deep.equal([
+          sharedRepo.path,
+          destinationRepo.path,
+        ]);
+        expect(store.persistedOpenRepos.map(({ path }) => path)).to.deep.equal([
+          sharedRepo.path,
+          destinationRepo.path,
+        ]);
+        expect(store.getActiveRepository()?.repository.path).to.equal(destinationRepo.path);
+      } finally {
+        el.remove();
+      }
+    });
+
     it('reports and prunes repos that fail to restore', async () => {
       mockResponses['open_repository'] = (args) => {
         if (args.path === '/repo/gone') {

@@ -5581,11 +5581,18 @@ export class AppShell extends LitElement {
           }
         })
       );
+      // A workspace switch may have replaced the saved tabs while these opens were pending.
+      const { persistedOpenRepos, openRepositories } = repositoryStore.getState();
+      const savedPaths = new Set(persistedOpenRepos.map((repo) => repo.path));
+      const openPaths = new Set(openRepositories.map(({ repository }) => repository.path));
+      const currentResults = results.filter(
+        ({ persisted }) => savedPaths.has(persisted.path) && !openPaths.has(persisted.path),
+      );
 
       // Add without activating each one — activation side effects (index
       // builds, profile/integration loads) belong to the single tab that
       // ends up active, chosen below.
-      for (const { repo } of results) {
+      for (const { repo } of currentResults) {
         if (repo) {
           repositoryStore.getState().addRepository(repo, { activate: false });
         }
@@ -5595,7 +5602,7 @@ export class AppShell extends LitElement {
       // reported — a silently missing tab that silently fails again on every
       // launch looks like data loss. Prune it so it isn't retried forever;
       // it stays available in the Recent list.
-      for (const { persisted, repo } of results) {
+      for (const { persisted, repo } of currentResults) {
         if (!repo) {
           repositoryStore.getState().prunePersistedRepo(persisted.path);
           showToast(`Could not restore repository "${persisted.name}" (${persisted.path})`, 'error');
@@ -5604,21 +5611,22 @@ export class AppShell extends LitElement {
 
       // Remotes load in parallel too (path-keyed store update, order-free).
       await Promise.all(
-        results
+        currentResults
           .filter((r) => r.repo !== null)
           .map((r) => this.loadRepositoryRemotes(r.persisted.path))
       );
 
       // Land on the tab the user had active last session; fall back to the
       // last successfully restored repo when that one is gone
-      const restoredPaths = results.filter((r) => r.repo !== null).map((r) => r.persisted.path);
-      const lastActivePath = repositoryStore.getState().persistedActivePath;
+      const restoredPaths = currentResults.filter((r) => r.repo !== null).map((r) => r.persisted.path);
+      const store = repositoryStore.getState();
+      const lastActivePath = store.persistedActivePath;
       const targetPath =
         lastActivePath && restoredPaths.includes(lastActivePath)
           ? lastActivePath
           : restoredPaths[restoredPaths.length - 1];
-      if (targetPath) {
-        repositoryStore.getState().setActiveByPath(targetPath);
+      if (targetPath && !store.getActiveRepository()) {
+        store.setActiveByPath(targetPath);
       }
 
       this.isRestoringRepositories = false;

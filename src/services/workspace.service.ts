@@ -10,6 +10,7 @@ import { invokeCommand } from './tauri-api.ts';
 import { openRepository } from './git/repository.ts';
 import { showToast } from './notification.service.ts';
 import type {
+  Repository,
   Workspace,
   WorkspaceRepoStatus,
   WorkspaceSearchResponse,
@@ -71,11 +72,12 @@ export async function openWorkspace(
 ): Promise<void> {
   const workspaceState = workspaceStore.getState();
   if (workspaceState.isLoading) return;
+  const switchingWorkspace =
+    workspaceState.activeWorkspaceId !== null && workspaceState.activeWorkspaceId !== workspace.id;
   workspaceState.setLoading(true);
 
   try {
-    const store = repositoryStore.getState();
-    let lastOpenedPath: string | null = null;
+    const openedRepositories: Repository[] = [];
     let failedCount = 0;
     for (const repo of workspace.repositories) {
       const status = repoStatuses?.get(repo.path);
@@ -86,15 +88,13 @@ export async function openWorkspace(
 
       const result = await openRepository({ path: repo.path });
       if (result.success && result.data) {
-        // Activate once after the batch to avoid starting index builds for every repo.
-        store.addRepository(result.data, { activate: false });
-        lastOpenedPath = result.data.path;
+        openedRepositories.push(result.data);
       } else {
         failedCount++;
       }
     }
 
-    if (failedCount > 0 && !lastOpenedPath) {
+    if (failedCount > 0 && openedRepositories.length === 0) {
       showToast(
         msg(str`Could not open workspace: ${workspace.name} — no repository could be opened`),
         'error',
@@ -102,7 +102,17 @@ export async function openWorkspace(
       return;
     }
 
-    if (lastOpenedPath) store.setActiveByPath(lastOpenedPath);
+    const store = repositoryStore.getState();
+    if (switchingWorkspace) {
+      store.replaceRepositories(openedRepositories);
+    } else {
+      // Activate once after the batch to avoid starting index builds for every repo.
+      for (const repo of openedRepositories) {
+        store.addRepository(repo, { activate: false });
+      }
+      const lastOpened = openedRepositories.at(-1);
+      if (lastOpened) store.setActiveByPath(lastOpened.path);
+    }
     workspaceState.setActiveWorkspaceId(workspace.id);
     await updateWorkspaceLastOpened(workspace.id);
 

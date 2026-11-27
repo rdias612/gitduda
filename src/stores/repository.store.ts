@@ -1,6 +1,7 @@
 import { createStore } from 'zustand/vanilla';
 import { persist } from 'zustand/middleware';
 import type { Repository, Branch, Remote, Tag, Stash, StatusEntry } from '../types/git.types.ts';
+import { samePath } from '../utils/path-compare.ts';
 import { commitsStore } from './commits.store.ts';
 
 export interface RecentRepository {
@@ -67,6 +68,8 @@ export interface RepositoryState {
    * builds, integration checks) — activate the final one explicitly.
    */
   addRepository: (repo: Repository, options?: { activate?: boolean }) => void;
+  /** Replace the tab set while keeping the active repository when it is still present. */
+  replaceRepositories: (repositories: readonly Repository[]) => void;
   removeRepository: (path: string) => void;
   /** Remove a repo from the persisted list only (e.g. it failed to restore) */
   prunePersistedRepo: (path: string) => void;
@@ -124,6 +127,13 @@ const createEmptyRepoData = (repo: Repository): OpenRepository => ({
   unstagedFiles: [],
 });
 
+function toPersistedOpenRepo(repo: Repository): PersistedOpenRepo {
+  return {
+    path: repo.path,
+    name: repo.name || repo.path.split('/').pop() || repo.path,
+  };
+}
+
 /** Checks if activeIndex is valid for the openRepositories array */
 function isActiveIndexValid(state: Pick<RepositoryState, 'activeIndex' | 'openRepositories'>): boolean {
   return state.activeIndex >= 0 && state.activeIndex < state.openRepositories.length;
@@ -136,7 +146,7 @@ export const repositoryStore = createStore<RepositoryState>()(
 
       // Repository management
       addRepository: (repo, options) => {
-        const name = repo.name || repo.path.split('/').pop() || repo.path;
+        const persistedRepo = toPersistedOpenRepo(repo);
         const activate = options?.activate ?? true;
 
         set((state) => {
@@ -151,7 +161,7 @@ export const repositoryStore = createStore<RepositoryState>()(
           const newRepos = [...state.openRepositories, createEmptyRepoData(repo)];
           const newPersistedRepos = state.persistedOpenRepos.some((r) => r.path === repo.path)
             ? state.persistedOpenRepos
-            : [...state.persistedOpenRepos, { path: repo.path, name }];
+            : [...state.persistedOpenRepos, persistedRepo];
 
           return {
             openRepositories: newRepos,
@@ -166,7 +176,47 @@ export const repositoryStore = createStore<RepositoryState>()(
         }
 
         // Add to recent
-        get().addRecentRepository(repo.path, name);
+        get().addRecentRepository(persistedRepo.path, persistedRepo.name);
+      },
+
+      replaceRepositories: (repositories) => {
+        const state = get();
+        const activeRepo = state.getActiveRepository();
+        const openRepositories: OpenRepository[] = [];
+        for (const repo of repositories) {
+          if (openRepositories.some((entry) => samePath(entry.repository.path, repo.path))) {
+            continue;
+          }
+          const existing =
+            activeRepo && samePath(activeRepo.repository.path, repo.path)
+              ? activeRepo
+              : state.openRepositories.find((entry) => samePath(entry.repository.path, repo.path));
+          openRepositories.push(existing ?? createEmptyRepoData(repo));
+        }
+
+        const retainedIndex = activeRepo ? openRepositories.indexOf(activeRepo) : -1;
+        const activeIndex = retainedIndex >= 0 ? retainedIndex : openRepositories.length - 1;
+        const persistedOpenRepos = openRepositories.map((entry) =>
+          toPersistedOpenRepo(entry.repository),
+        );
+        const activePath = openRepositories[activeIndex]?.repository.path ?? null;
+        set({
+          openRepositories,
+          persistedOpenRepos,
+          activeIndex,
+          persistedActivePath: activePath,
+          error: null,
+        });
+
+        const commits = commitsStore.getState();
+        commits.setActiveRepo(activePath);
+        const openPaths = new Set(persistedOpenRepos.map((repo) => repo.path));
+        for (const { repository } of state.openRepositories) {
+          if (!openPaths.has(repository.path)) commits.evictRepo(repository.path);
+        }
+        for (const { path, name } of persistedOpenRepos) {
+          state.addRecentRepository(path, name);
+        }
       },
 
       removeRepository: (path) => {
