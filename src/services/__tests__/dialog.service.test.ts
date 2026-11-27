@@ -25,6 +25,7 @@ if (!(globalThis as Record<string, unknown>).__TAURI_INTERNALS__) {
 import {
   openDialog,
   openRepositoryDialog,
+  openRepositoriesDialog,
   openCloneDestinationDialog,
   saveDialog,
   showMessage,
@@ -125,6 +126,10 @@ describe('dialog.service', () => {
       invokeResult = '/home/user/repo';
       const result = await openRepositoryDialog();
       expect(result).to.equal('/home/user/repo');
+      expect(invokeLog[0].args).to.have.property('options').that.includes({
+        directory: true,
+        multiple: false,
+      });
     });
 
     it('should return null on cancel', async () => {
@@ -143,6 +148,24 @@ describe('dialog.service', () => {
       invokeResult = [];
       const result = await openRepositoryDialog();
       expect(result).to.be.null;
+    });
+  });
+
+  describe('openRepositoriesDialog', () => {
+    it('opens the directory picker with multiple selection', async () => {
+      invokeResult = ['/repos/alpha', '/repos/beta'];
+      expect(await openRepositoriesDialog()).to.deep.equal(invokeResult);
+      expect(invokeLog[0].args).to.have.property('options').that.includes({
+        directory: true,
+        multiple: true,
+      });
+    });
+
+    it('normalizes single and cancelled selections to arrays', async () => {
+      invokeResult = '/repos/alpha';
+      expect(await openRepositoriesDialog()).to.deep.equal(['/repos/alpha']);
+      invokeResult = null;
+      expect(await openRepositoriesDialog()).to.deep.equal([]);
     });
   });
 

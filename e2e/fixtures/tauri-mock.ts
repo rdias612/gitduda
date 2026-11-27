@@ -806,6 +806,19 @@ export async function setupTauriMocks(
             return state.repository;
           case 'get_workspaces':
             return state.workspaces;
+          case 'add_repository_to_workspace': {
+            const { workspaceId, path, name } = args as {
+              workspaceId: string;
+              path: string;
+              name: string;
+            };
+            const workspace = state.workspaces.find(({ id }) => id === workspaceId);
+            if (!workspace) throw new Error('Workspace not found');
+            if (!workspace.repositories.some((repo) => repo.path === path)) {
+              workspace.repositories.push({ path, name });
+            }
+            return workspace;
+          }
           case 'get_recent_repositories':
             return [state.repository];
           case 'get_branches':

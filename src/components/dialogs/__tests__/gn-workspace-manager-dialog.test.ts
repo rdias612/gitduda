@@ -116,7 +116,7 @@ function findCommands(name: string): Array<{ command: string; args?: unknown }> 
  */
 let confirmAnswer = 'Ok';
 /** Result to return from the next plugin:dialog|open invoke (repo picker / file picker). */
-let dialogOpenResult: string | null = null;
+let dialogOpenResult: string | string[] | null = null;
 /** Result to return from the next plugin:dialog|save invoke (save dialog). */
 let dialogSaveResult: string | null = null;
 
@@ -125,12 +125,13 @@ function setupDefaultMocks(opts: {
   statuses?: WorkspaceRepoStatus[];
   savedWorkspace?: Workspace;
   deleteFails?: boolean;
+  addRepoErrors?: Record<string, string>;
   searchResults?: WorkspaceSearchResult[];
   searchFailures?: string[];
   searchError?: string;
   exportData?: string;
 } = {}): void {
-  const workspaces = opts.workspaces ?? [WS_ALPHA, WS_BETA];
+  let workspaces = opts.workspaces ?? [WS_ALPHA, WS_BETA];
   const statuses = opts.statuses ?? [STATUS_ALPHA, STATUS_BETA, STATUS_GAMMA];
 
   mockInvoke = async (command: string, args?: unknown) => {
@@ -153,8 +154,20 @@ function setupDefaultMocks(opts: {
         return undefined;
       case 'validate_workspace_repositories':
         return statuses;
-      case 'add_repository_to_workspace':
-        return workspaces[0] ?? null;
+      case 'add_repository_to_workspace': {
+        const { workspaceId, path, name } = args as {
+          workspaceId: string;
+          path: string;
+          name: string;
+        };
+        const error = opts.addRepoErrors?.[path];
+        if (error) throw new Error(error);
+        const ws = workspaces.find(({ id }) => id === workspaceId);
+        if (!ws) throw new Error('Workspace not found');
+        const updated = { ...ws, repositories: [...ws.repositories, { path, name }] };
+        workspaces = workspaces.map((workspace) => workspace === ws ? updated : workspace);
+        return updated;
+      }
       case 'remove_repository_from_workspace':
         return workspaces[0] ?? null;
       case 'search_workspace':
@@ -463,6 +476,10 @@ describe('gn-workspace-manager-dialog', () => {
 
   // ── Add / Remove Repos ────────────────────────────────────────────────
   describe('Add/Remove Repos', () => {
+    beforeEach(() => {
+      uiStore.setState({ toasts: [] });
+    });
+
     it('calls add_repository_to_workspace when a repo is selected via dialog', async () => {
       dialogOpenResult = '/repos/new-repo';
       const el = await renderDialog();
@@ -484,6 +501,89 @@ describe('gn-workspace-manager-dialog', () => {
       expect(addArgs.name).to.equal('new-repo');
     });
 
+    it('adds selected repositories sequentially and refreshes the list and statuses once', async () => {
+      const first = 'C:\\repos\\first';
+      const second = 'C:\\repos\\second';
+      dialogOpenResult = [first, second];
+      setupDefaultMocks({ statuses: [makeRepoStatus({ path: first, name: 'first' })] });
+      const invoke = mockInvoke;
+      let finishFirstAdd!: () => void;
+      const firstAddPending = new Promise<void>((resolve) => { finishFirstAdd = resolve; });
+      mockInvoke = async (command, args) => {
+        if (command === 'add_repository_to_workspace' && (args as { path: string }).path === first) {
+          await firstAddPending;
+        }
+        return invoke(command, args);
+      };
+      const el = await renderDialog();
+      clearHistory();
+
+      const addBtn = el.shadowRoot!.querySelector<HTMLButtonElement>('.add-repo-btn')!;
+      addBtn.click();
+      await tick(el);
+      try {
+        expect(addBtn.disabled).to.equal(true);
+        expect(findCommands('add_repository_to_workspace').map(({ args }) => args)).to.deep.equal([
+          { workspaceId: 'ws-1', path: first, name: 'first' },
+        ]);
+        expect(findCommands('get_workspaces')).to.have.length(0);
+      } finally {
+        finishFirstAdd();
+      }
+      await tick(el);
+
+      expect(findCommands('add_repository_to_workspace')[1].args).to.deep.equal({
+        workspaceId: 'ws-1', path: second, name: 'second',
+      });
+      expect(invokeHistory.map(({ command }) => command)).to.deep.equal([
+        'plugin:dialog|open',
+        'add_repository_to_workspace',
+        'add_repository_to_workspace',
+        'get_workspaces',
+        'validate_workspace_repositories',
+      ]);
+      expect([...el.shadowRoot!.querySelectorAll('.repo-name')].map((repo) => repo.textContent?.trim()))
+        .to.deep.equal(['alpha', 'beta', 'first', 'second']);
+      expect(el.shadowRoot!.querySelector('.repo-branch')?.textContent).to.contain('main');
+      expect(uiStore.getState().toasts.at(-1)).to.include({ type: 'success', message: 'Add repositories: 2 added' });
+      expect(addBtn.disabled).to.equal(false);
+    });
+
+    it('continues after duplicates and failures and reports the partial result', async () => {
+      dialogOpenResult = ['/repos/alpha', '/repos/broken', '/repos/new-repo'];
+      setupDefaultMocks({ addRepoErrors: { '/repos/broken': 'Permission denied' } });
+      const el = await renderDialog();
+      clearHistory();
+
+      el.shadowRoot!.querySelector<HTMLButtonElement>('.add-repo-btn')!.click();
+      await tick(el);
+
+      expect(findCommands('add_repository_to_workspace').map(({ args }) => (args as { path: string }).path))
+        .to.deep.equal(['/repos/broken', '/repos/new-repo']);
+      expect([...el.shadowRoot!.querySelectorAll('.repo-name')].map((repo) => repo.textContent?.trim()))
+        .to.deep.equal(['alpha', 'beta', 'new-repo']);
+      expect(uiStore.getState().toasts).to.have.length(1);
+      expect(uiStore.getState().toasts[0]).to.include({
+        type: 'warning',
+        message: 'Add repositories: 1 added, 1 already in workspace (alpha), 1 failed (broken: Permission denied)',
+      });
+    });
+
+    it('asks for a single parent folder if the picker returns mixed locations', async () => {
+      dialogOpenResult = ['/repos/new-repo', '/other/another-repo'];
+      const el = await renderDialog();
+      clearHistory();
+
+      el.shadowRoot!.querySelector<HTMLButtonElement>('.add-repo-btn')!.click();
+      await tick(el);
+
+      expect(findCommands('add_repository_to_workspace')).to.have.length(0);
+      expect(uiStore.getState().toasts[0]).to.include({
+        type: 'warning',
+        message: 'Select repository folders from the same parent folder.',
+      });
+    });
+
     it('does not call add_repository_to_workspace when dialog is cancelled', async () => {
       dialogOpenResult = null;
       const el = await renderDialog();
@@ -495,6 +595,8 @@ describe('gn-workspace-manager-dialog', () => {
 
       const addCalls = findCommands('add_repository_to_workspace');
       expect(addCalls.length).to.equal(0);
+      expect(findCommands('get_workspaces')).to.have.length(0);
+      expect(uiStore.getState().toasts).to.have.length(0);
     });
 
     it('renders repo items with names', async () => {

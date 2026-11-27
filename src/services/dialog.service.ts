@@ -73,6 +73,20 @@ export async function openRepositoryDialog(): Promise<string | null> {
 }
 
 /**
+ * Open a folder picker for adding repositories to a workspace.
+ */
+export async function openRepositoriesDialog(): Promise<string[]> {
+  const result = await openDialog({
+    title: 'Select Repositories',
+    directory: true,
+    multiple: true,
+  });
+
+  if (Array.isArray(result)) return result;
+  return result ? [result] : [];
+}
+
+/**
  * Open a folder picker dialog for clone destination
  */
 export async function openCloneDestinationDialog(defaultPath?: string): Promise<string | null> {

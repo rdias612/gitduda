@@ -8,7 +8,12 @@ import { customElement, property, state } from 'lit/decorators.js';
 import { sharedStyles } from '../../styles/shared-styles.ts';
 import * as workspaceService from '../../services/workspace.service.ts';
 import * as gitService from '../../services/git.service.ts';
-import { openRepositoryDialog, openDialog, saveDialog, showConfirm } from '../../services/dialog.service.ts';
+import {
+  openRepositoriesDialog,
+  openDialog,
+  saveDialog,
+  showConfirm,
+} from '../../services/dialog.service.ts';
 import { showToast } from '../../services/notification.service.ts';
 import { workspaceStore } from '../../stores/workspace.store.ts';
 import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
@@ -318,9 +323,14 @@ export class GnWorkspaceManagerDialog extends LitElement {
         transition: all var(--transition-fast);
       }
 
-      .add-repo-btn:hover {
+      .add-repo-btn:hover:not(:disabled) {
         background: var(--color-bg-hover);
         color: var(--color-text-primary);
+      }
+
+      .add-repo-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
       }
 
       .add-repo-btn svg {
@@ -698,6 +708,7 @@ export class GnWorkspaceManagerDialog extends LitElement {
    *  a shared boolean made Fetch All read "Running..." during a Pull All. */
   @state() private batchRunning: 'fetch' | 'pull' | null = null;
   @state() private deletingWorkspace = false;
+  @state() private addingRepositories = false;
   @state() private removingRepoPath: string | null = null;
   @state() private statusLoading = false;
 
@@ -858,18 +869,63 @@ export class GnWorkspaceManagerDialog extends LitElement {
 
   private async handleAddRepo(): Promise<void> {
     const ws = this.selectedWorkspace;
-    if (!ws) return;
+    if (!ws || this.addingRepositories) return;
 
-    const path = await openRepositoryDialog();
-    if (!path) return;
+    this.addingRepositories = true;
+    try {
+      const paths = await openRepositoriesDialog();
+      if (paths.length === 0) return;
 
-    const name = path.split('/').pop() ?? path;
-    const result = await workspaceService.addRepositoryToWorkspace(ws.id, path, name);
-    if (result.success) {
+      const folders = paths.map((path) => {
+        const parts = path.split(path.startsWith('/') ? '/' : /[\\/]/).filter(Boolean);
+        const name = parts.pop() ?? path;
+        return { path, name, parent: parts.join('/') };
+      });
+      const selectedParent = folders[0].parent;
+      if (folders.some(({ parent }) => parent !== selectedParent)) {
+        showToast('Select repository folders from the same parent folder.', 'warning');
+        return;
+      }
+
+      const existingPaths = new Set(ws.repositories.map(({ path }) => path));
+      const duplicates: string[] = [];
+      const failures: string[] = [];
+      let added = 0;
+
+      // Each command reads and writes the same workspace config file.
+      for (const { path, name } of folders) {
+        if (existingPaths.has(path)) {
+          duplicates.push(name);
+          continue;
+        }
+
+        const result = await workspaceService.addRepositoryToWorkspace(ws.id, path, name);
+        if (result.success) {
+          existingPaths.add(path);
+          added++;
+        } else {
+          failures.push(`${name}: ${result.error?.message || 'Unknown error'}`);
+        }
+      }
+
       await this.loadWorkspaces();
       await this.refreshStatus();
-    } else {
-      showToast(result.error?.message || 'Failed to add repository', 'error');
+
+      showToast(
+        `Add repositories: ${added} added` +
+          (duplicates.length
+            ? `, ${duplicates.length} already in workspace (${duplicates.join(', ')})`
+            : '') +
+          (failures.length ? `, ${failures.length} failed (${failures.join(', ')})` : ''),
+        failures.length ? (added ? 'warning' : 'error') : duplicates.length ? 'info' : 'success',
+      );
+    } catch (error) {
+      showToast(
+        `Failed to add repositories: ${error instanceof Error ? error.message : String(error)}`,
+        'error',
+      );
+    } finally {
+      this.addingRepositories = false;
     }
   }
 
@@ -1483,7 +1539,11 @@ export class GnWorkspaceManagerDialog extends LitElement {
                         </svg>
                         Export
                       </button>
-                      <button class="add-repo-btn" @click=${this.handleAddRepo}>
+                      <button
+                        class="add-repo-btn"
+                        ?disabled=${this.addingRepositories}
+                        @click=${this.handleAddRepo}
+                      >
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                           <line x1="12" y1="5" x2="12" y2="19"></line>
                           <line x1="5" y1="12" x2="19" y2="12"></line>

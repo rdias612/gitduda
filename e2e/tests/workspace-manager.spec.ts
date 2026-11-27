@@ -173,6 +173,41 @@ test.describe('Workspace Manager - repo status chips', () => {
   });
 });
 
+test('Workspace Manager adds folders selected together with Add Repo', async ({ page }) => {
+  const paths = ['/repos/alpha', '/repos/beta'];
+  await setupOpenRepository(page, {
+    workspaces: [{
+      id: 'ws-1',
+      name: 'Alpha Workspace',
+      description: '',
+      color: '#4fc3f7',
+      repositories: [],
+      createdAt: '2024-01-01T00:00:00Z',
+      lastOpened: null,
+    }],
+  });
+  await startCommandCaptureWithMocks(page, {
+    'plugin:dialog|open': paths,
+    validate_workspace_repositories: [],
+  });
+
+  await openWorkspaceManager(page);
+  const dialog = page.locator('gn-workspace-manager-dialog[open]');
+  await dialog.getByRole('button', { name: 'Add Repo' }).click();
+
+  await expect(dialog.locator('.repo-name')).toHaveText(['alpha', 'beta']);
+  await expect(page.locator('gn-toast-container .toast.success')).toHaveText(/2 added/);
+  const pickerCalls = await findCommand(page, 'plugin:dialog|open');
+  expect(pickerCalls).toHaveLength(1);
+  expect(pickerCalls[0].args).toMatchObject({ options: { directory: true, multiple: true } });
+  const addCalls = await findCommand(page, 'add_repository_to_workspace');
+  expect(addCalls.map(({ args }) => args)).toEqual([
+    { workspaceId: 'ws-1', path: paths[0], name: 'alpha' },
+    { workspaceId: 'ws-1', path: paths[1], name: 'beta' },
+  ]);
+  expect(await findCommand(page, 'validate_workspace_repositories')).toHaveLength(1);
+});
+
 test.describe('Workspace Manager - partial search failures', () => {
   test('shows matches from the repos that worked alongside the ones that could not be searched', async ({ page }) => {
     await setupOpenRepository(page);
