@@ -38,6 +38,19 @@ const WINDOWS_APP_MANIFEST: &str = r#"<assembly xmlns="urn:schemas-microsoft-com
 "#;
 
 fn main() {
+    println!("cargo:rerun-if-changed=icons");
+
+    for icon in [
+        "icons/icon.ico",
+        "icons/32x32.png",
+        "icons/128x128.png",
+        "icons/128x128@2x.png",
+        "icons/icon.png",
+        "icons/icon.icns",
+    ] {
+        println!("cargo:rerun-if-changed={icon}");
+    }
+
     let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
     let target_env = env::var("CARGO_CFG_TARGET_ENV").unwrap_or_default();
 
