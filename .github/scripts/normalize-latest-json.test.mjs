@@ -23,23 +23,23 @@ const RELEASE_FIXTURE = {
     {
       id: 390166863,
       name: "Gitduda_aarch64.app.tar.gz",
-      url: "https://api.github.com/repos/rdias612/gitdudareleases/assets/390166863",
+      url: "https://api.github.com/repos/rdias612/gitduda/releases/assets/390166863",
       browser_download_url:
-        "https://github.com/rdias612/gitdudareleases/download/untagged-draft/Gitduda_aarch64.app.tar.gz",
+        "https://github.com/rdias612/gitduda/releases/download/untagged-draft/Gitduda_aarch64.app.tar.gz",
     },
     {
       id: 390169695,
       name: "Gitduda_1.1.2_amd64.AppImage",
-      url: "https://api.github.com/repos/rdias612/gitdudareleases/assets/390169695",
+      url: "https://api.github.com/repos/rdias612/gitduda/releases/assets/390169695",
       browser_download_url:
-        "https://github.com/rdias612/gitdudareleases/download/v1.1.2/Gitduda_1.1.2_amd64.AppImage",
+        "https://github.com/rdias612/gitduda/releases/download/v1.1.2/Gitduda_1.1.2_amd64.AppImage",
     },
     {
       id: 390171183,
       name: "Gitduda_1.1.2_x64-setup.exe",
-      url: "https://api.github.com/repos/rdias612/gitdudareleases/assets/390171183",
+      url: "https://api.github.com/repos/rdias612/gitduda/releases/assets/390171183",
       browser_download_url:
-        "https://github.com/rdias612/gitdudareleases/download/v1.1.2/Gitduda_1.1.2_x64-setup.exe",
+        "https://github.com/rdias612/gitduda/releases/download/v1.1.2/Gitduda_1.1.2_x64-setup.exe",
     },
   ],
 };
@@ -51,15 +51,15 @@ const DRAFT_LATEST_FIXTURE = {
   platforms: {
     "darwin-aarch64": {
       signature: "sig-mac",
-      url: "https://api.github.com/repos/rdias612/gitdudareleases/assets/390166863",
+      url: "https://api.github.com/repos/rdias612/gitduda/releases/assets/390166863",
     },
     "linux-x86_64": {
       signature: "sig-linux",
-      url: "https://api.github.com/repos/rdias612/gitdudareleases/assets/390169695",
+      url: "https://api.github.com/repos/rdias612/gitduda/releases/assets/390169695",
     },
     "windows-x86_64": {
       signature: "sig-win",
-      url: "https://api.github.com/repos/rdias612/gitdudareleases/assets/390171183",
+      url: "https://api.github.com/repos/rdias612/gitduda/releases/assets/390171183",
     },
   },
 };
@@ -71,7 +71,7 @@ test("buildAssetDownloadMap constructs deterministic tag download URLs even for 
   // derived from repo + tag_name + asset.name points at the canonical tag path.
   assert.equal(
     byId.get("390166863"),
-    "https://github.com/rdias612/gitdudareleases/download/v1.1.2/Gitduda_aarch64.app.tar.gz",
+    "https://github.com/rdias612/gitduda/releases/download/v1.1.2/Gitduda_aarch64.app.tar.gz",
   );
 });
 
@@ -81,15 +81,15 @@ test("normalizeLatestJson rewrites all api.github.com asset URLs to direct downl
   assert.deepEqual(result.latest.platforms, {
     "darwin-aarch64": {
       signature: "sig-mac",
-      url: "https://github.com/rdias612/gitdudareleases/download/v1.1.2/Gitduda_aarch64.app.tar.gz",
+      url: "https://github.com/rdias612/gitduda/releases/download/v1.1.2/Gitduda_aarch64.app.tar.gz",
     },
     "linux-x86_64": {
       signature: "sig-linux",
-      url: "https://github.com/rdias612/gitdudareleases/download/v1.1.2/Gitduda_1.1.2_amd64.AppImage",
+      url: "https://github.com/rdias612/gitduda/releases/download/v1.1.2/Gitduda_1.1.2_amd64.AppImage",
     },
     "windows-x86_64": {
       signature: "sig-win",
-      url: "https://github.com/rdias612/gitdudareleases/download/v1.1.2/Gitduda_1.1.2_x64-setup.exe",
+      url: "https://github.com/rdias612/gitduda/releases/download/v1.1.2/Gitduda_1.1.2_x64-setup.exe",
     },
   });
 
@@ -102,7 +102,7 @@ test("normalizeLatestJson rewrites all api.github.com asset URLs to direct downl
 test("normalizeLatestJson fails when an API asset ID is missing from the release", () => {
   const broken = structuredClone(DRAFT_LATEST_FIXTURE);
   broken.platforms["darwin-aarch64"].url =
-    "https://api.github.com/repos/rdias612/gitdudareleases/assets/999999999";
+    "https://api.github.com/repos/rdias612/gitduda/releases/assets/999999999";
   assert.throws(
     () => normalizeLatestJson(broken, RELEASE_FIXTURE),
     /Cannot resolve release asset 999999999/,
@@ -140,7 +140,7 @@ test("CLI rewrites latest.json in place and prints 'updated' then 'unchanged'", 
   const updated = JSON.parse(readFileSync(latestPath, "utf8"));
   assert.equal(
     updated.platforms["darwin-aarch64"].url,
-    "https://github.com/rdias612/gitdudareleases/download/v1.1.2/Gitduda_aarch64.app.tar.gz",
+    "https://github.com/rdias612/gitduda/releases/download/v1.1.2/Gitduda_aarch64.app.tar.gz",
   );
 
   const cliResult = spawnSync(

@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { run } from './dependabot-auto-merge.mjs';
 
 const workflow = (file) =>
-  readFileSync(fileURLToPath(new URL(`../workflows/${file}`, import.meta.url)), 'utf8');
+  readFileSync(fileURLToPath(new URL(`../workflows/${file}`, import.meta.url)), 'utf8').replaceAll('\r\n', '\n');
 
 const AUTO_MERGE_YML = workflow('dependabot-auto-merge.yml');
 
@@ -56,7 +56,7 @@ function harness(overrides = {}) {
       head: { sha: HEAD_SHA },
     },
     openPullRequests: [{ number: 318, user: { login: 'dependabot[bot]' }, draft: false }],
-    workflowRuns: [green('CI'), green('Build & Release'), green('CodeQL')],
+    workflowRuns: [green('CI'), green('CodeQL')],
     checkRuns: [
       { name: 'Lint Frontend', status: 'completed', conclusion: 'success' },
       { name: 'Auto-merge', status: 'in_progress', conclusion: null },
@@ -206,7 +206,7 @@ test('refuses when a workflow other than the trigger failed', async () => {
   h.state.workflowRuns = [
     green('CI'),
     {
-      name: 'Build & Release',
+      name: 'CodeQL',
       head_sha: HEAD_SHA,
       event: 'pull_request',
       status: 'completed',
@@ -214,7 +214,7 @@ test('refuses when a workflow other than the trigger failed', async () => {
     },
   ];
 
-  assert.match(only(await run(h)).reason, /Build & Release \(failure\)/);
+  assert.match(only(await run(h)).reason, /CodeQL \(failure\)/);
   assert.equal(h.calls.merged.length, 0);
 });
 
@@ -228,7 +228,7 @@ test('refuses a commit that no workflow has registered a run for yet', async () 
 
 test('a green run on another commit does not stand in for this one', async () => {
   // The dangerous direction: readiness satisfied by a commit nobody tested.
-  h.state.workflowRuns = [green('CI', STALE_SHA), green('Build & Release', STALE_SHA)];
+  h.state.workflowRuns = [green('CI', STALE_SHA), green('CodeQL', STALE_SHA)];
 
   assert.match(only(await run(h)).reason, /no workflow runs have registered/);
   assert.equal(h.calls.merged.length, 0);
@@ -239,17 +239,17 @@ test('runs superseded by a later push do not block forever', async () => {
   // cancelled run and an in-progress one behind.
   h.state.workflowRuns.push(
     { name: 'CI', head_sha: STALE_SHA, event: 'pull_request', status: 'completed', conclusion: 'cancelled' },
-    { name: 'Build & Release', head_sha: STALE_SHA, event: 'pull_request', status: 'in_progress', conclusion: null },
+    { name: 'CodeQL', head_sha: STALE_SHA, event: 'pull_request', status: 'in_progress', conclusion: null },
   );
 
   assert.equal(only(await run(h)).merged, true);
 });
 
-test('ignores workflow runs that are not the pull request\'s own checks', async () => {
+test('ignores manual Build & Release runs for the pull request commit', async () => {
   h.state.workflowRuns.push({
-    name: 'Dependabot Updates',
+    name: 'Build & Release',
     head_sha: HEAD_SHA,
-    event: 'dynamic',
+    event: 'workflow_dispatch',
     status: 'completed',
     conclusion: 'failure',
   });
@@ -370,18 +370,14 @@ test('the workflow is named what the self-run filter looks for', () => {
   assert.match(AUTO_MERGE_YML, /^name: Dependabot auto-merge$/m);
 });
 
-test('the workflow waits on every workflow file that runs against a pull request', () => {
-  // CodeQL is not covered here: it comes from GitHub's default setup and has no
-  // file to read, so it is asserted separately below.
-  for (const file of ['ci.yml', 'build.yml']) {
-    const source = workflow(file);
-    assert.match(source, /^ {2}pull_request:$/m, `${file} should run on pull requests`);
-    const name = /^name:\s*(.+)$/m.exec(source)[1].trim();
-    assert.ok(
-      AUTO_MERGE_YML.includes(`\n      - ${name}\n`),
-      `${name} runs on pull requests but auto-merge does not wait for it`,
-    );
-  }
+test('the workflow waits on CI for pull requests', () => {
+  const source = workflow('ci.yml');
+  assert.match(source, /^ {2}pull_request:$/m);
+  const name = /^name:\s*(.+)$/m.exec(source)[1].trim();
+  assert.ok(
+    AUTO_MERGE_YML.includes(`\n      - ${name}\n`),
+    `${name} runs on pull requests but auto-merge does not wait for it`,
+  );
 });
 
 test('the workflow waits on default-setup CodeQL', () => {

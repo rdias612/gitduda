@@ -1,0 +1,34 @@
+name: Upload installer
+description: Upload an installer with its original filename and no ZIP wrapper
+
+inputs:
+  path:
+    description: Path or glob matching exactly one installer
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Resolve installer path and filename
+      id: installer
+      shell: pwsh
+      env:
+        INSTALLER_PATH: ${{ inputs.path }}
+      run: |
+        $installers = @(Get-ChildItem -Path $env:INSTALLER_PATH -File -ErrorAction SilentlyContinue)
+        if ($installers.Count -ne 1) {
+          throw "Expected one installer matching '$env:INSTALLER_PATH', found $($installers.Count)."
+        }
+        "name=$($installers[0].Name)" >> $env:GITHUB_OUTPUT
+        "path=$($installers[0].FullName)" >> $env:GITHUB_OUTPUT
+
+    - name: Upload file directly
+      uses: actions/upload-artifact@v7
+      with:
+        # The raw upload uses the basename. Overwrite needs that same name on reruns.
+        name: ${{ steps.installer.outputs.name }}
+        path: ${{ steps.installer.outputs.path }}
+        archive: false
+        overwrite: true
+        if-no-files-found: error
+        retention-days: 7

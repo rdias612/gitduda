@@ -1,12 +1,6 @@
 name: Build & Release
 
 on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
   workflow_dispatch:
     inputs:
       release:
@@ -14,12 +8,10 @@ on:
         type: boolean
         default: false
 
-# Builds of the same ref supersede each other, but a release build (a manual
-# dispatch with the release input) must not be cancelled by a later push to
-# main (that is what happened to the first v0.9.1 build), so a release run
-# gets its own group.
+# Separate manual test builds and release builds so each can supersede only
+# runs of the same kind on the same ref.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}${{ ((github.event_name == 'workflow_dispatch' && inputs.release)) && '-release' || '' }}
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.release && 'release' || 'test' }}
   cancel-in-progress: true
 
 permissions:
@@ -31,7 +23,7 @@ env:
 jobs:
   test-e2e:
     name: E2E Tests
-    if: (github.event_name == 'workflow_dispatch' && inputs.release)
+    if: inputs.release
     runs-on: ubuntu-latest
 
     steps:
@@ -66,11 +58,13 @@ jobs:
         with:
           name: playwright-report
           path: e2e/playwright-report/
+          overwrite: true
           retention-days: 14
 
   build:
+    name: Build (${{ matrix.name }})
     needs: [test-e2e]
-    if: ${{ always() && (needs.test-e2e.result == 'success' || needs.test-e2e.result == 'skipped') }}
+    if: ${{ !cancelled() && (!inputs.release || needs.test-e2e.result == 'success') }}
     strategy:
       fail-fast: false
       matrix:
@@ -78,7 +72,7 @@ jobs:
           - platform: macos-latest
             target: aarch64-apple-darwin
             name: macOS-ARM64
-            bundles: app
+            bundles: dmg
           - platform: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
             name: Linux-x64
@@ -89,6 +83,8 @@ jobs:
             bundles: msi,nsis
 
     runs-on: ${{ matrix.platform }}
+    env:
+      BUNDLE_DIR: src-tauri/target/${{ matrix.target }}/release/bundle
 
     steps:
       - name: Checkout repository
@@ -133,19 +129,15 @@ jobs:
       - name: Build frontend
         run: npm run build
 
-      # Build without release for ordinary pushes and pull requests (skip signing, use specific bundles)
+      # Manual test builds use the platform's installer formats and skip signing.
       - name: Build Tauri app
-        if: ${{ !((github.event_name == 'workflow_dispatch' && inputs.release)) }}
+        if: ${{ !inputs.release }}
         run: npm run tauri build -- --target ${{ matrix.target }} --bundles ${{ matrix.bundles }} --no-sign
 
-      # Build with release for a manual dispatch with the release input —
-      # tauri-action creates the draft release named after the version in
-      # tauri.conf.json, and publishing that draft creates the tag. A tag push
-      # deliberately does not trigger a build: a second build after publishing
-      # replaced the v0.9.0 assets that the package channels had already
-      # hashed, and opened a duplicate draft for v0.9.1.
+      # tauri-action creates the draft for the version in tauri.conf.json.
+      # The manual trigger keeps publishing that draft from rebuilding its assets.
       - name: Build Tauri app (Release)
-        if: (github.event_name == 'workflow_dispatch' && inputs.release)
+        if: inputs.release
         uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -167,7 +159,8 @@ jobs:
           args: --target ${{ matrix.target }}
 
       - name: Build MSIX package (Microsoft Store)
-        if: matrix.platform == 'windows-latest' && github.event_name == 'workflow_dispatch' && inputs.release && vars.MSIX_IDENTITY_NAME != '' && vars.MSIX_PUBLISHER != '' && vars.MSIX_PUBLISHER_DISPLAY_NAME != ''
+        id: build-msix
+        if: runner.os == 'Windows' && inputs.release && vars.MSIX_IDENTITY_NAME != '' && vars.MSIX_PUBLISHER != '' && vars.MSIX_PUBLISHER_DISPLAY_NAME != ''
         shell: pwsh
         env:
           MSIX_IDENTITY_NAME: ${{ vars.MSIX_IDENTITY_NAME }}
@@ -175,20 +168,47 @@ jobs:
           MSIX_PUBLISHER_DISPLAY_NAME: ${{ vars.MSIX_PUBLISHER_DISPLAY_NAME }}
         run: ./scripts/build-msix.ps1 -Target ${{ matrix.target }}
 
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v7
+      - name: Upload macOS disk image
+        if: runner.os == 'macOS'
+        uses: ./.github/actions/upload-installer
         with:
-          name: gitduda-${{ matrix.name }}
-          path: |
-            src-tauri/target/${{ matrix.target }}/release/bundle/macos/*.app
-            src-tauri/target/${{ matrix.target }}/release/bundle/deb/*.deb
-            src-tauri/target/${{ matrix.target }}/release/bundle/appimage/*.AppImage
-            src-tauri/target/${{ matrix.target }}/release/bundle/rpm/*.rpm
-            src-tauri/target/${{ matrix.target }}/release/bundle/msi/*.msi
-            src-tauri/target/${{ matrix.target }}/release/bundle/nsis/*.exe
-            *.msix
-          if-no-files-found: ignore
-          retention-days: 7
+          path: ${{ env.BUNDLE_DIR }}/dmg/*.dmg
+
+      - name: Upload Debian package
+        if: runner.os == 'Linux'
+        uses: ./.github/actions/upload-installer
+        with:
+          path: ${{ env.BUNDLE_DIR }}/deb/*.deb
+
+      - name: Upload AppImage
+        if: runner.os == 'Linux'
+        uses: ./.github/actions/upload-installer
+        with:
+          path: ${{ env.BUNDLE_DIR }}/appimage/*.AppImage
+
+      - name: Upload RPM package
+        if: runner.os == 'Linux'
+        uses: ./.github/actions/upload-installer
+        with:
+          path: ${{ env.BUNDLE_DIR }}/rpm/*.rpm
+
+      - name: Upload MSI installer
+        if: runner.os == 'Windows'
+        uses: ./.github/actions/upload-installer
+        with:
+          path: ${{ env.BUNDLE_DIR }}/msi/*.msi
+
+      - name: Upload NSIS installer
+        if: runner.os == 'Windows'
+        uses: ./.github/actions/upload-installer
+        with:
+          path: ${{ env.BUNDLE_DIR }}/nsis/*.exe
+
+      - name: Upload MSIX package
+        if: steps.build-msix.outcome == 'success'
+        uses: ./.github/actions/upload-installer
+        with:
+          path: Gitduda_*_x64.msix
 
   # tauri-action writes api.github.com/repos/.../releases/assets/<id> URLs into
   # latest.json when releaseDraft is true. Rewrite them to direct
@@ -197,7 +217,7 @@ jobs:
   finalize-release:
     name: Normalize updater manifest
     needs: [build]
-    if: (github.event_name == 'workflow_dispatch' && inputs.release)
+    if: inputs.release
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository

@@ -27,7 +27,6 @@ on:
     # through GitHub's default setup, so it has no file in this directory.
     workflows:
       - CI
-      - Build & Release
       - CodeQL
     types:
       - completed

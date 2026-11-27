@@ -32,7 +32,7 @@ Em **Settings → Secrets and variables → Actions → Variables** do repositó
 - `MSIX_PUBLISHER`
 - `MSIX_PUBLISHER_DISPLAY_NAME`
 
-Quando todas as 3 variáveis estiverem definidas, qualquer execução de release em `.github/workflows/build.yml` (`workflow_dispatch` com `release=true`) gerará `Gitduda_<versao>_x64.msix` na perna `Windows-x64` e o publicará nos artefatos da workflow (`gitduda-Windows-x64`).
+Com as três variáveis definidas, uma execução manual de **Build & Release** com `release` marcado gera `Gitduda_<versao>_x64.msix` no job do Windows. A página da execução oferece o arquivo `.msix` como download direto na seção **Artifacts**.
 
 ### 3. Build local e teste via sideload
 
