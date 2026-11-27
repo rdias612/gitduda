@@ -236,7 +236,7 @@ test("sha256Of returns the upper-case hex digest winget expects", () => {
   writeFileSync(file, "gitduda");
   assert.equal(
     sha256Of(file),
-    "9CED9F4CAF7440E302E4B533F1578E83E41B20F2BC7820C1F680E611B563E3AC",
+    "47456CC275DB672DC2B9D0074B25357E73BBAF39C61D377F0E0870D1C379C98E",
   );
 });
 

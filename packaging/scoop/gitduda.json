@@ -1,7 +1,7 @@
 {
   "version": "1.1.2",
   "description": "Fast, privacy-first Git GUI client",
-  "homepage": "https://github.com/rdias612/gitduda",
+  "homepage": "https://gitduda.dev.br",
   "license": "MIT",
   "notes": "Gitduda needs the Microsoft Edge WebView2 runtime, which is preinstalled on Windows 11 and most Windows 10 systems. If the app does not start, install it from https://developer.microsoft.com/microsoft-edge/webview2/",
   "architecture": {

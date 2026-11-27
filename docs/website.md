@@ -1,4 +1,4 @@
-# Website (gitduda.dev)
+# Website (gitduda.dev.br)
 
 The landing page lives in [`site/`](../site) as plain static files (one HTML
 page, a few assets, no build step) and is published to GitHub Pages by
@@ -11,7 +11,7 @@ Asset URLs are versioned at deploy time: the workflow runs
 [`.github/scripts/version-site-assets.mjs`](../.github/scripts/version-site-assets.mjs),
 which appends `?v=<content hash>` to every `assets/…` reference in
 `index.html`. Replace an image under the same file name and the deployed page
-points at a new URL, so Cloudflare, GitHub Pages and browsers (which cache
+points at a new URL, so GitHub Pages and browsers (which cache
 images for hours) pick it up on the next load. The committed HTML keeps plain
 paths, so opening `site/index.html` locally needs no build step.
 
@@ -21,9 +21,10 @@ paths, so opening `site/index.html` locally needs no build step.
    deployment → Source: GitHub Actions*. Then run the "Deploy Website"
    workflow once (Actions tab → Run workflow) or merge a change under `site/`.
 2. **Custom domain.** Still under *Settings → Pages*, set *Custom domain* to
-   `gitduda.dev` and tick *Enforce HTTPS* once the certificate has been issued
-   (`site/CNAME` carries the same value so a deploy never resets it).
-3. **DNS for gitduda.dev** (apex domain), at your registrar or DNS host:
+   `gitduda.dev.br` and tick *Enforce HTTPS* once the TLS certificate has been
+   issued (`site/CNAME` carries the same value so a deploy never resets it).
+3. **DNS for gitduda.dev.br** (apex domain), configured directly in the
+   **Registro.br** DNS zone editor:
 
    | Type  | Name | Value |
    |-------|------|-------|
@@ -37,12 +38,9 @@ paths, so opening `site/index.html` locally needs no build step.
    | AAAA  | `@`  | `2606:50c0:8003::153` |
    | CNAME | `www` | `rdias612.github.io` |
 
-   `.dev` is an HSTS-preloaded TLD, so the site only works over HTTPS — GitHub
-   provisions the certificate automatically once the A records resolve
-   (usually within an hour).
-4. **gitduda.com and gitduda.app** — set a registrar-level (or Cloudflare)
-   301 redirect to `https://gitduda.dev` for the apex and `www`. Nothing needs
-   to be hosted there.
+   Wait for DNS propagation from Registro.br and for GitHub Pages to finish
+   provisioning the TLS certificate before ticking *Enforce HTTPS* under
+   *Settings → Pages*.
 
 ## Updating the page
 
@@ -50,7 +48,7 @@ Edit `site/index.html` and push to `main`. Assets:
 
 - `site/assets/main-window.webp` — hero screenshot, generated from
   `docs/screenshots/main-window.png` (resized to 1600px wide, WebP quality
-  82). Regenerate after the 0.9.0 release so the title bar shows *Gitduda*.
+  82).
 - `site/assets/icon-256.png`, `site/assets/icon-512.png`,
   `site/assets/favicon-64.png` — written by `npm run icons:build` from
   `src-tauri/icons/icon-source.png`, alongside the app icons (see
@@ -59,9 +57,12 @@ Edit `site/index.html` and push to `main`. Assets:
 Download links are matched by asset-name suffix (`_aarch64.dmg`,
 `_x64_en-US.msi`, `_x64-setup.exe`, `_amd64.deb`, `_amd64.AppImage`,
 `.x86_64.rpm`); if the bundle naming changes, update the `groups` table in the
-page's script alongside `publish-packages.yml`.
+page's script alongside `publish-packages.yml`. Once the Microsoft Store
+submission is certified, add the official Microsoft Store Web Installer badge
+(in *Direct* mode) to `site/index.html` following
+[`docs/microsoft-store-web-installer.md`](microsoft-store-web-installer.md).
 
 The `homepage` fields in `src-tauri/tauri.conf.json` (`bundle.homepage`),
-`packaging/scoop/gitduda.json` and `packaging/homebrew/gitduda.rb.template`
-already point at `https://gitduda.dev`; use the same URL for the winget
-manifest's `PublisherUrl` / `PackageUrl` when submitting `rdias612.Gitduda`.
+`packaging/scoop/gitduda.json`, `packaging/homebrew/gitduda.rb.template`, and
+`packaging/winget/rdias612.Gitduda.locale.en-US.yaml.template` (`PublisherUrl`
+/ `PackageUrl`) all point at `https://gitduda.dev.br`.

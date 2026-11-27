@@ -6,11 +6,11 @@ PackageIdentifier: rdias612.Gitduda
 PackageVersion: {{VERSION}}
 PackageLocale: en-US
 Publisher: rdias612
-PublisherUrl: https://github.com/rdias612/gitduda
+PublisherUrl: https://gitduda.dev.br
 PublisherSupportUrl: https://github.com/rdias612/gitduda/issues
 Author: Gitduda Contributors
 PackageName: Gitduda
-PackageUrl: https://github.com/rdias612/gitduda
+PackageUrl: https://gitduda.dev.br
 License: MIT
 LicenseUrl: https://github.com/rdias612/gitduda/blob/main/LICENSE
 Copyright: Copyright © 2024 Gitduda Contributors

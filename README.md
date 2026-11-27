@@ -1,12 +1,12 @@
 # Gitduda
 
-[![Build & Release](https://github.com/rdias612/gitdudaactions/workflows/build.yml/badge.svg)](https://github.com/rdias612/gitdudaactions/workflows/build.yml)
-[![CI](https://github.com/rdias612/gitdudaactions/workflows/ci.yml/badge.svg)](https://github.com/rdias612/gitdudaactions/workflows/ci.yml)
+[![Build & Release](https://github.com/rdias612/gitduda/actions/workflows/build.yml/badge.svg)](https://github.com/rdias612/gitduda/actions/workflows/build.yml)
+[![CI](https://github.com/rdias612/gitduda/actions/workflows/ci.yml/badge.svg)](https://github.com/rdias612/gitduda/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![GitHub release](https://img.shields.io/github/v/release/rdias612/gitduda)](https://github.com/rdias612/gitdudareleases)
-[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey)](https://github.com/rdias612/gitdudareleases)
+[![GitHub release](https://img.shields.io/github/v/release/rdias612/gitduda)](https://github.com/rdias612/gitduda/releases)
+[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey)](https://github.com/rdias612/gitduda/releases)
 
-A modern, cross-platform Git GUI client built with Tauri, Lit, and Rust. **Website: [gitduda.dev](https://gitduda.dev)**
+A modern, cross-platform Git GUI client built with Tauri, Lit, and Rust. **Website: [gitduda.dev.br](https://gitduda.dev.br)**
 
 Gitduda aims to be a fast, privacy-first alternative to existing Git clients like GitHub Desktop, GitKraken, and Sourcetree. It runs entirely offline with no telemetry, account requirements, or cloud dependencies.
 
@@ -222,14 +222,13 @@ Gitduda is built for developers who value **privacy, performance, and control**:
 
 ### Download
 
-Pre-built binaries are available from the [Releases](https://github.com/rdias612/gitdudareleases) page:
+Pre-built binaries are available from the [Releases](https://github.com/rdias612/gitduda/releases) page:
 
 | Platform | Download |
 |----------|----------|
 | macOS (Apple Silicon) | `.dmg` |
 | Windows | `.msi` or `.exe` |
-| Linux | `.deb` or `.AppImage` |
-| Arch Linux | [AUR](https://aur.archlinux.org/packages/gitduda-bin) (community) |
+| Linux | `.deb`, `.AppImage`, or `.rpm` |
 
 On Linux, saved credentials use keyutils backed by Secret Service. A running and
 unlocked Secret Service provider, such as GNOME Keyring or KWallet, is required
@@ -257,22 +256,6 @@ scoop install https://raw.githubusercontent.com/rdias612/gitduda/main/packaging/
 ```bash
 brew install --cask rdias612/gitduda/gitduda
 ```
-
-### Arch Linux (AUR)
-
-A community package is available on the AUR as [`gitduda-bin`](https://aur.archlinux.org/packages/gitduda-bin), repackaged from the official `.deb` release:
-
-```bash
-# Using an AUR helper
-yay -S gitduda-bin
-
-# Or manually
-git clone https://aur.archlinux.org/gitduda-bin.git
-cd gitduda-bin
-makepkg -si
-```
-
-This package is community-maintained and is not an official Gitduda release channel.
 
 ### Build from Source
 
@@ -329,7 +312,7 @@ Production builds are output to `src-tauri/target/release/bundle/`.
 
 ### First Time Setup
 
-1. **Download and Install**: Get the latest release for your platform from the [Releases](https://github.com/rdias612/gitdudareleases) page.
+1. **Download and Install**: Get the latest release for your platform from the [Releases](https://github.com/rdias612/gitduda/releases) page.
 
 2. **Open a Repository**: 
    - Click **"Open Repository"** or press `Cmd/Ctrl+O`
@@ -717,7 +700,7 @@ Have an idea for a new feature? Check the [ROADMAP.md](ROADMAP.md) first to see 
 ### Stay Updated
 
 - **Watch the Repository**: Click "Watch" on GitHub to get notified of releases
-- **Releases**: Check the [Releases](https://github.com/rdias612/gitdudareleases) page for new versions
+- **Releases**: Check the [Releases](https://github.com/rdias612/gitduda/releases) page for new versions
 - **Changelog**: See release notes for detailed changes in each version
 
 ## Contributing
@@ -816,6 +799,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 Gitduda stands on the shoulders of giants. We're grateful to these projects and communities:
 
+- **[Gitnado](https://github.com/hegsie/gitnado)** - The original open-source Git GUI project from which Gitduda was forked
 - **[libgit2](https://libgit2.org/)** - The Git library powering core operations
 - **[Tauri](https://tauri.app/)** - For making cross-platform desktop apps accessible with Rust and web technologies
 - **[Lit](https://lit.dev/)** - Lightweight web components framework

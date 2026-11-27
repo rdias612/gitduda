@@ -7,7 +7,7 @@ cask "gitduda" do
   url "https://github.com/rdias612/gitduda/releases/download/v#{version}/Gitduda_#{version}_aarch64.dmg"
   name "Gitduda"
   desc "Fast, privacy-first Git GUI client"
-  homepage "https://github.com/rdias612/gitduda"
+  homepage "https://gitduda.dev.br"
 
   livecheck do
     url :url

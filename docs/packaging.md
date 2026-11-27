@@ -1,7 +1,7 @@
 # Package Manager Distribution
 
 Gitduda is delivered through package managers in addition to the direct
-downloads on the [Releases](https://github.com/rdias612/gitdudareleases) page.
+downloads on the [Releases](https://github.com/rdias612/gitduda/releases) page.
 The [`publish-packages.yml`](../.github/workflows/publish-packages.yml)
 workflow runs automatically whenever a release is published (moved out of
 draft) and pushes the new version to each channel. It can also be re-run
@@ -13,7 +13,6 @@ manually from the Actions tab (workflow dispatch) with a release tag such as
 | winget | Windows | PR against `microsoft/winget-pkgs` via Komac | `WINGET_TOKEN` secret, fork of winget-pkgs |
 | Homebrew | macOS (Apple Silicon) | Push to `rdias612/homebrew-gitduda` tap | Tap repository, `HOMEBREW_TAP_TOKEN` secret |
 | Scoop | Windows | Commit to `packaging/scoop/gitduda.json` on `main` | None |
-| AUR | Arch Linux | Community-maintained (`gitduda-bin`) | — |
 
 Jobs whose secret is missing are skipped, not failed, so the workflow works
 before every channel is set up.
@@ -37,7 +36,7 @@ One-time setup:
    or update workflow ... without `workflow` scope" (the v1.0.0 release hit
    this).
 3. Nothing else. For each release the job first checks whether
-   `manifests/h/rdias612/gitduda<version>` is already in winget-pkgs and skips
+   `manifests/r/rdias612/Gitduda/<version>` is already in winget-pkgs and skips
    with a notice if it is, so re-running an already-merged release does not
    open a duplicate PR. Otherwise it renders the three manifests from the templates in [`packaging/winget/`](../packaging/winget/)
    with [`.github/scripts/winget-manifests.mjs`](../.github/scripts/winget-manifests.mjs)
@@ -76,7 +75,7 @@ together when winget-pkgs moves to a newer schema.
 If the Komac step ever fails, render the manifests locally with the same
 script and submit them by hand: `node .github/scripts/winget-manifests.mjs
 --version <v> --exe <exe> --msi <msi> --msi-analysis <komac analyze output>
---release-date <YYYY-MM-DD> --out winget`, then `komac submit winget/manifests/h/rdias612/gitduda<v>`
+--release-date <YYYY-MM-DD> --out winget`, then `komac submit winget/manifests/r/rdias612/Gitduda/<version>`
 (or `wingetcreate submit` on Windows). The templates pin the NSIS
 `ProductCode` (`Gitduda`, the uninstall registry key Tauri writes) and the
 WiX `UpgradeCode` from `tauri.conf.json`; update them together if either
@@ -117,7 +116,7 @@ PAT.
 Users install with:
 
 ```powershell
-scoop install https://raw.githubusercontent.com/rdias612/gitdudamain/packaging/scoop/gitduda.json
+scoop install https://raw.githubusercontent.com/rdias612/gitduda/main/packaging/scoop/gitduda.json
 ```
 
 Because Scoop extracts the MSI rather than running it, the WebView2 runtime
