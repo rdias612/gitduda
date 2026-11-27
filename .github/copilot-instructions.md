@@ -85,7 +85,7 @@ Install [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cp
 ```bash
 # Clone the repository
 git clone https://github.com/rdias612/gitduda.git
-cd Gitduda
+cd gitduda
 
 # Install frontend dependencies
 npm install
@@ -185,7 +185,7 @@ grep -rn "_[a-z]*:" src/types/api.types.ts | grep -v "//"
    - Keep component state local when possible
    - Follow reactive patterns
 
-5. **ESLint Rules**: Follow `.eslintrc.cjs` configuration
+5. **ESLint Rules**: Follow `eslint.config.mjs` configuration
    - Unused vars: Warn (prefix with `_` to ignore)
    - No explicit any: Warn
    - No console: Off (logging is allowed)
@@ -387,7 +387,6 @@ All workflows must pass before merging.
 ## Resources & Documentation
 
 - **Main Docs**: [README.md](../README.md)
-- **Roadmap**: [ROADMAP.md](../ROADMAP.md)
 - **OAuth Setup**: [docs/oauth-setup.md](../docs/oauth-setup.md)
 - **Tauri Docs**: https://v2.tauri.app/
 - **Lit Docs**: https://lit.dev/
@@ -427,4 +426,3 @@ npm run test:e2e              # E2E tests
 
 **For more details**, see:
 - [README.md](../README.md) - Project overview and features
-- [ROADMAP.md](../ROADMAP.md) - Planned features

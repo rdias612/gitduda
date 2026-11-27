@@ -10,6 +10,8 @@ A modern, cross-platform Git GUI client built with Tauri, Lit, and Rust. **Websi
 
 Gitduda aims to be a fast, privacy-first alternative to existing Git clients like GitHub Desktop, GitKraken, and Sourcetree. It runs entirely offline with no telemetry, account requirements, or cloud dependencies.
 
+> **Note:** Gitduda is an active fork of [Gitnado](https://github.com/hegsie/gitnado), originally created by Ben Hegarty.
+
 ## Table of Contents
 
 - [Screenshots](#screenshots)
@@ -21,7 +23,6 @@ Gitduda aims to be a fast, privacy-first alternative to existing Git clients lik
 - [Development](#development)
 - [Tech Stack](#tech-stack)
 - [Testing](#testing)
-- [Roadmap](#roadmap)
 - [Troubleshooting](#troubleshooting)
 - [FAQ](#faq)
 - [Contributing](#contributing)
@@ -66,17 +67,6 @@ Gitduda is built for developers who value **privacy, performance, and control**:
 <p align="center">
   <img src="docs/screenshots/main-window.png" alt="Main Window" width="800">
 </p>
-
-<details>
-<summary>More Screenshots</summary>
-
-### Commit Graph
-<img src="docs/screenshots/commit-graph.png" alt="Commit Graph" width="800">
-
-### Diff Viewer
-<img src="docs/screenshots/diff-viewer.png" alt="Diff Viewer" width="800">
-
-</details>
 
 ## Features
 
@@ -294,7 +284,7 @@ Install [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cp
 ```bash
 # Clone the repository
 git clone https://github.com/rdias612/gitduda.git
-cd Gitduda
+cd gitduda
 
 # Install dependencies
 npm install
@@ -412,7 +402,6 @@ gitduda/
 │
 ├── e2e/                    # End-to-end tests (Playwright)
 │   └── tests/              # E2E test specs
-├── plan/                   # Technical documentation
 ├── docs/                   # Additional documentation
 └── .github/workflows/      # CI/CD pipelines
 ```
@@ -585,16 +574,6 @@ describe('MyComponent', () => {
 
 See [.github/copilot-instructions.md](.github/copilot-instructions.md) for detailed testing guidelines.
 
-## Roadmap
-
-See [ROADMAP.md](ROADMAP.md) for planned features including:
-
-- Semantic git history search (natural language commit search)
-- AI-powered pre-commit code review ("Local Bouncer")
-- Predictive rebase with conflict preview ("Rebase Pilot")
-- Plugin/extension system
-- Additional workflow templates (GitHub Flow, GitLab Flow)
-
 ## Troubleshooting
 
 ### AI Commit Message Generation
@@ -690,7 +669,7 @@ When reporting bugs, please include:
 
 ### Feature Requests
 
-Have an idea for a new feature? Check the [ROADMAP.md](ROADMAP.md) first to see if it's already planned, then:
+Have an idea for a new feature? Check the [existing issues](https://github.com/rdias612/gitduda/issues) first to see if it's already planned or requested, then:
 
 1. Search existing issues to avoid duplicates
 2. Open a new issue with the `enhancement` label
@@ -721,8 +700,8 @@ Contributions are welcome! Gitduda is built by the community, for the community.
 1. **Fork the repository**
 2. **Clone your fork**:
    ```bash
-   git clone https://github.com/YOUR_USERNAME/Gitduda.git
-   cd Gitduda
+   git clone https://github.com/YOUR_USERNAME/gitduda.git
+   cd gitduda
    ```
 3. **Install dependencies**:
    ```bash
@@ -783,7 +762,7 @@ Contributions are welcome! Gitduda is built by the community, for the community.
 
 ### Coding Standards
 
-- **TypeScript**: Use ESLint rules defined in `.eslintrc.cjs`
+- **TypeScript**: Use ESLint rules defined in `eslint.config.mjs`
 - **Rust**: Follow `rustfmt` and `clippy` recommendations
 - **Testing**: Aim for good test coverage of new features
 - **Documentation**: Document public APIs and complex logic
