@@ -6,7 +6,6 @@
 
 pub mod config;
 pub mod ledger;
-pub mod local;
 pub mod mcp;
 pub mod mcp_client;
 pub mod providers;
@@ -22,11 +21,9 @@ use config::{api_key_account, ConfigLoadError, KeyringSecretStore, SecretStore};
 pub use config::{AiConfig, AiTaskRoute, AiTaskTier, ProviderSettings};
 pub use ledger::{AiLedger, AiLedgerEntry, AiPrivacySummary, NewAiLedgerEntry};
 pub use providers::{
-    AnthropicProvider, GeminiProvider, GithubCopilotProvider, LoadedModelMeta,
-    LocalInferenceProvider, OllamaProvider, OpenAiCompatibleProvider,
+    AnthropicProvider, GeminiProvider, GithubCopilotProvider, OllamaProvider,
+    OpenAiCompatibleProvider,
 };
-
-use crate::commands::local_ai::SharedLocalAiState;
 
 /// AI provider types supported by the system
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -38,7 +35,6 @@ pub enum AiProviderType {
     Anthropic,
     GithubCopilot,
     GoogleGemini,
-    LocalInference,
 }
 
 impl AiProviderType {
@@ -50,7 +46,6 @@ impl AiProviderType {
             AiProviderType::Anthropic => "Anthropic Claude",
             AiProviderType::GithubCopilot => "GitHub Models",
             AiProviderType::GoogleGemini => "Google Gemini",
-            AiProviderType::LocalInference => "Local AI (Embedded)",
         }
     }
 
@@ -62,15 +57,12 @@ impl AiProviderType {
             AiProviderType::Anthropic => "https://api.anthropic.com",
             AiProviderType::GithubCopilot => "https://models.inference.ai.azure.com",
             AiProviderType::GoogleGemini => "https://generativelanguage.googleapis.com",
-            AiProviderType::LocalInference => "",
         }
     }
 
     pub fn requires_api_key(&self) -> bool {
         match self {
-            AiProviderType::Ollama | AiProviderType::LmStudio | AiProviderType::LocalInference => {
-                false
-            }
+            AiProviderType::Ollama | AiProviderType::LmStudio => false,
             AiProviderType::OpenAi
             | AiProviderType::Anthropic
             | AiProviderType::GithubCopilot
@@ -86,7 +78,6 @@ impl AiProviderType {
             AiProviderType::Anthropic => "claude-haiku-4-5",
             AiProviderType::GithubCopilot => "gpt-4o",
             AiProviderType::GoogleGemini => "gemini-2.0-flash",
-            AiProviderType::LocalInference => "local",
         }
     }
 
@@ -98,7 +89,6 @@ impl AiProviderType {
             AiProviderType::Anthropic,
             AiProviderType::GithubCopilot,
             AiProviderType::GoogleGemini,
-            AiProviderType::LocalInference,
         ]
     }
 }
@@ -513,10 +503,6 @@ pub struct AiService {
     /// parsed non-secret settings remain in `config` for the UI.
     secret_error: Option<String>,
     providers: HashMap<AiProviderType, Box<dyn AiProvider>>,
-    /// Shared reference to the local inference provider (for loading models)
-    local_provider: LocalInferenceProvider,
-    /// Shared local AI state for lazy model loading
-    local_ai_state: Option<SharedLocalAiState>,
     /// Bounded ring-buffer ledger of AI activity for privacy transparency
     ledger: std::sync::Mutex<AiLedger>,
 }
@@ -544,8 +530,6 @@ impl AiService {
             secrets,
             secret_error,
             providers: HashMap::new(),
-            local_provider: LocalInferenceProvider::new(),
-            local_ai_state: None,
             ledger: std::sync::Mutex::new(AiLedger::new()),
         };
 
@@ -655,22 +639,6 @@ impl AiService {
         );
         self.providers
             .insert(AiProviderType::GoogleGemini, Box::new(gemini));
-
-        // Local inference provider — reuse shared instance to preserve loaded engine
-        self.providers.insert(
-            AiProviderType::LocalInference,
-            Box::new(self.local_provider.clone()),
-        );
-    }
-
-    /// Get the local model status
-    pub async fn get_local_model_status(&self) -> providers::LocalModelStatus {
-        self.local_provider.get_status().await
-    }
-
-    /// Get the display name of the currently loaded local model, if any.
-    pub async fn get_loaded_model_name(&self) -> Option<String> {
-        self.local_provider.get_model_name().await
     }
 
     /// Get the current configuration
@@ -688,9 +656,9 @@ impl AiService {
     }
 
     /// Whether a request to `provider_type` is permitted by the security
-    /// settings. A provider on loopback (Ollama, LM Studio) or with no endpoint
-    /// at all (the embedded model) never leaves the machine and stays usable
-    /// with offline mode on — that is the whole point of running one.
+    /// settings. A provider on loopback (Ollama, LM Studio) never leaves the
+    /// machine and stays usable with offline mode on — that is the whole point
+    /// of running one.
     pub fn provider_network_allowed(&self, provider_type: AiProviderType) -> bool {
         crate::services::security::endpoint_allowed(&self.endpoint_for(provider_type))
     }
@@ -701,11 +669,10 @@ impl AiService {
         self.config.active_provider.map(|pt| self.endpoint_for(pt))
     }
 
-    /// True if `provider_type` executes on this machine (`LocalInference`, or
-    /// `Ollama`/`LmStudio` configured on a loopback address).
+    /// True if `provider_type` executes on this machine (`Ollama`/`LmStudio`
+    /// configured on a loopback address).
     pub fn is_local_provider(&self, provider_type: AiProviderType) -> bool {
         match provider_type {
-            AiProviderType::LocalInference => true,
             AiProviderType::Ollama | AiProviderType::LmStudio => {
                 let ep = self.endpoint_for(provider_type).to_ascii_lowercase();
                 ep.is_empty()
@@ -888,129 +855,9 @@ impl AiService {
         self.save_config()
     }
 
-    /// Set the shared local AI state reference for lazy model loading.
-    /// Must be called after both AiState and SharedLocalAiState are created.
-    pub fn set_local_ai_state(&mut self, state: SharedLocalAiState) {
-        self.local_ai_state = Some(state);
-    }
-
-    /// Lazily load a local GGUF model if one is downloaded but not yet loaded.
-    ///
-    /// This defers model loading to avoid startup race conditions:
-    /// instead of loading the model at startup (which could race with other
-    /// initialization), we defer loading until the first inference request.
-    pub async fn ensure_local_model_loaded(&self) -> Result<(), String> {
-        // Already loaded or loading — nothing to do
-        let status = self.local_provider.get_status().await;
-        if status == providers::LocalModelStatus::Ready
-            || status == providers::LocalModelStatus::Loading
-        {
-            return Ok(());
-        }
-
-        let local_state = match &self.local_ai_state {
-            Some(s) => s.clone(),
-            None => return Err("Local AI state not available".to_string()),
-        };
-
-        let local = local_state.read().await;
-        let downloaded = local.model_manager.list_downloaded().unwrap_or_default();
-
-        // Pick the first model whose GGUF file is actually on disk and look up
-        // its registry entry. A directory left with only its metadata cannot be
-        // loaded, and trying would leave the provider stuck in the error state.
-        let model = match downloaded
-            .iter()
-            .find(|m| m.status == local::model_manager::ModelStatus::Downloaded)
-        {
-            Some(m) => m,
-            None => return Ok(()), // Nothing loadable — nothing to do
-        };
-        let meta = local
-            .registry
-            .get_by_id(&model.id)
-            .map(|entry| providers::LoadedModelMeta {
-                tier: entry.tier,
-                architecture: entry.architecture.clone(),
-                context_length: entry.context_length,
-            })
-            .or_else(|| {
-                local.model_manager.get_downloaded_meta(&model.id).map(
-                    |(_display_name, architecture, context_length)| providers::LoadedModelMeta {
-                        tier: local::ModelTier::Standard,
-                        architecture,
-                        context_length,
-                    },
-                )
-            });
-        let model_path = model.path.clone();
-        let display_name = model.display_name.clone();
-        drop(local);
-
-        tracing::info!("Lazy-loading local model: {}", display_name);
-        match self.load_local_model(&model_path, display_name, meta).await {
-            Ok(()) => Ok(()),
-            Err(_)
-                if matches!(
-                    self.local_provider.get_status().await,
-                    providers::LocalModelStatus::Loading | providers::LocalModelStatus::Ready
-                ) =>
-            {
-                Ok(())
-            }
-            Err(e) => Err(e),
-        }
-    }
-
-    /// True if a downloaded local model is waiting to be lazy-loaded.
-    ///
-    /// The GGUF file must be present: a model directory left with only its
-    /// metadata is not loadable, so it does not count. `list_downloaded` also
-    /// ignores in-flight downloads, whose metadata is written last.
-    pub async fn has_loadable_local_model(&self) -> bool {
-        let local_state = match &self.local_ai_state {
-            Some(s) => s,
-            None => return false,
-        };
-        let local = local_state.read().await;
-        local
-            .model_manager
-            .list_downloaded()
-            .unwrap_or_default()
-            .iter()
-            .any(|m| m.status == local::model_manager::ModelStatus::Downloaded)
-    }
-
-    /// True when local inference is the provider a request would be served by:
-    /// it is the choice made in Settings, or nothing has been chosen and the
-    /// scan below tries local inference first.
-    fn local_inference_would_serve(&self) -> bool {
-        matches!(
-            self.config.active_provider,
-            None | Some(AiProviderType::LocalInference)
-        )
-    }
-
     /// Why an AI request would fail right now, or `None` if it would succeed.
-    ///
-    /// A downloaded-but-unloaded local model counts as available: the model is
-    /// only ever loaded on demand (see [`AiService::ensure_local_model_loaded`]),
-    /// never at startup, so reporting it as unavailable would hide AI features
-    /// that do in fact work after every restart. That only holds when local
-    /// inference is the provider a request would actually use — a provider
-    /// chosen in Settings is never substituted, so a downloaded model does not
-    /// make some other unavailable choice work.
     pub async fn unavailable_reason(&self) -> Option<String> {
-        match self.resolve_provider().await {
-            Ok(_) => None,
-            Err(reason) => {
-                if self.local_inference_would_serve() && self.has_loadable_local_model().await {
-                    None
-                } else {
-                    Some(reason)
-                }
-            }
-        }
+        self.resolve_provider().await.err()
     }
 
     /// Whether an AI request would succeed right now.
@@ -1018,29 +865,15 @@ impl AiService {
         self.unavailable_reason().await.is_none()
     }
 
-    /// Resolve the provider that will serve a request, loading the local model
-    /// only when it is the model that will actually answer.
+    /// Resolve the provider that will serve a request.
     ///
     /// A choice made in Settings is honoured exactly: when the chosen provider
     /// is unavailable the request fails naming it instead of quietly going
     /// somewhere else, so a diff never reaches a provider the user did not
-    /// pick — and a downloaded-but-unloaded local model is never loaded on
-    /// behalf of a *different* chosen provider that happens to be down.
-    /// Loading a GGUF costs gigabytes of RAM/GPU, so the load is only
-    /// attempted when local inference is the provider that could actually
-    /// serve: it is the explicit choice, or nothing has been chosen and the
-    /// scan below tries local inference first. The scan across every other
-    /// provider applies only when nothing has been chosen.
+    /// pick. The scan across every other provider applies only when nothing
+    /// has been chosen.
     pub async fn resolve_provider(&self) -> Result<(&dyn AiProvider, AiProviderType), String> {
         if let Some(pt) = self.config.active_provider {
-            if pt == AiProviderType::LocalInference {
-                // Deferred from startup to avoid races; loaded here since the
-                // user chose this provider explicitly.
-                if let Err(e) = self.ensure_local_model_loaded().await {
-                    tracing::debug!("Lazy model load skipped: {}", e);
-                }
-            }
-
             // A provider the security settings forbid reaching is not probed
             // and not used, whatever its state.
             if self.provider_network_allowed(pt) {
@@ -1059,37 +892,19 @@ impl AiService {
                 ));
             }
 
-            let hint = match pt {
-                AiProviderType::LocalInference => {
-                    "Please download and load a model in Settings > Local AI, or select a different provider."
-                }
-                _ if pt.requires_api_key() => {
-                    "Please check its API key in Settings, or select a different provider."
-                }
-                _ => "Please make sure it is running, or select a different provider in Settings.",
+            let hint = if pt.requires_api_key() {
+                "Please check its API key in Settings, or select a different provider."
+            } else {
+                "Please make sure it is running, or select a different provider in Settings."
             };
             return Err(format!("{} is not available. {}", pt.display_name(), hint));
         }
 
-        // Nothing chosen — use whatever is reachable. Local inference ranks
-        // above every other fallback, so it gets first refusal: load it now,
-        // deferred from startup to avoid races.
-        if let Err(e) = self.ensure_local_model_loaded().await {
-            tracing::debug!("Lazy model load skipped: {}", e);
-        }
-        if let Some(provider) = self.providers.get(&AiProviderType::LocalInference) {
-            if provider.is_available().await {
-                return Ok((provider.as_ref(), AiProviderType::LocalInference));
-            }
-        }
-
-        // Fall back to any other available provider, in a deterministic order.
-        // Iterating `self.providers` (a HashMap) directly would pick an
-        // unpredictable provider across runs when several have keys configured.
+        // Nothing chosen — fall back to any available provider, in a
+        // deterministic order. Iterating `self.providers` (a HashMap) directly
+        // would pick an unpredictable provider across runs when several have
+        // keys configured.
         for pt in AiProviderType::all() {
-            if pt == AiProviderType::LocalInference {
-                continue; // Already checked above
-            }
             // Skipped rather than probed: the scan runs on every availability
             // check, so probing a forbidden host here would leak a request per
             // check even with offline mode on.
@@ -1126,11 +941,6 @@ impl AiService {
     ) -> Result<(&dyn AiProvider, AiProviderType, Option<String>), String> {
         if let Some(route) = self.config.task_routes.get(&tier) {
             let pt = route.provider;
-            if pt == AiProviderType::LocalInference {
-                if let Err(e) = self.ensure_local_model_loaded().await {
-                    tracing::debug!("Lazy model load for tier {:?} skipped: {}", tier, e);
-                }
-            }
             if crate::services::security::guard_endpoint(&self.endpoint_for(pt)).is_ok() {
                 if let Some(provider) = self.providers.get(&pt) {
                     if provider.is_available().await {
@@ -1167,14 +977,7 @@ impl AiService {
             }
         };
 
-        let model = if pt == AiProviderType::LocalInference {
-            self.get_loaded_model_name()
-                .await
-                .or(model_opt)
-                .unwrap_or_else(|| pt.default_model().to_string())
-        } else {
-            model_opt.unwrap_or_else(|| pt.default_model().to_string())
-        };
+        let model = model_opt.unwrap_or_else(|| pt.default_model().to_string());
 
         Some(AiPrivacyBadgeInfo {
             provider_type: pt,
@@ -1216,11 +1019,8 @@ impl AiService {
         let (provider, provider_type, model_override) =
             self.resolve_provider_for_tier(AiTaskTier::FastText).await?;
 
-        // Truncate diff if too long (skip for local inference — it handles
-        // per-file truncation internally and needs all files for good summaries)
-        let truncated_diff = if provider_type == AiProviderType::LocalInference {
-            diff
-        } else if diff.len() > MAX_DIFF_BYTES {
+        // Truncate diff if too long
+        let truncated_diff = if diff.len() > MAX_DIFF_BYTES {
             format!(
                 "{}...\n[Diff truncated for length]",
                 truncate_at_char_boundary(&diff, MAX_DIFF_BYTES)
@@ -1362,49 +1162,6 @@ impl AiService {
         .await
     }
 
-    /// Load a GGUF model into the local inference engine.
-    ///
-    /// After loading, the local inference provider will report as available
-    /// and can be used for commit message generation and conflict resolution.
-    pub async fn load_local_model(
-        &self,
-        model_path: &std::path::Path,
-        model_name: String,
-        meta: Option<providers::LoadedModelMeta>,
-    ) -> Result<(), String> {
-        // Atomically claim the loading transition so concurrent callers cannot
-        // both start loading the same GGUF model in parallel.
-        if !self.local_provider.try_start_loading().await {
-            return Err("A model is already loaded or being loaded".to_string());
-        }
-
-        let model_path = model_path.to_path_buf();
-
-        // Run the heavy GGUF loading on a blocking thread to avoid freezing the async runtime
-        let result = tokio::task::spawn_blocking(move || {
-            local::GgufEngine::load(&model_path, model_name, meta)
-        })
-        .await
-        .map_err(|e| format!("Model loading task failed: {e}"));
-
-        match result {
-            Ok(Ok(engine)) => {
-                self.local_provider.set_engine(Box::new(engine)).await;
-                tracing::info!("Local inference engine loaded and ready");
-                Ok(())
-            }
-            Ok(Err(e)) | Err(e) => {
-                self.local_provider.set_error().await;
-                Err(e)
-            }
-        }
-    }
-
-    /// Unload the current local model
-    pub async fn unload_local_model(&self) {
-        self.local_provider.clear_engine().await;
-    }
-
     /// Auto-detect available local providers
     pub async fn auto_detect_providers(&self) -> Vec<AiProviderType> {
         let mut available = Vec::new();
@@ -1505,27 +1262,15 @@ mod tests {
     fn test_provider_type_requires_api_key() {
         assert!(!AiProviderType::Ollama.requires_api_key());
         assert!(!AiProviderType::LmStudio.requires_api_key());
-        assert!(!AiProviderType::LocalInference.requires_api_key());
         assert!(AiProviderType::OpenAi.requires_api_key());
         assert!(AiProviderType::Anthropic.requires_api_key());
         assert!(AiProviderType::GoogleGemini.requires_api_key());
     }
 
     #[test]
-    fn test_local_inference_provider_type() {
-        assert_eq!(
-            AiProviderType::LocalInference.display_name(),
-            "Local AI (Embedded)"
-        );
-        assert_eq!(AiProviderType::LocalInference.default_model(), "local");
-        assert_eq!(AiProviderType::LocalInference.default_endpoint(), "");
-    }
-
-    #[test]
-    fn test_all_providers_includes_local() {
+    fn test_all_providers() {
         let all = AiProviderType::all();
-        assert!(all.contains(&AiProviderType::LocalInference));
-        assert_eq!(all.len(), 7);
+        assert_eq!(all.len(), 6);
     }
 
     /// A provider that is always available and answers instantly, standing in
@@ -1570,182 +1315,6 @@ mod tests {
         ) -> Result<String, String> {
             Ok("stub text".to_string())
         }
-    }
-
-    /// Write a model directory that `list_downloaded` reports as downloaded,
-    /// with a `model.gguf` that is not a valid GGUF so any attempted load fails
-    /// fast. The engine leaving `Unloaded` is the observable "a load was
-    /// attempted"; the load itself never succeeds.
-    fn write_downloaded_model(models_dir: &std::path::Path) {
-        let dir = models_dir.join("tiny-test");
-        std::fs::create_dir_all(&dir).unwrap();
-        std::fs::write(
-            dir.join("model_meta.json"),
-            r#"{
-                "id": "tiny-test",
-                "displayName": "Tiny Test",
-                "sizeBytes": 1,
-                "sha256": "",
-                "architecture": "llama",
-                "contextLength": 512
-            }"#,
-        )
-        .unwrap();
-        std::fs::write(dir.join("model.gguf"), b"not a gguf file").unwrap();
-    }
-
-    /// An AiService with one downloaded-but-unloaded local model and no
-    /// reachable network providers.
-    async fn service_fixture() -> (AiService, tempfile::TempDir, tempfile::TempDir) {
-        let config_dir = tempfile::tempdir().unwrap();
-        let models_dir = tempfile::tempdir().unwrap();
-        write_downloaded_model(models_dir.path());
-
-        let mut service = AiService::new(config_dir.path().to_path_buf());
-        service.set_local_ai_state(crate::commands::local_ai::create_local_ai_state(
-            models_dir.path().to_path_buf(),
-        ));
-        // Point the endpoint-probing providers at a closed port so
-        // `is_available` fails instantly and without leaving the machine.
-        // These call `init_providers`, so they must precede any stub insert.
-        service
-            .set_endpoint(AiProviderType::Ollama, Some("http://127.0.0.1:1".into()))
-            .unwrap();
-        service
-            .set_endpoint(AiProviderType::LmStudio, Some("http://127.0.0.1:1".into()))
-            .unwrap();
-
-        (service, config_dir, models_dir)
-    }
-
-    /// A downloaded GGUF must not be loaded into RAM/GPU when the active
-    /// provider is a cloud one that is about to serve the request — that also
-    /// silently undid the Settings "Unload" button on the next AI action.
-    #[tokio::test]
-    async fn test_generate_commit_message_does_not_load_local_when_another_provider_serves() {
-        let _policy = no_policy();
-        let (mut service, _config_dir, _models_dir) = service_fixture().await;
-        service
-            .set_active_provider(AiProviderType::Anthropic)
-            .unwrap();
-        service
-            .providers
-            .insert(AiProviderType::Anthropic, Box::new(StubProvider));
-
-        let result = service
-            .generate_commit_message("diff --git a/a b/a".to_string())
-            .await;
-
-        assert_eq!(result.unwrap().summary, "feat: stub");
-        assert_eq!(
-            service.get_local_model_status().await,
-            providers::LocalModelStatus::Unloaded,
-            "no local model load may be attempted when another provider serves"
-        );
-    }
-
-    /// `generate_text` backs changelog, vibe check, PR description and conflict
-    /// explain, and had the same unconditional load.
-    #[tokio::test]
-    async fn test_generate_text_does_not_load_local_when_another_provider_serves() {
-        let _policy = no_policy();
-        let (mut service, _config_dir, _models_dir) = service_fixture().await;
-        service
-            .set_active_provider(AiProviderType::Anthropic)
-            .unwrap();
-        service
-            .providers
-            .insert(AiProviderType::Anthropic, Box::new(StubProvider));
-
-        let result = service.generate_text("sys", "user", Some(100)).await;
-
-        assert_eq!(result.unwrap(), "stub text");
-        assert_eq!(
-            service.get_local_model_status().await,
-            providers::LocalModelStatus::Unloaded,
-            "no local model load may be attempted when another provider serves"
-        );
-    }
-
-    /// Guard against over-gating: with nothing else configured, the downloaded
-    /// local model is still the candidate and must still be lazily loaded.
-    #[tokio::test]
-    async fn test_generate_commit_message_still_lazy_loads_local_when_nothing_else_available() {
-        let _policy = no_policy();
-        let (service, _config_dir, _models_dir) = service_fixture().await;
-
-        let err = service
-            .generate_commit_message("diff --git a/a b/a".to_string())
-            .await
-            .unwrap_err();
-
-        assert_eq!(
-            err,
-            "No AI provider available. Please configure a provider in Settings."
-        );
-        assert_ne!(
-            service.get_local_model_status().await,
-            providers::LocalModelStatus::Unloaded,
-            "the local model is the only candidate, so a load must be attempted"
-        );
-    }
-
-    /// When the user explicitly chose local inference, it is loaded even
-    /// though another provider is configured — but a failed load must not
-    /// silently substitute that other provider. Selecting a provider in
-    /// Settings is honoured exactly, in both directions.
-    #[tokio::test]
-    async fn test_local_active_provider_is_loaded_and_errors_when_it_cannot_load() {
-        let _policy = no_policy();
-        let (mut service, _config_dir, _models_dir) = service_fixture().await;
-        service
-            .set_active_provider(AiProviderType::LocalInference)
-            .unwrap();
-        service
-            .providers
-            .insert(AiProviderType::Anthropic, Box::new(StubProvider));
-
-        let err = service
-            .generate_commit_message("diff --git a/a b/a".to_string())
-            .await
-            .unwrap_err();
-
-        assert_ne!(
-            service.get_local_model_status().await,
-            providers::LocalModelStatus::Unloaded,
-            "the user's chosen local model must still be loaded"
-        );
-        assert!(err.contains("Local AI"), "{err}");
-    }
-
-    /// When a *different* provider is explicitly chosen and unreachable, the
-    /// request must fail naming that provider — not silently substitute the
-    /// local model. Loading a GGUF on its behalf would also undo an explicit
-    /// Settings "Unload" the next time this provider comes back, and would
-    /// perform a needless multi-gigabyte load for a provider the user never
-    /// selected.
-    #[tokio::test]
-    async fn test_unavailable_active_provider_does_not_fall_back_to_local_model() {
-        let _policy = no_policy();
-        let (mut service, _config_dir, _models_dir) = service_fixture().await;
-        // Ollama is the chosen provider but its endpoint is a closed port.
-        service.set_active_provider(AiProviderType::Ollama).unwrap();
-        // ...while a stale cloud key is still configured behind it.
-        service
-            .providers
-            .insert(AiProviderType::Anthropic, Box::new(StubProvider));
-
-        let err = service
-            .generate_commit_message("diff --git a/a b/a".to_string())
-            .await
-            .unwrap_err();
-
-        assert_eq!(
-            service.get_local_model_status().await,
-            providers::LocalModelStatus::Unloaded,
-            "a non-active local model must not be loaded on behalf of a different chosen provider"
-        );
-        assert!(err.contains("Ollama"), "{err}");
     }
 
     // --- Provider resolution -------------------------------------------------
@@ -1839,23 +1408,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn resolve_provider_error_points_at_the_local_model_step() {
-        let _policy = no_policy();
-        let dir = tempfile::tempdir().unwrap();
-        let mut service = test_service(&dir);
-        set_key(&mut service, AiProviderType::GoogleGemini, "test-key");
-        // Local AI selected, no engine loaded.
-        service.config.active_provider = Some(AiProviderType::LocalInference);
-
-        let err = service
-            .resolve_provider()
-            .await
-            .map(|(_, pt)| pt)
-            .unwrap_err();
-        assert!(err.contains("Settings > Local AI"), "{err}");
-    }
-
-    #[tokio::test]
     async fn resolve_provider_uses_the_provider_the_user_selected() {
         let _policy = no_policy();
         let dir = tempfile::tempdir().unwrap();
@@ -1887,121 +1439,6 @@ mod tests {
         assert!(service.find_available_provider().await.is_some());
     }
 
-    // --- Local-model availability -------------------------------------------
-    //
-    // A local GGUF model is never loaded at startup (see
-    // `ensure_local_model_loaded`): loading is deferred to the first inference
-    // request. These tests pin that a downloaded-but-unloaded model still
-    // reports as available, and that a half-deleted model directory does not.
-
-    /// Build an `AiService` with no configured cloud provider, wired to a
-    /// models directory under `models_dir`.
-    fn service_with_models(models_dir: std::path::PathBuf) -> (AiService, tempfile::TempDir) {
-        let config_dir = tempfile::tempdir().unwrap();
-        let mut service = AiService::new(config_dir.path().to_path_buf());
-        service.set_local_ai_state(crate::commands::local_ai::create_local_ai_state(models_dir));
-        (service, config_dir)
-    }
-
-    /// Write a model directory the way `ModelManager` lays one out. Without the
-    /// GGUF file it is the half-downloaded/half-deleted shape that
-    /// `list_downloaded` reports as `ModelStatus::Error`.
-    fn write_model(models_dir: &std::path::Path, id: &str, with_gguf: bool) {
-        let model_dir = models_dir.join(id);
-        std::fs::create_dir_all(&model_dir).unwrap();
-        let meta = format!(
-            r#"{{
-                "id": "{id}",
-                "displayName": "Test Model",
-                "sizeBytes": 9,
-                "sha256": "abc",
-                "architecture": "test",
-                "contextLength": 2048
-            }}"#
-        );
-        std::fs::write(model_dir.join("model_meta.json"), meta).unwrap();
-        if with_gguf {
-            std::fs::write(model_dir.join("model.gguf"), b"fake data").unwrap();
-        }
-    }
-
-    #[tokio::test]
-    async fn test_downloaded_but_unloaded_local_model_counts_as_available() {
-        let _policy = no_policy();
-        let models = tempfile::tempdir().unwrap();
-        write_model(models.path(), "ready-model", true);
-        let (service, _cfg) = service_with_models(models.path().to_path_buf());
-
-        // Nothing has been loaded: this is the state after every app restart.
-        assert!(!service
-            .test_provider(AiProviderType::LocalInference)
-            .await
-            .unwrap());
-        assert_eq!(
-            service.get_local_model_status().await,
-            providers::LocalModelStatus::Unloaded
-        );
-
-        // ...yet a generate request would lazily load it and succeed, so the
-        // `is_ai_available` command must not report AI as unconfigured.
-        assert!(service.has_loadable_local_model().await);
-        assert!(service.has_available_provider().await);
-    }
-
-    #[tokio::test]
-    async fn test_no_downloaded_model_is_not_loadable() {
-        // An empty models directory.
-        let models = tempfile::tempdir().unwrap();
-        let (service, _cfg) = service_with_models(models.path().to_path_buf());
-        assert!(!service.has_loadable_local_model().await);
-
-        // ...and the pre-wiring state, before `set_local_ai_state` is called.
-        let config_dir = tempfile::tempdir().unwrap();
-        let unwired = AiService::new(config_dir.path().to_path_buf());
-        assert!(!unwired.has_loadable_local_model().await);
-    }
-
-    #[tokio::test]
-    async fn test_model_directory_without_gguf_is_not_loadable() {
-        // Metadata left behind without the weights: nothing can be loaded from
-        // it, so it must not light up the AI affordances.
-        let models = tempfile::tempdir().unwrap();
-        write_model(models.path(), "broken-model", false);
-        let (service, _cfg) = service_with_models(models.path().to_path_buf());
-
-        assert!(!service.has_loadable_local_model().await);
-    }
-
-    #[tokio::test]
-    async fn test_downloaded_local_model_does_not_cover_a_different_chosen_provider() {
-        let _policy = no_policy();
-        // A local model is downloaded, but the user picked a cloud provider that
-        // is not reachable. A request would fail rather than quietly run on the
-        // local model, so availability must report false — otherwise the AI
-        // affordances light up and every click errors.
-        let models = tempfile::tempdir().unwrap();
-        write_model(models.path(), "ready-model", true);
-        let (mut service, _cfg) = service_with_models(models.path().to_path_buf());
-        service.config.active_provider = Some(AiProviderType::Anthropic);
-
-        assert!(service.has_loadable_local_model().await);
-        assert!(!service.has_available_provider().await);
-        let reason = service.unavailable_reason().await.expect("unavailable");
-        assert!(reason.contains("Anthropic Claude"), "{reason}");
-    }
-
-    #[tokio::test]
-    async fn test_downloaded_local_model_covers_local_inference_when_chosen() {
-        let _policy = no_policy();
-        let models = tempfile::tempdir().unwrap();
-        write_model(models.path(), "ready-model", true);
-        let (mut service, _cfg) = service_with_models(models.path().to_path_buf());
-        service.config.active_provider = Some(AiProviderType::LocalInference);
-
-        assert!(service.has_available_provider().await);
-        assert!(service.unavailable_reason().await.is_none());
-    }
-
     #[tokio::test]
     async fn test_unavailable_reason_is_generic_when_nothing_is_configured() {
         let _policy = no_policy();
@@ -2023,21 +1460,6 @@ mod tests {
 
         assert!(service.unavailable_reason().await.is_none());
         assert!(service.has_available_provider().await);
-    }
-
-    #[tokio::test]
-    async fn test_ensure_local_model_loaded_skips_a_model_with_no_gguf() {
-        let models = tempfile::tempdir().unwrap();
-        write_model(models.path(), "broken-model", false);
-        let (service, _cfg) = service_with_models(models.path().to_path_buf());
-
-        // Attempting to load the missing GGUF would fail and leave the provider
-        // parked in `Error`; it must be skipped instead.
-        assert!(service.ensure_local_model_loaded().await.is_ok());
-        assert_eq!(
-            service.get_local_model_status().await,
-            providers::LocalModelStatus::Unloaded
-        );
     }
 
     #[tokio::test]
@@ -2094,7 +1516,8 @@ mod tests {
     #[tokio::test]
     async fn test_ledger_recording_and_privacy_badge() {
         let _policy = no_policy();
-        let (mut service, _config_dir, _models_dir) = service_fixture().await;
+        let dir = tempfile::tempdir().unwrap();
+        let mut service = test_service(&dir);
         service
             .set_active_provider(AiProviderType::Anthropic)
             .unwrap();

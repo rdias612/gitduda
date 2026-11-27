@@ -18,7 +18,6 @@ use std::sync::Arc;
 use tauri::{Emitter, Listener, Manager};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-use commands::local_ai::create_local_ai_state;
 use commands::watcher::WatcherState;
 use services::ai::mcp::server::create_mcp_state;
 use services::ai::AiState;
@@ -195,19 +194,6 @@ pub fn run() {
                 }
             });
             app.manage(create_ai_state(config_dir.clone()));
-
-            // Initialize local AI state with models directory
-            let models_dir = app.path().app_data_dir().unwrap_or_default().join("models");
-            let local_ai_state = create_local_ai_state(models_dir);
-            app.manage(local_ai_state.clone());
-
-            // Wire local AI state into AiService for lazy model loading.
-            // Model loading is deferred to first inference request.
-            {
-                let ai_state: tauri::State<'_, AiState> = app.state();
-                let mut service = ai_state.blocking_write();
-                service.set_local_ai_state(local_ai_state);
-            }
 
             // Initialize MCP server state from the saved configuration
             // External MCP servers the AI features may call for context.
@@ -790,19 +776,6 @@ pub fn run() {
             commands::ai::explain_conflict,
             commands::ai::find_reflog_entry,
             commands::merge::preview_rebase,
-            // Local AI model management
-            commands::local_ai::get_system_capabilities,
-            commands::local_ai::get_available_models,
-            commands::local_ai::get_downloaded_models,
-            commands::local_ai::download_model,
-            commands::local_ai::cancel_model_download,
-            commands::local_ai::delete_model,
-            commands::local_ai::get_model_status,
-            commands::local_ai::get_loaded_model_name,
-            commands::local_ai::get_recommended_model,
-            commands::local_ai::load_model,
-            commands::local_ai::unload_model,
-            commands::local_ai::import_custom_model,
             // MCP server
             commands::mcp_client::list_external_mcp_servers,
             commands::mcp_client::save_external_mcp_server,
@@ -1018,16 +991,5 @@ pub fn run() {
         .build(tauri::generate_context!())
         .expect("error while building tauri application");
 
-    app.run(|app_handle, event| {
-        if let tauri::RunEvent::Exit = event {
-            // Unload the local AI model before the process exits to avoid
-            // llama.cpp crashing during unordered global teardown.
-            let ai_state = app_handle.state::<services::ai::AiState>().inner().clone();
-            tauri::async_runtime::block_on(async {
-                let service = ai_state.read().await;
-                service.unload_local_model().await;
-                tracing::info!("Unloaded local AI model for clean shutdown");
-            });
-        }
-    });
+    app.run(|_, _| {});
 }

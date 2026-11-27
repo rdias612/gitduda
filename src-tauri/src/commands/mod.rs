@@ -44,7 +44,6 @@ pub mod hooks;
 pub mod issue_templates;
 pub mod jira;
 pub mod lfs;
-pub mod local_ai;
 pub mod maintenance;
 pub mod mcp;
 pub mod mcp_client;

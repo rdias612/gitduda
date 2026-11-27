@@ -59,9 +59,8 @@ tar = "0.4"
 async-trait = "0.1"
 futures-util = "0.3"
 
-# Local AI inference
+# System process detection (agent sessions)
 sysinfo = "0.40"
-llama-cpp-2 = { version = "0.1", default-features = false }
 
 # Embedding & semantic search
 sqlite-vec = "0.1.8-alpha.1"
@@ -94,7 +93,6 @@ tauri-plugin-window-state = "2"
 keyring = { version = "3", features = ["windows-native", "linux-native-sync-persistent"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
-llama-cpp-2 = { version = "0.1", default-features = false, features = ["metal"] }
 candle-core = { version = "0.11", features = ["metal", "accelerate"] }
 candle-nn = { version = "0.11", features = ["metal", "accelerate"] }
 candle-transformers = { version = "0.11", features = ["metal", "accelerate"] }
@@ -128,13 +126,10 @@ default = ["custom-protocol"]
 custom-protocol = ["tauri/custom-protocol"]
 msix-store = []
 cuda = [
-  "llama-cpp-2/cuda",
   "candle-core/cuda",
   "candle-nn/cuda",
   "candle-transformers/cuda",
 ]
-rocm = ["llama-cpp-2/rocm"]
-vulkan = ["llama-cpp-2/vulkan"]
 
 [profile.release]
 panic = "abort"
