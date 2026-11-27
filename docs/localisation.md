@@ -23,8 +23,6 @@ call site is here, and nothing else in `src/` has one.
   switcher, including its accessible labels and empty states.
 - `src/components/welcome/gn-welcome.ts` — the whole component, including its
   toast messages and accessible labels.
-- `src/services/local-ai.service.ts` — the model tier labels the Settings
-  dialog shows next to each local model.
 - `src/services/workspace.service.ts` — feedback when opening a workspace.
 - `src/stores/settings.store.ts` — the whitespace-mode menu and the graph
   palette names (`getGraphColorSchemes()`), both built where the setting lives

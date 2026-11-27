@@ -192,7 +192,7 @@
           <div class="card"><h3><span class="ic"><svg viewBox="0 0 24 24"><path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z"/></svg></span>Fast on big repos</h3><p>Rust backend, virtualised graph and diff rendering, background indexing. Comfortable at 100k+ commits.</p></div>
           <div class="card"><h3><span class="ic"><svg viewBox="0 0 24 24"><path d="M7 4h2v4.1a4 4 0 0 1 6 0V4h2v5a4 4 0 0 1-3 3.9V20h-2v-7.1A4 4 0 0 1 9 9V4H7zm5 3a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg></span>Interactive rebase</h3><p>Reorder, squash, fixup, edit and drop commits visually, with a preview of the result and conflict handling built in.</p></div>
           <div class="card"><h3><span class="ic"><svg viewBox="0 0 24 24"><path d="M3 4h7v16H3zm11 0h7v7h-7zm0 9h7v7h-7z"/></svg></span>3-way merge editor</h3><p>Base, ours and theirs side by side, chunk-by-chunk resolution, and optional AI suggestions for the tricky ones.</p></div>
-          <div class="card"><h3><span class="ic"><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zm1 4v4.6l3.5 2-1 1.7L11 12.7V7h2z"/></svg></span>Local AI, your GPU</h3><p>Commit messages, changelogs and conflict help from an embedded local model, Ollama or LM Studio — or bring a cloud key if you prefer.</p></div>
+          <div class="card"><h3><span class="ic"><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zm1 4v4.6l3.5 2-1 1.7L11 12.7V7h2z"/></svg></span>Local AI, your choice</h3><p>Commit messages, changelogs and conflict help from Ollama or LM Studio running on your machine — or bring a cloud key if you prefer.</p></div>
           <div class="card"><h3><span class="ic"><svg viewBox="0 0 24 24"><path d="M4 5h16v3H4zm0 5h16v3H4zm0 5h10v3H4z"/></svg></span>Integrations</h3><p>Pull requests, issues, releases and pipelines from GitHub, GitLab, Azure DevOps and Bitbucket. JIRA linking. An MCP server for your AI tools.</p></div>
           <div class="card"><h3><span class="ic"><svg viewBox="0 0 24 24"><path d="M4 4h6v6H4zm10 0h6v6h-6zM4 14h6v6H4zm10 0h6v6h-6z"/></svg></span>Worktrees, submodules, LFS</h3><p>The advanced stuff, handled: worktree management, submodules, Git LFS, sparse checkout, bisect, reflog undo.</p></div>
           <div class="card"><h3><span class="ic"><svg viewBox="0 0 24 24"><path d="M5 3h14v18H5zm2 2v14h10V5zm2 2h6v2H9zm0 4h6v2H9zm0 4h4v2H9z"/></svg></span>Diffs that read well</h3><p>Syntax-highlighted diffs, hunk and line-level staging, image diffs (side-by-side, onion skin, swipe), blame, file history.</p></div>
@@ -243,13 +243,13 @@
           <div class="card"><h3>Minimum</h3><ul>
             <li>macOS 11 (Apple Silicon), Windows 10 64-bit, or Linux with GTK 3.24+</li>
             <li>4 GB RAM (8 GB recommended for large repositories)</li>
-            <li>500 MB disk, plus ~2 GB if you download the local AI model</li>
+            <li>500 MB disk space</li>
             <li>Git 2.20 or later on your PATH</li>
           </ul></div>
-          <div class="card"><h3>For local AI acceleration</h3><ul>
-            <li>macOS: Apple Silicon (Metal)</li>
-            <li>Windows / Linux: NVIDIA GPU with CUDA (GTX 1060 or better)</li>
-            <li>Without a GPU everything still works — the model just runs on the CPU, or use Ollama, LM Studio or a cloud provider</li>
+          <div class="card"><h3>For AI &amp; semantic search</h3><ul>
+            <li>Local LLMs via Ollama or LM Studio (runs fully offline on your hardware)</li>
+            <li>Cloud providers (OpenAI, Anthropic, GitHub Models, Google Gemini) with your own API key</li>
+            <li>Semantic commit search uses local Candle embeddings with automatic Metal/CUDA acceleration and CPU fallback</li>
           </ul></div>
         </div>
       </div>

@@ -253,9 +253,6 @@
 <trans-unit id="s31f20aaa82bf4f8b">
   <source>Offline Mode</source>
   <target>Mode hors ligne</target></trans-unit>
-<trans-unit id="s33757788925c0442">
-  <source>Block every operation that leaves this machine — fetch, pull, push, clone, tag push, remote prune, LFS, submodules, auto-fetch, provider APIs (pull requests, issues, releases, CI), and cloud AI providers (OpenAI, Anthropic, Google Gemini, GitHub Models). Local AI — Ollama, LM Studio and the embedded model — keeps working.</source>
-  <target>Bloquer toute opération qui sort de cette machine — fetch, pull, push, clonage, envoi d'étiquettes, nettoyage des distants, LFS, sous-modules, récupération automatique, API des fournisseurs (pull requests, tickets, versions, CI) et fournisseurs d'IA en ligne (OpenAI, Anthropic, Google Gemini, GitHub Models). L'IA locale — Ollama, LM Studio et le modèle embarqué — continue de fonctionner.</target></trans-unit>
 <trans-unit id="s5d9e1403ffb4d805">
   <source>Confirm Network Operations</source>
   <target>Confirmer les opérations réseau</target></trans-unit>
@@ -371,69 +368,9 @@
 <trans-unit id="s7b7163270e57e8b4">
   <source>Refresh</source>
   <target>Actualiser</target></trans-unit>
-<trans-unit id="s88798712209c4218">
-  <source>Local AI Engine</source>
-  <target>Moteur d'IA local</target></trans-unit>
-<trans-unit id="s66f52a78df4e030d">
-  <source>RAM: <x id="0" equiv-text="${localAiService.formatBytes(this.systemCapabilities.totalRamBytes)}"/></source>
-  <target>RAM : <x id="0" equiv-text="${localAiService.formatBytes(this.systemCapabilities.totalRamBytes)}"/></target></trans-unit>
-<trans-unit id="s60ebfd604165bcd5">
-  <source> | GPU: <x id="0" equiv-text="${this.systemCapabilities.gpuInfo.name}"/></source>
-  <target> | GPU : <x id="0" equiv-text="${this.systemCapabilities.gpuInfo.name}"/></target></trans-unit>
-<trans-unit id="s5351f93e2220fe0f">
-  <source> | No dedicated GPU detected</source>
-  <target> | Aucun GPU dédié détecté</target></trans-unit>
-<trans-unit id="s6d94a1fbaba2217e">
-  <source>GPU Accelerated</source>
-  <target>Accéléré par GPU</target></trans-unit>
-<trans-unit id="s8a28477e944a13c5">
-  <source>CPU Only</source>
-  <target>CPU uniquement</target></trans-unit>
-<trans-unit id="s6c9966f2702b4307">
-  <source>Detecting system capabilities...</source>
-  <target>Détection des capacités du système...</target></trans-unit>
-<trans-unit id="saf92c2a62d066d63">
-  <source>Engine Status</source>
-  <target>État du moteur</target></trans-unit>
-<trans-unit id="s024a0021a7a612cf">
-  <source>Model Loaded</source>
-  <target>Modèle chargé</target></trans-unit>
-<trans-unit id="sa812ba9ded26aa98">
-  <source>Loading model...</source>
-  <target>Chargement du modèle...</target></trans-unit>
-<trans-unit id="safce72b6f68493e8">
-  <source>Recommended: <x id="0" equiv-text="${this.recommendedModel.displayName}"/></source>
-  <target>Recommandé : <x id="0" equiv-text="${this.recommendedModel.displayName}"/></target></trans-unit>
-<trans-unit id="s6dafa6ffd121f507">
-  <source><x id="0" equiv-text="${localAiService.formatBytes(this.recommendedModel.sizeBytes)}"/> download</source>
-  <target><x id="0" equiv-text="${localAiService.formatBytes(this.recommendedModel.sizeBytes)}"/> à télécharger</target></trans-unit>
-<trans-unit id="s25250c555b37c663">
-  <source>Downloading...</source>
-  <target>Téléchargement...</target></trans-unit>
-<trans-unit id="sd3386a2ef42e80b9">
-  <source>Download</source>
-  <target>Télécharger</target></trans-unit>
-<trans-unit id="s9388a164976d0160">
-  <source>Loaded</source>
-  <target>Chargé</target></trans-unit>
-<trans-unit id="s5d3714bc882df1b2">
-  <source>Unload</source>
-  <target>Décharger</target></trans-unit>
 <trans-unit id="s49730f3d5751a433">
   <source>Loading...</source>
   <target>Chargement...</target></trans-unit>
-<trans-unit id="sb87a1067596d7a10">
-  <source>Downloaded</source>
-  <target>Téléchargé</target></trans-unit>
-<trans-unit id="s4f20edb48a6287c9">
-  <source>Load</source>
-  <target>Charger</target></trans-unit>
-<trans-unit id="sdc673e73b5c13aea">
-  <source>Delete</source>
-  <target>Supprimer</target></trans-unit>
-<trans-unit id="s2ceb11be2290bb1b">
-  <source>Cancel</source>
-  <target>Annuler</target></trans-unit>
 <trans-unit id="s5b1ccdf16a13c3fe">
   <source>MCP Server</source>
   <target>Serveur MCP</target></trans-unit>
@@ -617,15 +554,6 @@
 <trans-unit id="s8c04b169bee5549b">
   <source><x id="0" equiv-text="${aiService.getProviderDisplayName(providerType)}"/> is not available. Check your API key and try again.</source>
   <target><x id="0" equiv-text="${aiService.getProviderDisplayName(providerType)}"/> n'est pas disponible. Vérifiez votre clé d'API et réessayez.</target></trans-unit>
-<trans-unit id="sd91e344cb5c0232b">
-  <source>Loading failed for <x id="0" equiv-text="${event.payload.modelId}"/>: <x id="1" equiv-text="${reason}"/></source>
-  <target>Échec du chargement de <x id="0" equiv-text="${event.payload.modelId}"/> : <x id="1" equiv-text="${reason}"/></target></trans-unit>
-<trans-unit id="s09f7206ed00062e1">
-  <source>Download failed for <x id="0" equiv-text="${event.payload.modelId}"/>: <x id="1" equiv-text="${event.payload.error}"/></source>
-  <target>Échec du téléchargement de <x id="0" equiv-text="${event.payload.modelId}"/> : <x id="1" equiv-text="${event.payload.error}"/></target></trans-unit>
-<trans-unit id="sa6d63ff474ed0ca3">
-  <source>unknown error</source>
-  <target>erreur inconnue</target></trans-unit>
 <trans-unit id="s32793431a738a1be">
   <source>Failed to set provider</source>
   <target>Échec de la définition du fournisseur</target></trans-unit>
@@ -641,21 +569,6 @@
 <trans-unit id="s98e950e15fb380a7">
   <source>Failed to clear diff tool</source>
   <target>Échec de la suppression de l'outil de diff</target></trans-unit>
-<trans-unit id="sc24f98763051cf0b">
-  <source>Failed to start download</source>
-  <target>Échec du démarrage du téléchargement</target></trans-unit>
-<trans-unit id="s62cb03f8de2cfcff">
-  <source>Failed to cancel download</source>
-  <target>Échec de l'annulation du téléchargement</target></trans-unit>
-<trans-unit id="sf5d2d1e9dbcf5331">
-  <source>Failed to delete model</source>
-  <target>Échec de la suppression du modèle</target></trans-unit>
-<trans-unit id="s6a8e97f496d4c0ba">
-  <source>Failed to load model</source>
-  <target>Échec du chargement du modèle</target></trans-unit>
-<trans-unit id="s8a4061c3e0759881">
-  <source>Failed to unload model</source>
-  <target>Échec du déchargement du modèle</target></trans-unit>
 <trans-unit id="s39e07d32192cd4ee">
   <source>Failed to stop MCP server</source>
   <target>Échec de l'arrêt du serveur MCP</target></trans-unit>
@@ -671,15 +584,6 @@
 <trans-unit id="s3420935f88f459e9">
   <source>Failed to save MCP port</source>
   <target>Échec de l'enregistrement du port MCP</target></trans-unit>
-<trans-unit id="s59af9cc8acfda651">
-  <source>Ultra-Light (8GB+ RAM)</source>
-  <target>Ultra-léger (8 Go+ de RAM)</target></trans-unit>
-<trans-unit id="s33c1c6766b419d56">
-  <source>Standard (16GB+ RAM)</source>
-  <target>Standard (16 Go+ de RAM)</target></trans-unit>
-<trans-unit id="sde169a28c0b76e74">
-  <source>Not Supported</source>
-  <target>Non pris en charge</target></trans-unit>
 <trans-unit id="s4795644f9fe85a17">
   <source>(Not checked - not in your remote allowlist)</source>
   <target>(Non vérifié - absent de votre liste des distants autorisés)</target>
@@ -688,65 +592,9 @@
   <source>(Not checked)</source>
   <target>(Non vérifié)</target>
 </trans-unit>
-<trans-unit id="s139461118d0c6b34">
-  <source> | NPU: <x id="0" equiv-text="${this.systemCapabilities.npuInfo.name}"/></source>
-  <target> | NPU : <x id="0" equiv-text="${this.systemCapabilities.npuInfo.name}"/></target>
-</trans-unit>
-<trans-unit id="s14f9c26b88565a40">
-  <source>Metal (Apple Silicon)</source>
-  <target>Metal (Apple Silicon)</target>
-</trans-unit>
-<trans-unit id="s475cc31ab33fe1a4">
-  <source>AMD ROCm</source>
-  <target>AMD ROCm</target>
-</trans-unit>
-<trans-unit id="s5c4fecca1aa2e36d">
-  <source>Unified</source>
-  <target>Unifiée</target>
-</trans-unit>
-<trans-unit id="sab70d4fefdcc30b1">
-  <source>NVIDIA CUDA</source>
-  <target>NVIDIA CUDA</target>
-</trans-unit>
-<trans-unit id="sd7382f471da4c774">
-  <source>Vulkan GPU</source>
-  <target>GPU Vulkan</target>
-</trans-unit>
 <trans-unit id="sa233299e616554be">
   <source>Clone submodules recursively (--recurse-submodules)</source>
   <target>Cloner les sous-modules récursivement (--recurse-submodules)</target>
-</trans-unit>
-<trans-unit id="s4dc0ce10224bfda9">
-  <source>Import a local .gguf model file from disk</source>
-  <target>Importer un fichier de modèle .gguf local depuis le disque</target>
-</trans-unit>
-<trans-unit id="s62efba5773343917">
-  <source>Failed to import model</source>
-  <target>Échec de l'importation du modèle</target>
-</trans-unit>
-<trans-unit id="s7d8395311eddd4b3">
-  <source>Import .gguf…</source>
-  <target>Importer .gguf…</target>
-</trans-unit>
-<trans-unit id="sa3b0f17af482539e">
-  <source>Imported model <x id="0" equiv-text="${result.data.displayName}"/></source>
-  <target>Modèle <x id="0" equiv-text="${result.data.displayName}"/> importé</target>
-</trans-unit>
-<trans-unit id="sa55fee06cb583091">
-  <source>Import Custom GGUF Model</source>
-  <target>Importer un modèle GGUF personnalisé</target>
-</trans-unit>
-<trans-unit id="sb2b78fd9376183c7">
-  <source>Custom Model</source>
-  <target>Modèle personnalisé</target>
-</trans-unit>
-<trans-unit id="scdc531a4c0b234d8">
-  <source>Pro (32GB+ RAM)</source>
-  <target>Pro (32 Go+ de RAM)</target>
-</trans-unit>
-<trans-unit id="sd29e1b38e37050fb">
-  <source>Custom GGUF</source>
-  <target>GGUF personnalisé</target>
 </trans-unit>
 <trans-unit id="scf8b8b68ba5e0f98">
   <source>Agent Guardrails</source>
@@ -887,6 +735,10 @@
 <trans-unit id="s5671fb95bc3d5b04">
   <source>Update now</source>
   <target>Mettre à jour maintenant</target>
+</trans-unit>
+<trans-unit id="s7bb313059734e4fc">
+  <source>Block every operation that leaves this machine — fetch, pull, push, clone, tag push, remote prune, LFS, submodules, auto-fetch, provider APIs (pull requests, issues, releases, CI), and cloud AI providers (OpenAI, Anthropic, Google Gemini, GitHub Models). Local AI — Ollama and LM Studio — keeps working.</source>
+  <target>Bloquer toute opération qui sort de cette machine — fetch, pull, push, clonage, envoi d'étiquettes, nettoyage des distants, LFS, sous-modules, récupération automatique, API des fournisseurs (pull requests, tickets, versions, CI) et fournisseurs d'IA en ligne (OpenAI, Anthropic, Google Gemini, GitHub Models). L'IA locale — Ollama et LM Studio — continue de fonctionner.</target>
 </trans-unit>
 </body>
 </file>

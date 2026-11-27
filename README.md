@@ -38,7 +38,7 @@ Gitduda is built for developers who value **privacy, performance, and control**:
 - **🆓 Free & Open Source**: MIT licensed, no account required, no subscription fees, no feature paywalls.
 - **🌐 Cross-Platform**: Native apps for macOS, Windows, and Linux with consistent UX.
 - **🚫 Offline-First**: Works perfectly without an internet connection. Network operations only when you explicitly push/pull/fetch. The one optional exception is author avatars, which are off by default and fetched from Gravatar only if you turn them on — and never while Offline Mode is enabled.
-- **🤖 AI-Powered**: Local or cloud-based AI for commit message generation - choose from embedded local model (runs on your machine with GPU acceleration), Ollama, LM Studio, OpenAI, Anthropic, or GitHub Copilot.
+- **🤖 AI-Powered**: Local or cloud-based AI for commit message generation — choose from Ollama, LM Studio, OpenAI, Anthropic, GitHub Models, or Google Gemini.
 - **🔧 Full-Featured**: Supports advanced Git operations like interactive rebase, cherry-pick, worktrees, submodules, and more.
 
 ### How is it Different?
@@ -49,7 +49,7 @@ Gitduda is built for developers who value **privacy, performance, and control**:
 | No account required | ✅ | ✅ | ❌ (free tier limit) | ❌ |
 | Open source | ✅ | ✅ | ❌ | ❌ |
 | Local AI features | ✅ | ❌ | ✅ (cloud only) | ❌ |
-| Cloud AI providers | ✅ (7) | ❌ | ✅ | ❌ |
+| AI providers | ✅ (6) | ❌ | ✅ | ❌ |
 | AI changelog generation | ✅ | ❌ | ❌ | ❌ |
 | AI conflict resolution | ✅ | ❌ | ❌ | ❌ |
 | MCP server | ✅ | ❌ | ❌ | ❌ |
@@ -183,12 +183,10 @@ Gitduda is built for developers who value **privacy, performance, and control**:
 - **Commit Message Generation** - generate conventional commit messages from staged diffs
 - **AI Merge Conflict Resolution** - per-conflict and batch AI suggestions with explanations in the 3-way merge editor
 - **Automatic Changelog Generation** - AI-powered release notes from commit history between any two refs
-- **Semantic Search** - embedding-based commit search using ONNX Runtime and sqlite-vec vector storage
+- **Semantic Search** - embedding-based commit search using local Candle embeddings and sqlite-vec vector storage
 - **MCP Server** - Model Context Protocol server exposing Git tools for external AI tools (Cursor, VS Code, etc.), protected by a generated access token that every client must send as `Authorization: Bearer <token>` (copy the token and a ready-made client configuration from Settings → MCP Server)
-- **7 AI Providers** - Ollama, LM Studio, OpenAI, Anthropic, GitHub Copilot, Google Gemini, and embedded local inference
-- **Adaptive Model Selection** - detects system VRAM/GPU and recommends optimal model (4 curated models)
-- **Embedded LLM (Default)** - runs entirely on your machine with Metal (macOS) or CUDA (Windows/Linux) GPU acceleration
-- **Offline-First** - default embedded model and local providers work completely offline
+- **6 AI Providers** - Ollama, LM Studio, OpenAI, Anthropic, GitHub Models, and Google Gemini
+- **Offline-First** - local providers (Ollama, LM Studio) and Candle semantic search work completely offline
 - **Auto-Detection** - automatically discovers local LLM providers (Ollama, LM Studio)
 - **Provider Configuration** - test and configure AI providers with API key support
 
@@ -209,19 +207,16 @@ Gitduda is built for developers who value **privacy, performance, and control**:
   
 - **Hardware**:
   - 4 GB RAM (8 GB recommended for large repositories)
-  - 500 MB disk space (+~2 GB for AI model if using commit message generation)
+  - 500 MB disk space
   - x64 (Windows, Linux) or Apple Silicon (macOS)
   
 - **Software**:
   - Git 2.20+ (automatically uses system Git installation)
   
-### Recommended for AI Features
+### Recommended for Local AI & Semantic Search
 
-- **macOS**: Apple Silicon (M1/M2/M3) for Metal GPU acceleration
-- **Windows**: NVIDIA GPU with CUDA support (GTX 1060 or better)
-- **Linux**: NVIDIA GPU with CUDA support (GTX 1060 or better)
-
-> **Note**: AI features work on CPU-only systems but will be slower. You can disable GPU acceleration if needed (see [Troubleshooting](#troubleshooting)).
+- **Local LLMs**: [Ollama](https://ollama.com/) or [LM Studio](https://lmstudio.ai/) running locally (fully offline)
+- **Semantic Search Acceleration**: Apple Silicon (Metal) on macOS or NVIDIA GPU (CUDA) on Windows/Linux for local Candle embeddings (automatic CPU fallback)
 
 ## Installation
 
@@ -453,7 +448,7 @@ Gitduda uses a **multi-process architecture** powered by Tauri:
 - **System Git** (via shell) for complex operations (rebase, submodules) to avoid libgit2 limitations
 - **Zustand** for reactive state management on the frontend
 - **SQLite** for caching repository metadata and indexing
-- **AI Providers** (llama-cpp-2) for embedded local LLM, with support for external providers (Ollama, LM Studio, OpenAI, Anthropic, GitHub Copilot)
+- **AI Providers** — pluggable local (Ollama, LM Studio) and cloud (OpenAI, Anthropic, GitHub Models, Google Gemini) providers, plus local Candle embeddings for semantic search
 
 ### Development Workflow
 
@@ -531,12 +526,12 @@ it, or add a locale.
 - [git2-rs](https://github.com/rust-lang/git2-rs) - libgit2 bindings
 - [Tokio](https://tokio.rs/) - Async runtime
 - [SQLite](https://www.sqlite.org/) - Local database
-- [llama-cpp-2](https://github.com/utilityai/llama-cpp-rs) - LLM inference with GPU acceleration
+- [Candle](https://github.com/huggingface/candle) - Pure-Rust local embeddings for semantic commit search
 
 ### Additional Tools
 
 - **Git**: [libgit2](https://libgit2.org/) for core operations, system Git for advanced features
-- **AI Models**: 4 curated models with adaptive selection (Gemma 3, Llama 3.2, Phi-4), supports Ollama, LM Studio, OpenAI, Anthropic, GitHub Copilot, Google Gemini
+- **AI Providers**: Supports Ollama, LM Studio, OpenAI, Anthropic, GitHub Models, and Google Gemini
 - **Testing**: [Web Test Runner](https://modern-web.dev/docs/test-runner/overview/), [Playwright](https://playwright.dev/)
 - **Build**: [Vite](https://vitejs.dev/) for frontend, [Cargo](https://doc.rust-lang.org/cargo/) for backend
 - **CI/CD**: GitHub Actions for automated testing and releases
@@ -621,26 +616,10 @@ See [ROADMAP.md](ROADMAP.md) for planned features including:
 
 ### AI Commit Message Generation
 
-Gitduda supports multiple AI providers for commit message generation. By default, it uses an embedded LLM that runs locally on your machine. On first use, it downloads a ~2GB model file. You can also configure local providers (Ollama, LM Studio) or cloud providers (OpenAI, Anthropic, GitHub Copilot) in Settings > AI Providers.
+Gitduda supports 6 AI providers for commit message generation: local providers (Ollama, LM Studio) and cloud providers (OpenAI, Anthropic, GitHub Models, Google Gemini). Configure and test your provider in Settings > AI Providers.
 
-**macOS GPU Issues**: If the app crashes when generating commit messages, you may need to adjust GPU settings:
-
-```bash
-# Run with CPU-only inference (slower but stable)
-GITNADO_GPU_LAYERS=0 /Applications/Gitduda.app/Contents/MacOS/Gitduda
-
-# Or reduce GPU layers (try 16, 8, etc.)
-GITNADO_GPU_LAYERS=16 /Applications/Gitduda.app/Contents/MacOS/Gitduda
-```
-
-This is a known issue with Metal GPU buffer allocation on some macOS configurations. See [llama.cpp#16266](https://github.com/ggml-org/llama.cpp/issues/16266) for details.
-
-**Model Storage**: The AI model is stored in:
-- macOS: `~/Library/Application Support/io.github.rdias612.gitduda/models/`
-- Windows: `%APPDATA%\io.github.rdias612.gitduda\models\`
-- Linux: `~/.config/io.github.rdias612.gitduda/models/`
-
-You can delete the model folder to re-download or free up space.
+- **Local providers not detected**: Make sure Ollama (`http://localhost:11434`) or LM Studio (`http://localhost:1234`) is running with at least one model loaded, then re-test the connection in Settings > AI Providers.
+- **Cloud providers**: Verify your API key and selected model in Settings > AI Providers, and ensure Offline Mode is disabled.
 
 ## FAQ
 
@@ -653,7 +632,7 @@ A: Yes! Gitduda is open source under the MIT license. There are no subscription 
 A: No. Gitduda has zero telemetry and no analytics. The only network requests are Git operations (push/pull/fetch), optional integrations (GitHub, GitLab, etc.) that you explicitly configure, and — if you turn on the "Show Avatars" setting, which is off by default — author avatar images from gravatar.com, each request carrying an MD5 hash of that commit author's email address. Offline Mode and the remote allowlist block all of them.
 
 **Q: Can I use Gitduda offline?**  
-A: Absolutely. Gitduda works perfectly offline. All features work locally, including AI commit message generation (after initial model download).
+A: Absolutely. Gitduda works perfectly offline. All core Git features work locally, and AI features work offline when paired with a local provider (Ollama or LM Studio).
 
 **Q: How does Gitduda compare to other Git clients?**  
 A: See the [comparison table](#why-gitduda) above. Gitduda focuses on privacy, performance, and being fully open source.
@@ -675,16 +654,13 @@ A: Gitduda works with any Git remote (GitHub, GitLab, Bitbucket, Azure DevOps, s
 ### AI Features
 
 **Q: How does the AI commit message generation work?**  
-A: Gitduda supports multiple AI providers. By default, it uses an embedded local LLM ([Tavernari/git-commit-message](https://huggingface.co/Tavernari/git-commit-message)) that runs entirely on your machine. You can also configure local providers (Ollama, LM Studio) or cloud providers (OpenAI, Anthropic, GitHub Copilot). The AI analyzes your staged changes and generates [conventional commit messages](https://www.conventionalcommits.org/) (e.g., `feat:`, `fix:`, `docs:`). The embedded model (~2GB) downloads once on first use.
+A: Gitduda supports 6 AI providers: local providers (Ollama, LM Studio) and cloud providers (OpenAI, Anthropic, GitHub Models, Google Gemini). The AI analyzes your staged changes and generates [conventional commit messages](https://www.conventionalcommits.org/) (e.g., `feat:`, `fix:`, `docs:`).
 
 **Q: Do I need an internet connection for AI features?**  
-A: It depends on which AI provider you use. The embedded model and local providers (Ollama, LM Studio) work completely offline after the initial model download (~2GB for embedded model). Cloud-based providers (OpenAI, Anthropic, GitHub Copilot) require an active internet connection.
+A: It depends on which AI provider you use. Local providers (Ollama, LM Studio) and Candle-based semantic search work completely offline. Cloud-based providers (OpenAI, Anthropic, GitHub Models, Google Gemini) require an active internet connection.
 
 **Q: Can I use my own AI backend (Ollama, LM Studio)?**  
-A: Yes! Gitduda supports multiple AI providers including local providers (Ollama, LM Studio) and cloud-based providers (OpenAI, Anthropic, GitHub Copilot). The application auto-detects local providers and allows you to configure them in settings.
-
-**Q: Why does AI generation crash on my Mac?**  
-A: This is a known issue with Metal GPU buffer allocation on some macOS configurations. See [Troubleshooting](#troubleshooting) for workarounds (CPU-only mode or reduced GPU layers).
+A: Yes! Gitduda supports local providers (Ollama, LM Studio) and cloud-based providers (OpenAI, Anthropic, GitHub Models, Google Gemini). The application auto-detects local providers and allows you to configure them in settings.
 
 ### Privacy & Security
 
@@ -692,7 +668,7 @@ A: This is a known issue with Metal GPU buffer allocation on some macOS configur
 A: All data is stored locally on your machine:
 - Repository data: In your Git repositories (standard Git storage)
 - App settings: Platform-specific config directories (see [Troubleshooting](#troubleshooting))
-- AI models: Local app data directory (~2GB)
+- Semantic search embeddings: Local SQLite index and Candle embedding model cache
 
 **Q: Is Gitduda audited for security?**  
 A: Gitduda is open source, so the code is publicly auditable. We use Rust for memory safety and follow security best practices. If you find security issues, please report them via GitHub Security Advisories.
@@ -844,7 +820,7 @@ Gitduda stands on the shoulders of giants. We're grateful to these projects and 
 - **[Tauri](https://tauri.app/)** - For making cross-platform desktop apps accessible with Rust and web technologies
 - **[Lit](https://lit.dev/)** - Lightweight web components framework
 - **[Shiki](https://shiki.style/)** - Beautiful syntax highlighting
-- **[llama.cpp](https://github.com/ggerganov/llama.cpp)** - Efficient LLM inference enabling local AI features
+- **[Candle](https://github.com/huggingface/candle)** - Pure-Rust ML framework powering local semantic search embeddings
 - **[Rust](https://www.rust-lang.org/)** & **[TypeScript](https://www.typescriptlang.org/)** - Languages that make this project possible
 - The **open source community** for inspiration, feedback, and contributions
 

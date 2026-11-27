@@ -252,13 +252,12 @@ Gitduda's advantage stays the same: everything above runs **locally, with no acc
 - **Repository insights (local-only):** commit and PR cycle-time, churn hotspots, ownership and bus-factor maps computed from local history. No telemetry.
 - **Dedicated CUDA/Vulkan release builds** in the CI matrix.
 
-#### 4.7 Local AI Refresh ✅
+#### 4.7 Local AI & Routing Refresh ✅
 
-- ✅ **Model catalog refresh:** verified SHA-256 checksums across all curated GGUFs and added Gemma 3 4B (`Standard`) and Qwen 2.5 Coder 14B (`Pro`) models (`src-tauri/src/services/ai/local/model_registry.rs`).
 - ✅ **Code-aware embeddings:** index changed file paths and extracted multi-language symbol identifiers alongside commit messages, combined with SQLite FTS5 BM25 + `sqlite-vec` Reciprocal Rank Fusion (RRF) hybrid ranking (`src-tauri/src/services/embedding/embedding_index.rs`).
-- ✅ **Prefix KV-cache tracking & warm context reuse** for faster local generation across consecutive prompts (`src-tauri/src/services/ai/local/gguf_engine.rs`).
 - ✅ **Per-feature model routing:** pick a provider/model per task tier (`fast_text`, `code_review`, `reasoning_merge`) with a visible Local vs Cloud privacy badge (`src-tauri/src/services/ai/config.rs`, `<gn-ai-routing-ledger>`).
 - ✅ **AI privacy ledger:** a local, inspectable ring-buffer log of every AI request showing provider, task tier, local/cloud execution, token estimates, latency, and redacted prompt preview (`src-tauri/src/services/ai/ledger.rs`, `<gn-ai-routing-ledger>`). Cloud providers stay strictly opt-in.
+- *(Note: the previously bundled `llama-cpp-2` embedded GGUF runtime, curated catalog, and prefix KV-cache were removed in favor of external local runtimes — Ollama and LM Studio — while keeping Candle local embeddings intact.)*
 
 #### Guiding principles for Phase 4
 
@@ -339,21 +338,11 @@ Gitduda's advantage stays the same: everything above runs **locally, with no acc
 
 #### Phase 1: The "Sovereign Brain" ✅
 
-*Establishing the hardware-accelerated foundation.*
-
-- ✅ **Adaptive Model Switching** — Gitduda detects system VRAM/GPU and selects the optimal model:
-  - **Ultra-light (8GB RAM):** Uses **Gemma 3 1B** (distilled) or **Llama 3.2 1B**
-  - **Standard (16GB+ RAM):** Uses **Gemma 3 4B** or **Phi-4-mini** (3.8B)
-  - **Pro (32GB+ RAM):** Uses **Qwen 2.5 Coder 14B** (Q4_K_M)
-  - System capability detection across RAM, GPU vendor/architecture (Metal + Accelerate on macOS, NVIDIA CUDA, AMD ROCm & Vulkan), VRAM, unified memory detection (Apple Silicon & AMD Ryzen AI APUs), and NPU detection (Apple Neural Engine & AMD XDNA) with tier-based recommendations
-
-- ✅ **GPU-Accelerated Local Inference & Token Streaming** — Rust-native GGUF inference via `llama-cpp-2` with hardware acceleration: Metal + Accelerate on macOS, NVIDIA CUDA, AMD ROCm & Vulkan on Linux/Windows, unified memory & NPU awareness, dynamic VRAM layer offloading, CPU fallback, and real-time token-by-token streaming (`ai-stream-token` events) for commit message generation. Supports llama, gemma, phi, mistral, and qwen architectures.
+*Establishing the local-first AI and MCP foundation.*
 
 - ✅ **The "Context Proxy" (MCP)** — Local-first implementation of the **Model Context Protocol**. Gitduda serves as an MCP host with HTTP/JSON-RPC server, exposing 7 Git tools (`get_commit_history`, `get_branches`, `get_status`, `get_diff`, `get_file_blame`, `search_commits`, `get_open_repositories`) for external tools to query.
 
-- ✅ **Local Model Management & Custom GGUF Import** — Download models from HuggingFace with SHA-256 verification, progress tracking, cancellation support, or import arbitrary local `.gguf` files from disk (`import_custom_model`). Load/unload/delete models. Settings UI with system capabilities display and model browser.
-
-- ✅ **7 Cloud AI Providers** — Ollama, LM Studio, OpenAI, Anthropic Claude, GitHub Copilot, Google Gemini, and embedded local inference. API key management, provider testing, per-provider model selection.
+- ✅ **6 AI Providers** — Local providers (Ollama, LM Studio) with auto-detection and cloud providers (OpenAI, Anthropic Claude, GitHub Models, Google Gemini). API key management, provider testing, per-provider model selection, and streaming commit message generation (`ai-stream-token` events). *(The earlier embedded `llama-cpp-2` GGUF engine was removed to keep builds lightweight and delegate local LLM hosting to Ollama and LM Studio.)*
 
 #### Phase 2: Semantic Git History ✅
 
@@ -433,7 +422,7 @@ Recently shipped milestones (as of 2026-10-23):
 - ✅ **Inline PR/MR review comments** — GitHub, GitLab, Azure DevOps, and Bitbucket dialogs support viewing and posting general and line-level diff review comments.
 - ✅ **Recursive submodule clone (`--recurse-submodules`)** — `clone_repository` and `gn-clone-dialog.ts` support cloning submodules recursively (enabled by default).
 - ✅ **Hook execution logs & Output panel filter/terminal launcher** — `gn-hooks-dialog.ts` records and displays historical hook execution logs, and `gn-output-panel.ts` provides output search/filtering and a quick external terminal launcher.
-- ✅ **Local AI `Pro` tier, custom `.gguf` import & token streaming** — `Pro` (32GB+ RAM / 12GB+ VRAM) model tier (Qwen 2.5 Coder 14B), local `.gguf` model import from disk (`import_custom_model`), and real-time `ai-stream-token` streaming during commit message generation.
+- ✅ **AI token streaming** — real-time `ai-stream-token` streaming during commit message generation across supported local (Ollama, LM Studio) and cloud providers.
 - ✅ **Unified Provider Dialog Base (`GnProviderDialogBase`)** — shared abstract base class (`src/components/dialogs/gn-provider-dialog-base.ts`) unifying repository detection, generation-counter stale-response guards, deferred repo reconciliation during account ops, PR/MR creation guards, and review comment drawers across GitHub, GitLab, Bitbucket, and Azure DevOps dialogs.
 
 ### Architectural Refactoring & Modularization ✅

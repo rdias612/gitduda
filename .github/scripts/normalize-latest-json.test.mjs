@@ -152,7 +152,7 @@ test("CLI rewrites latest.json in place and prints 'updated' then 'unchanged'", 
   assert.equal(cliResult.stdout.trim(), "unchanged");
 });
 
-test("build.yml and publish-packages.yml normalize latest.json and ci.yml caches CMake version", () => {
+test("build.yml and publish-packages.yml normalize latest.json", () => {
   const buildWorkflow = readFileSync(
     fileURLToPath(new URL("../workflows/build.yml", import.meta.url)),
     "utf8",
@@ -161,16 +161,8 @@ test("build.yml and publish-packages.yml normalize latest.json and ci.yml caches
     fileURLToPath(new URL("../workflows/publish-packages.yml", import.meta.url)),
     "utf8",
   );
-  const ciWorkflow = readFileSync(
-    fileURLToPath(new URL("../workflows/ci.yml", import.meta.url)),
-    "utf8",
-  );
 
   assert.match(buildWorkflow, /node \.github\/scripts\/normalize-latest-json\.mjs/);
   assert.match(publishWorkflow, /node \.github\/scripts\/normalize-latest-json\.mjs/);
-  assert.equal(
-    (ciWorkflow.match(/env-vars: ImageOS CMAKE_VERSION/g) ?? []).length,
-    4,
-  );
 });
 
