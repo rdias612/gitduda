@@ -123,7 +123,7 @@ fn guard_ai_request(service: &AiService) -> Result<(), String> {
 pub fn is_local_provider(provider_type: AiProviderType) -> bool {
     matches!(
         provider_type,
-        AiProviderType::Ollama | AiProviderType::LmStudio | AiProviderType::LocalInference
+        AiProviderType::Ollama | AiProviderType::LmStudio
     )
 }
 
