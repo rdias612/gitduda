@@ -124,6 +124,7 @@ test.describe('Commit Panel', () => {
 
   test('should disable commit button when no message is entered', async () => {
     // With staged files but no message, commit should be disabled
+    await rightPanel.commitMessage.fill('');
     await expect(rightPanel.commitButton).toBeDisabled();
   });
 
