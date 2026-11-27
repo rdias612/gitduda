@@ -40,7 +40,7 @@ const hashFor = (file) => {
 test("versionAssets tags every kind of reference and reports the files", () => {
   const html = [
     '<link rel="icon" href="assets/a.png">',
-    '<meta property="og:image" content="https://gitduda.dev/assets/b.webp">',
+    '<meta property="og:image" content="https://gitduda.dev.br/assets/b.webp">',
     '<img src="assets/b.webp" srcset="assets/a.png 256w, assets/c.svg 512w">',
     "<div style=\"background:url('assets/a.png')\"></div>",
   ].join("\n");
@@ -49,7 +49,7 @@ test("versionAssets tags every kind of reference and reports the files", () => {
     out,
     [
       '<link rel="icon" href="assets/a.png?v=11111111">',
-      '<meta property="og:image" content="https://gitduda.dev/assets/b.webp?v=22222222">',
+      '<meta property="og:image" content="https://gitduda.dev.br/assets/b.webp?v=22222222">',
       '<img src="assets/b.webp?v=22222222" srcset="assets/a.png?v=11111111 256w, assets/c.svg?v=33333333 512w">',
       "<div style=\"background:url('assets/a.png?v=11111111')\"></div>",
     ].join("\n"),
@@ -69,7 +69,7 @@ test("versionAssets leaves references that already carry a query string alone", 
 
 test("versionAssets is idempotent and ignores non-asset paths", () => {
   const html =
-    '<a href="https://github.com/rdias612/gitdudareleases">x</a> <script src="app.js"></script> <img src="assets/a.png">';
+    '<a href="https://github.com/rdias612/gitduda/releases">x</a> <script src="app.js"></script> <img src="assets/a.png">';
   const once = versionAssets(html, hashFor).html;
   assert.equal(versionAssets(once, hashFor).html, once);
   assert.match(once, /assets\/a\.png\?v=11111111/);
@@ -80,9 +80,9 @@ test("hashFile is a short, stable content hash", () => {
   const dir = mkdtempSync(join(tmpdir(), "site-hash-"));
   const file = join(dir, "x.bin");
   writeFileSync(file, "gitduda");
-  assert.equal(hashFile(file), "9ced9f4c");
+  assert.equal(hashFile(file), "47456cc2");
   writeFileSync(file, "gitduda!");
-  assert.notEqual(hashFile(file), "9ced9f4c");
+  assert.notEqual(hashFile(file), "47456cc2");
 });
 
 function siteFixture() {
@@ -91,7 +91,7 @@ function siteFixture() {
   writeFileSync(join(dir, "assets", "shot.webp"), "first");
   writeFileSync(
     join(dir, "index.html"),
-    '<img src="assets/shot.webp"><meta content="https://gitduda.dev/assets/shot.webp">',
+    '<img src="assets/shot.webp"><meta content="https://gitduda.dev.br/assets/shot.webp">',
   );
   return dir;
 }
@@ -106,7 +106,7 @@ test("versionSite rewrites index.html in place and the tag changes with the file
   const tag = hashFile(join(dir, "assets", "shot.webp"));
   assert.equal(
     first,
-    `<img src="assets/shot.webp?v=${tag}"><meta content="https://gitduda.dev/assets/shot.webp?v=${tag}">`,
+    `<img src="assets/shot.webp?v=${tag}"><meta content="https://gitduda.dev.br/assets/shot.webp?v=${tag}">`,
   );
   assert.deepEqual(logs, ["versioned assets/shot.webp"]);
 
@@ -143,7 +143,7 @@ test("the real site versions cleanly and every referenced asset exists", () => {
   );
   assert.match(
     html,
-    /og:image" content="https:\/\/gitduda\.dev\/assets\/main-window\.webp\?v=[0-9a-f]{8}"/,
+    /og:image" content="https:\/\/gitduda\.dev\.br\/assets\/main-window\.webp\?v=[0-9a-f]{8}"/,
   );
 });
 

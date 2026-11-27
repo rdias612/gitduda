@@ -1,8 +1,8 @@
 /**
  * Versions the asset URLs in the website before it is deployed.
  *
- * gitduda.dev is served through Cloudflare and GitHub Pages, both of which
- * cache images for hours, and browsers cache them for as long again. An asset
+ * gitduda.dev.br is served through GitHub Pages, which
+ * caches images for hours, and browsers cache them for as long again. An asset
  * replaced under the same name therefore keeps showing its old contents until
  * every cache expires. Appending `?v=<content hash>` to each reference gives a
  * changed file a new URL, so caches fetch it immediately, while an unchanged

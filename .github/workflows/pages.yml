@@ -1,6 +1,6 @@
 name: Deploy Website
 
-# Publishes site/ (gitduda.dev) to GitHub Pages. The site is plain static
+# Publishes site/ (gitduda.dev.br) to GitHub Pages. The site is plain static
 # files — no build step. Pages must be set to deploy from "GitHub Actions"
 # in the repository settings; see docs/website.md.
 
@@ -37,7 +37,7 @@ jobs:
         uses: actions/configure-pages@v6
 
       # Append ?v=<content hash> to every asset URL so a replaced image gets a
-      # new URL and is not served stale from Cloudflare, Pages or browser caches.
+      # new URL and is not served stale from Pages or browser caches.
       - name: Version asset URLs
         run: node .github/scripts/version-site-assets.mjs site
 
