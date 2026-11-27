@@ -1082,7 +1082,7 @@ It connects the frontend drawer to the Tauri backend.
             raw,
             "branch_compare",
             "feat/ai",
-            "Local AI (Embedded)",
+            "Ollama",
             true,
         );
         assert_eq!(explanation.title, "Refactor branch comparison dialog");

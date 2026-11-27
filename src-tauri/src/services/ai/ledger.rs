@@ -214,7 +214,7 @@ mod tests {
                 feature: "commit_message".to_string(),
                 task_tier: AiTaskTier::FastText,
                 provider_type: if is_local {
-                    AiProviderType::LocalInference
+                    AiProviderType::Ollama
                 } else {
                     AiProviderType::OpenAi
                 },

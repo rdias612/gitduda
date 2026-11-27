@@ -2900,8 +2900,6 @@ mod tests {
         let _guard = test_support::offline();
         assert!(!service.provider_network_allowed(AiProviderType::OpenAi));
         assert!(service.provider_network_allowed(AiProviderType::Ollama));
-        // The embedded model has no endpoint at all.
-        assert!(service.provider_network_allowed(AiProviderType::LocalInference));
     }
 
     // ---- the paths that used to have NEITHER gate ----
@@ -2924,47 +2922,29 @@ mod tests {
         pem::encode(&pem::Pem::new("PRIVATE KEY", der.as_ref()))
     }
 
-    /// The first model the registry offers — any entry will do, they all come
-    /// from the same host.
-    fn a_registry_model() -> crate::services::ai::local::ModelEntry {
-        crate::services::ai::local::ModelRegistry::default()
-            .get_all()
-            .first()
-            .expect("the registry ships at least one model")
-            .clone()
-    }
-
     #[test]
     fn offline_mode_refuses_ai_model_downloads() {
-        use crate::services::ai::local::model_manager::guard_model_download;
         use crate::services::embedding::embedding_model::guard_embedding_model_download;
 
-        let entry = a_registry_model();
         let _guard = test_support::offline();
 
         // Both the command that starts the download and the request that opens
-        // the socket run exactly these.
-        expect_blocked(guard_model_download(&entry), "download_model");
+        // the socket run exactly this guard.
         expect_blocked(guard_embedding_model_download(), "download_embedding_model");
     }
 
     #[test]
     fn an_allowlist_without_huggingface_refuses_model_downloads() {
-        use crate::services::ai::local::model_manager::guard_model_download;
         use crate::services::embedding::embedding_model::guard_embedding_model_download;
-
-        let entry = a_registry_model();
 
         {
             let _guard = test_support::allowlist(&["github.com"]);
-            expect_blocked(guard_model_download(&entry), "download_model");
             expect_blocked(guard_embedding_model_download(), "download_embedding_model");
         }
 
         // Naming the host is what makes the download possible again — a guard
         // that refused either way would just be offline mode by another name.
         let _guard = test_support::allowlist(&["huggingface.co"]);
-        assert!(guard_model_download(&entry).is_ok());
         assert!(guard_embedding_model_download().is_ok());
     }
 

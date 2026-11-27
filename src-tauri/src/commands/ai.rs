@@ -1081,7 +1081,6 @@ mod tests {
             (AiProviderType::Anthropic, "\"anthropic\""),
             (AiProviderType::GithubCopilot, "\"github_copilot\""),
             (AiProviderType::GoogleGemini, "\"google_gemini\""),
-            (AiProviderType::LocalInference, "\"local_inference\""),
         ];
 
         for (variant, wire) in expected {

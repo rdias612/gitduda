@@ -314,7 +314,7 @@ pub(crate) mod tests {
         config.task_routes.insert(
             AiTaskTier::FastText,
             AiTaskRoute {
-                provider: AiProviderType::LocalInference,
+                provider: AiProviderType::Ollama,
                 model: None,
             },
         );
@@ -332,7 +332,7 @@ pub(crate) mod tests {
         assert_eq!(
             loaded.task_routes.get(&AiTaskTier::FastText),
             Some(&AiTaskRoute {
-                provider: AiProviderType::LocalInference,
+                provider: AiProviderType::Ollama,
                 model: None,
             })
         );

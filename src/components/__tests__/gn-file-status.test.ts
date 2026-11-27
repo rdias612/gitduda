@@ -99,6 +99,19 @@ async function renderFileStatus(): Promise<GnFileStatus> {
   return el;
 }
 
+function filterInput(el: GnFileStatus): HTMLInputElement {
+  const input = el.shadowRoot!.querySelector('.filter-input');
+  expect(input, 'filter input is rendered').to.not.be.null;
+  return input as HTMLInputElement;
+}
+
+async function typeFilter(el: GnFileStatus, value: string): Promise<void> {
+  const input = filterInput(el);
+  input.value = value;
+  input.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+  await el.updateComplete;
+}
+
 // ── Tests ──────────────────────────────────────────────────────────────────
 describe('gn-file-status', () => {
   beforeEach(() => {
@@ -1278,19 +1291,6 @@ describe('gn-file-status', () => {
   // ── Multi-repo behavior ──────────────────────────────────────────────
   // ── Path filter ──────────────────────────────────────────────────────
   describe('path filter', () => {
-    function filterInput(el: GnFileStatus): HTMLInputElement {
-      const input = el.shadowRoot!.querySelector('.filter-input');
-      expect(input, 'filter input is rendered').to.not.be.null;
-      return input as HTMLInputElement;
-    }
-
-    async function typeFilter(el: GnFileStatus, value: string): Promise<void> {
-      const input = filterInput(el);
-      input.value = value;
-      input.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
-      await el.updateComplete;
-    }
-
     function filePaths(el: GnFileStatus, sectionIndex?: number): string[] {
       const root =
         sectionIndex === undefined
@@ -1932,6 +1932,154 @@ describe('gn-file-status', () => {
       const discard = findCommands('discard_changes')[0];
       expect(discard, 'discard_changes was called').to.not.be.undefined;
       expect((discard.args as { path: string }).path).to.equal(REPO_PATH);
+    });
+  });
+
+  describe('explicit Stage all button (issue #10)', () => {
+    function getChangesStageAll(el: GnFileStatus): HTMLButtonElement {
+      const unstagedSection = el.shadowRoot!.querySelectorAll('.section')[1];
+      const btn = unstagedSection.querySelector(
+        '.section-actions .section-action-labeled',
+      );
+      expect(btn, 'Stage all button is rendered').to.not.be.null;
+      return btn as HTMLButtonElement;
+    }
+
+    it('renders visible "Stage all" label without active filter', async () => {
+      const el = await renderFileStatus();
+      const stageAllBtn = getChangesStageAll(el);
+
+      expect(stageAllBtn.textContent?.trim()).to.include('Stage all');
+      expect(stageAllBtn.disabled).to.equal(false);
+      expect(stageAllBtn.getAttribute('aria-label')).to.equal('Stage all files');
+    });
+
+    it('stages new, modified, and deleted unstaged files without auto-committing', async () => {
+      const el = await renderFileStatus();
+      clearHistory();
+
+      const stageAllBtn = getChangesStageAll(el);
+      stageAllBtn.click();
+      await new Promise((r) => setTimeout(r, 100));
+      await el.updateComplete;
+
+      const stageCalls = findCommands('stage_files');
+      expect(stageCalls).to.have.length(1);
+      const stageArgs = stageCalls[0].args as { path: string; paths: string[] };
+      expect(stageArgs.paths).to.deep.equal([
+        'src/utils/helper.ts',
+        'README.md',
+        'temp.log',
+        'src/partial.ts',
+      ]);
+      expect(findCommands('create_commit')).to.have.length(0);
+      expect(findCommands('commit')).to.have.length(0);
+    });
+
+    it('updates label and stages only matching files when filter is active', async () => {
+      const el = await renderFileStatus();
+      await typeFilter(el, 'helper');
+      clearHistory();
+
+      const stageAllBtn = getChangesStageAll(el);
+      expect(stageAllBtn.textContent?.trim()).to.equal('Stage 1 matching');
+      expect(stageAllBtn.getAttribute('title')).to.equal(
+        'Stage 1 file matching the filter',
+      );
+
+      stageAllBtn.click();
+      await new Promise((r) => setTimeout(r, 100));
+      await el.updateComplete;
+
+      const stageCalls = findCommands('stage_files');
+      expect(stageCalls).to.have.length(1);
+      const stageArgs = stageCalls[0].args as { paths: string[] };
+      expect(stageArgs.paths).to.deep.equal(['src/utils/helper.ts']);
+    });
+
+    it('activates via Enter and Space without preventing default or collapsing Changes', async () => {
+      const el = await renderFileStatus();
+      clearHistory();
+
+      const unstagedSection = el.shadowRoot!.querySelectorAll('.section')[1];
+      const sectionHeader = unstagedSection.querySelector('.section-header')!;
+      const stageAllBtn = getChangesStageAll(el);
+      stageAllBtn.focus();
+
+      const enterEvent = new KeyboardEvent('keydown', {
+        key: 'Enter',
+        bubbles: true,
+        composed: true,
+        cancelable: true,
+      });
+      stageAllBtn.dispatchEvent(enterEvent);
+      expect(enterEvent.defaultPrevented).to.equal(false);
+
+      stageAllBtn.click();
+      await new Promise((r) => setTimeout(r, 100));
+      await el.updateComplete;
+      expect(findCommands('stage_files')).to.have.length(1);
+      expect(sectionHeader.getAttribute('aria-expanded')).to.equal('true');
+
+      clearHistory();
+      const spaceEvent = new KeyboardEvent('keydown', {
+        key: ' ',
+        bubbles: true,
+        composed: true,
+        cancelable: true,
+      });
+      stageAllBtn.dispatchEvent(spaceEvent);
+      expect(spaceEvent.defaultPrevented).to.equal(false);
+
+      stageAllBtn.click();
+      await new Promise((r) => setTimeout(r, 100));
+      await el.updateComplete;
+      expect(findCommands('stage_files')).to.have.length(1);
+      expect(sectionHeader.getAttribute('aria-expanded')).to.equal('true');
+    });
+
+    it('disables the button when there are only staged files', async () => {
+      setupDefaultMocks({
+        entries: [
+          { path: 'src/app.ts', status: 'modified', isStaged: true, isConflicted: false },
+        ],
+      });
+      const el = await renderFileStatus();
+      clearHistory();
+
+      const stageAllBtn = getChangesStageAll(el);
+      expect(stageAllBtn.disabled).to.equal(true);
+
+      stageAllBtn.click();
+      await new Promise((r) => setTimeout(r, 50));
+      await el.updateComplete;
+      expect(findCommands('stage_files')).to.have.length(0);
+    });
+
+    it('disables the button with "Stage matching" label when filter leaves only staged files', async () => {
+      const el = await renderFileStatus();
+      await typeFilter(el, 'app.ts');
+
+      const stageAllBtn = getChangesStageAll(el);
+      expect(stageAllBtn.disabled).to.equal(true);
+      expect(stageAllBtn.textContent?.trim()).to.equal('Stage matching');
+    });
+
+    it('disables the button when all unstaged files are conflicted', async () => {
+      setupDefaultMocks({
+        entries: [
+          {
+            path: 'src/conflict.ts',
+            status: 'conflicted',
+            isStaged: false,
+            isConflicted: true,
+          },
+        ],
+      });
+      const el = await renderFileStatus();
+
+      const stageAllBtn = getChangesStageAll(el);
+      expect(stageAllBtn.disabled).to.equal(true);
     });
   });
 });
