@@ -57,6 +57,8 @@ test.describe('Commit Panel - Basic', () => {
   });
 
   test('Commit button should be disabled without message', async () => {
+    await rightPanel.commitMessage.fill('');
+
     await expect(rightPanel.commitButton).toBeDisabled();
   });
 

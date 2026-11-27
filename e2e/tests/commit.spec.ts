@@ -32,6 +32,7 @@ test.describe('Commit Workflow', () => {
 
   test('should enable commit button when message is entered and files are staged', async () => {
     // Commit button should be disabled when message is empty
+    await rightPanel.commitMessage.fill('');
     await expect(rightPanel.commitButton).toBeDisabled();
 
     await rightPanel.commitMessage.fill('feat: add new feature');
@@ -280,10 +281,11 @@ test.describe('Commit - Button State', () => {
   });
 
   test('should commit and update all UI: clear message, reset staged files, show success', async ({ page }) => {
-    // Verify initial state: 1 staged file, button disabled without message
+    // Verify initial state: 1 staged file with auto-populated default message and enabled button
     const initialStaged = await rightPanel.getStagedCount();
     expect(initialStaged).toBe(1);
-    await expect(rightPanel.commitButton).toBeDisabled();
+    await expect(rightPanel.commitMessage).toHaveValue('modified file src/main.ts');
+    await expect(rightPanel.commitButton).toBeEnabled();
 
     await startCommandCapture(page);
 
