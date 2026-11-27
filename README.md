@@ -1,796 +1,191 @@
+<div align="center">
+
 # Gitduda
+
+**Local-first Git client with AI, MCP, and zero telemetry.**
 
 [![Build & Release](https://github.com/rdias612/gitduda/actions/workflows/build.yml/badge.svg)](https://github.com/rdias612/gitduda/actions/workflows/build.yml)
 [![CI](https://github.com/rdias612/gitduda/actions/workflows/ci.yml/badge.svg)](https://github.com/rdias612/gitduda/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![GitHub release](https://img.shields.io/github/v/release/rdias612/gitduda)](https://github.com/rdias612/gitduda/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey)](https://github.com/rdias612/gitduda/releases)
 
-A modern, cross-platform Git GUI client built with Tauri, Lit, and Rust. **Website: [gitduda.dev.br](https://gitduda.dev.br)**
+[Website](https://gitduda.dev.br) · [Releases](https://github.com/rdias612/gitduda/releases) · [Why Gitduda](#why-gitduda) · [At a Glance](#at-a-glance) · [Installation](#installation) · [Build & Dev](#build--development)
 
-Gitduda aims to be a fast, privacy-first alternative to existing Git clients like GitHub Desktop, GitKraken, and Sourcetree. It runs entirely offline with no telemetry, account requirements, or cloud dependencies.
+<br />
 
-> **Note:** Gitduda is an active fork of [Gitnado](https://github.com/hegsie/gitnado), originally created by Ben Hegarty.
+</div>
 
-## Table of Contents
+Gitduda is a native, cross-platform desktop Git client built with **Tauri 2.0, Rust, Lit 3, and TypeScript**: a fast visual commit graph, a 3-way merge conflict editor, four forge integrations, on-device semantic commit search, and a built-in MCP server — no accounts, no subscriptions, no telemetry.
 
-- [Screenshots](#screenshots)
-- [Why Gitduda?](#why-gitduda)
-- [Features](#features)
-- [System Requirements](#system-requirements)
-- [Installation](#installation)
-- [Quick Start](#quick-start)
-- [Development](#development)
-- [Tech Stack](#tech-stack)
-- [Testing](#testing)
-- [Troubleshooting](#troubleshooting)
-- [FAQ](#faq)
-- [Contributing](#contributing)
-- [Community & Support](#community--support)
-- [License](#license)
-- [Acknowledgments](#acknowledgments)
-
-## Why Gitduda?
-
-Gitduda is built for developers who value **privacy, performance, and control**:
-
-- **🔒 Privacy-First**: No telemetry, no analytics, no cloud dependencies. Your code and workflow stay on your machine. The only third-party lookup is the opt-in "Show Avatars" setting, which sends an MD5 hash of each commit author's email address to gravatar.com; it is off by default and is blocked by Offline Mode and by the remote allowlist.
-- **⚡ Performance**: Built with Rust and native Git libraries for blazing-fast operations, even with large repositories (100k+ commits).
-- **🆓 Free & Open Source**: MIT licensed, no account required, no subscription fees, no feature paywalls.
-- **🌐 Cross-Platform**: Native apps for macOS, Windows, and Linux with consistent UX.
-- **🚫 Offline-First**: Works perfectly without an internet connection. Network operations only when you explicitly push/pull/fetch. The one optional exception is author avatars, which are off by default and fetched from Gravatar only if you turn them on — and never while Offline Mode is enabled.
-- **🤖 AI-Powered**: Local or cloud-based AI for commit message generation — choose from Ollama, LM Studio, OpenAI, Anthropic, GitHub Models, or Google Gemini.
-- **🔧 Full-Featured**: Supports advanced Git operations like interactive rebase, cherry-pick, worktrees, submodules, and more.
-
-### How is it Different?
-
-| Feature | Gitduda | GitHub Desktop | GitKraken | Sourcetree |
-|---------|-----------|----------------|-----------|------------|
-| Privacy (no telemetry) | ✅ | ❌ | ❌ | ❌ |
-| No account required | ✅ | ✅ | ❌ (free tier limit) | ❌ |
-| Open source | ✅ | ✅ | ❌ | ❌ |
-| Local AI features | ✅ | ❌ | ✅ (cloud only) | ❌ |
-| AI providers | ✅ (6) | ❌ | ✅ | ❌ |
-| AI changelog generation | ✅ | ❌ | ❌ | ❌ |
-| AI conflict resolution | ✅ | ❌ | ❌ | ❌ |
-| MCP server | ✅ | ❌ | ❌ | ❌ |
-| Interactive rebase UI | ✅ | ❌ | ✅ | ✅ |
-| 3-way merge editor | ✅ | ❌ | ✅ | ✅ |
-| GPG signing | ✅ | ✅ | ✅ | ✅ |
-| Multiple integrations | ✅ (4+) | GitHub only | ✅ | ✅ |
-| Worktrees | ✅ | ❌ | ❌ | ❌ |
-| Git LFS | ✅ | ✅ | ✅ | ✅ |
-| Image diff viewer | ✅ | ❌ | ❌ | ❌ |
-
-## Screenshots
-
-<p align="center">
-  <img src="docs/screenshots/main-window.png" alt="Main Window" width="800">
-</p>
-
-## Features
-
-### Repository Management
-- Open, clone, and initialize repositories
-- Multi-repository support with tabs
-- File system watching for auto-refresh
-
-### Commit Operations
-- Commit history with interactive graph visualization and infinite scroll
-- Create commits with staging support
-- Hunk-level staging/unstaging
-- Commit details view with file list
-- Commit amend - modify last commit message and staged files
-
-### Branch Operations
-- Create, delete, rename branches
-- Checkout branches and commits
-- Branch tracking (upstream detection)
-- Ahead/behind commit counting
-
-### Merge & Rebase
-- Merge with fast-forward, squash, and no-ff options
-- Rebase onto branches
-- Interactive rebase with action editor
-- **3-Way Merge Conflict Editor** - Beyond Compare-style side-by-side conflict resolution
-- Abort/continue operations
-
-### Cherry-pick & Revert
-- Cherry-pick specific commits to apply to current branch
-- Conflict resolution support for cherry-pick
-- Abort/continue cherry-pick operations
-- Revert commits with auto-generated revert message
-- Abort/continue revert operations
-
-### Reset Operations
-- Soft, mixed, and hard reset modes
-- Reset to any commit with visual confirmation
-- Context menu integration for quick access
-
-### Remote Operations
-- Fetch, pull, push
-- Multiple remotes support
-- Force push option
-
-### Productivity Features
-- **Command Palette** (Cmd/Ctrl+P) - fuzzy finder for actions, branches, files, and commits
-- **File History** - view all commits that modified a file with rename following
-- **Commit Search** - search by message, author, SHA, file path, or date range
-- **Undo/Redo** - visual reflog browser for recovering previous states
-- **Keyboard Shortcuts** - comprehensive keyboard navigation with vim-style support
-- **Drag & Drop** - drag branches to merge/rebase, drag files to stage/unstage
-
-### Tags & Stashes
-- Tag management (create, delete, push)
-- Stash management (create, apply, pop, drop)
-
-### Diff & Blame
-- Diff viewer with syntax highlighting (Shiki)
-- **Image Diff Viewer** - compare images with 4 modes (side-by-side, onion-skin, swipe, difference)
-- Blame view with author attribution
-- Dark and light themes
-- Syntax highlighting theme options
-
-### Advanced Git Operations
-- **Remote Management** - add, remove, rename remotes, edit URLs
-- **Clean Operations** - remove untracked/ignored files with preview
-- **Bisect** - binary search for bug-introducing commits
-- **Submodules** - add, init, update, sync, remove submodules
-- **Worktrees** - create, remove, lock/unlock, move multiple working directories
-- **Git LFS** - track patterns, pull/fetch/prune large files
-
-### Security & Configuration
-- **GPG Signing** - configure keys, sign commits/tags, verify signatures, trust levels
-- **SSH Key Management** - generate keys (Ed25519, RSA, ECDSA), view/copy public keys, test connections
-- **Git Configuration** - view/edit global and repository config, manage aliases, user identity
-- **Credential Management** - credential helper configuration, test credentials, per-remote settings
-
-### GitHub Integration
-- **Pull Requests** - view PRs, create PRs, PR status visualization in commit graph
-- **Issues** - view issues, create issues, filter by state/labels
-- **Commit Linking** - automatic issue reference detection (fixes #123, closes #456)
-- **Releases** - view releases, create releases with auto-generated notes
-- **GitHub Actions** - workflow run status, check runs for commits
-- **OAuth Authentication** - secure authentication flow
-
-### GitLab Integration
-- **Merge Requests** - view MRs, create MRs, status filtering
-- **Issues** - view issues, create issues, label filtering
-- **Pipelines** - view CI/CD pipeline status
-- **OAuth Authentication** - secure authentication flow
-
-### Azure DevOps Integration
-- **Pull Requests** - view PRs, create PRs, PR status filtering
-- **Work Items** - browse and query work items by project
-- **Pipelines** - view pipeline/build run status
-
-### Bitbucket Integration
-- **Pull Requests** - view PRs, create PRs, status filtering
-- **Issues** - view issues with priority and status
-- **Pipelines** - view pipeline run status
-
-### AI-Powered Features
-- **Commit Message Generation** - generate conventional commit messages from staged diffs
-- **AI Merge Conflict Resolution** - per-conflict and batch AI suggestions with explanations in the 3-way merge editor
-- **Automatic Changelog Generation** - AI-powered release notes from commit history between any two refs
-- **Semantic Search** - embedding-based commit search using local Candle embeddings and sqlite-vec vector storage
-- **MCP Server** - Model Context Protocol server exposing Git tools for external AI tools (Cursor, VS Code, etc.), protected by a generated access token that every client must send as `Authorization: Bearer <token>` (copy the token and a ready-made client configuration from Settings → MCP Server)
-- **6 AI Providers** - Ollama, LM Studio, OpenAI, Anthropic, GitHub Models, and Google Gemini
-- **Offline-First** - local providers (Ollama, LM Studio) and Candle semantic search work completely offline
-- **Auto-Detection** - automatically discovers local LLM providers (Ollama, LM Studio)
-- **Provider Configuration** - test and configure AI providers with API key support
-
-### Unified Profiles
-- **Multiple Identities** - configure work/personal Git identities
-- **Integration Accounts** - link GitHub, GitLab, Azure DevOps accounts to profiles
-- **Auto-Detection** - automatically switch profiles based on repository URL patterns
-- **Profile Switching** - switch identity and linked accounts together
-
-## System Requirements
-
-### Minimum Requirements
-
-- **Operating System**:
-  - macOS 10.15 (Catalina) or later
-  - Windows 10 (64-bit) or later
-  - Linux (kernel 4.4+) with GTK 3.24+
-  
-- **Hardware**:
-  - 4 GB RAM (8 GB recommended for large repositories)
-  - 500 MB disk space
-  - x64 (Windows, Linux) or Apple Silicon (macOS)
-  
-- **Software**:
-  - Git 2.20+ (automatically uses system Git installation)
-  
-### Recommended for Local AI & Semantic Search
-
-- **Local LLMs**: [Ollama](https://ollama.com/) or [LM Studio](https://lmstudio.ai/) running locally (fully offline)
-- **Semantic Search Acceleration**: Apple Silicon (Metal) on macOS or NVIDIA GPU (CUDA) on Windows/Linux for local Candle embeddings (automatic CPU fallback)
-
-## Installation
-
-### Download
-
-Pre-built binaries are available from the [Releases](https://github.com/rdias612/gitduda/releases) page:
-
-| Platform | Download |
-|----------|----------|
-| macOS (Apple Silicon) | `.dmg` |
-| Windows | `.msi` or `.exe` |
-| Linux | `.deb`, `.AppImage`, or `.rpm` |
-
-On Linux, saved credentials use keyutils backed by Secret Service. A running and
-unlocked Secret Service provider, such as GNOME Keyring or KWallet, is required
-to save and retrieve credentials; Gitduda reports an error if one is unavailable.
-
-### Package Managers
-
-New releases are published to package managers automatically (see
-[docs/packaging.md](docs/packaging.md) for how this works).
-
-#### Windows (winget)
-
-```powershell
-winget install rdias612.Gitduda
-```
-
-#### Windows (Scoop)
-
-```powershell
-scoop install https://raw.githubusercontent.com/rdias612/gitduda/main/packaging/scoop/gitduda.json
-```
-
-#### macOS (Homebrew, Apple Silicon)
-
-```bash
-brew install --cask rdias612/gitduda/gitduda
-```
-
-### Build from Source
-
-#### Prerequisites
-
-- [Node.js](https://nodejs.org/) 20+
-- [Rust](https://rustup.rs/) 1.95+
-- Platform-specific dependencies (see below)
-
-#### macOS
-
-```bash
-xcode-select --install
-```
-
-#### Linux (Debian/Ubuntu)
-
-```bash
-sudo apt-get update
-sudo apt-get install -y \
-  libwebkit2gtk-4.1-dev \
-  libayatana-appindicator3-dev \
-  librsvg2-dev \
-  libssl-dev \
-  libgtk-3-dev \
-  libglib2.0-dev \
-  libdbus-1-dev
-```
-
-#### Windows
-
-Install [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) with the "Desktop development with C++" workload.
-
-#### Build Steps
-
-```bash
-# Clone the repository
-git clone https://github.com/rdias612/gitduda.git
-cd gitduda
-
-# Install dependencies
-npm install
-
-# Build and run in development mode
-npm run tauri:dev
-
-# Build for production
-npm run tauri:build
-```
-
-Production builds are output to `src-tauri/target/release/bundle/`.
-
-## Quick Start
-
-### First Time Setup
-
-1. **Download and Install**: Get the latest release for your platform from the [Releases](https://github.com/rdias612/gitduda/releases) page.
-
-2. **Open a Repository**: 
-   - Click **"Open Repository"** or press `Cmd/Ctrl+O`
-   - Navigate to any existing Git repository on your machine
-   - Or clone a repository using **"Clone Repository"**
-
-3. **Explore the Interface**:
-   - **Left Sidebar**: Navigate between branches, tags, remotes, and stashes
-   - **Center Panel**: View commit history with interactive graph
-   - **Right Sidebar**: See changes, stage files, and write commit messages
-   - **Bottom Panel**: View diffs with syntax highlighting
-
-### Common Workflows
-
-#### Making a Commit
-
-1. Make changes to files in your repository
-2. Files appear in the **Changes** section of the right sidebar
-3. Click on files to view diffs in the bottom panel
-4. Click the **+** button next to files to stage them (or stage individual hunks)
-5. Write a commit message in the text area
-6. Click **"Commit"** or press `Cmd/Ctrl+Enter`
-
-#### Creating a Branch
-
-1. Right-click on any commit in the history
-2. Select **"Create Branch"**
-3. Enter a branch name
-4. Click **"Create"** to create and checkout the new branch
-
-#### Merging Branches
-
-1. Checkout the target branch (e.g., `main`)
-2. Right-click on the branch you want to merge
-3. Select **"Merge into current branch"**
-4. Choose merge options (fast-forward, squash, no-ff)
-5. Click **"Merge"**
-
-#### Using the Command Palette
-
-Press `Cmd/Ctrl+P` to open the command palette and quickly access any feature with fuzzy search.
-
-### Keyboard Shortcuts
-
-| Action | macOS | Windows/Linux |
-|--------|-------|---------------|
-| Command Palette | `Cmd+P` | `Ctrl+P` |
-| Open Repository | `Cmd+O` | `Ctrl+O` |
-| Commit | `Cmd+Enter` | `Ctrl+Enter` |
-| Refresh | `Cmd+R` | `Ctrl+R` |
-| Stage/Unstage File | `Space` | `Space` |
-| Search | `Cmd+F` | `Ctrl+F` |
-
-> **Tip**: Press `?` anywhere in the app to see all available keyboard shortcuts.
-
-## Development
-
-### Available Scripts
-
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Start Vite dev server |
-| `npm run tauri:dev` | Run app in development mode |
-| `npm run tauri:build` | Build production application |
-| `npm run build` | Build frontend only |
-| `npm run test` | Run tests |
-| `npm run test:watch` | Run tests in watch mode |
-| `npm run typecheck` | Type check without emitting |
-| `npm run lint` | Lint TypeScript files |
-| `npm run lint:fix` | Lint and fix issues |
-| `npm run format` | Format code with Prettier |
-
-### Project Structure
-
-```
-gitduda/
-├── src/                    # Frontend (TypeScript/Lit)
-│   ├── components/         # UI components
-│   │   ├── common/         # Shared components
-│   │   ├── dialogs/        # Modal dialogs
-│   │   ├── graph/          # Commit graph visualization
-│   │   ├── panels/         # Content panels (diff, blame)
-│   │   ├── sidebar/        # Navigation sidebars
-│   │   └── toolbar/        # Top toolbar
-│   ├── services/           # API and service layer
-│   ├── stores/             # Zustand state management
-│   ├── types/              # TypeScript type definitions
-│   └── styles/             # CSS and design tokens
-│
-├── src-tauri/              # Backend (Rust)
-│   ├── src/
-│   │   ├── commands/       # Tauri command handlers
-│   │   ├── services/       # Business logic
-│   │   └── models/         # Data structures
-│   ├── Cargo.toml          # Rust dependencies
-│   └── tauri.conf.json     # Tauri configuration
-│
-├── e2e/                    # End-to-end tests (Playwright)
-│   └── tests/              # E2E test specs
-├── docs/                   # Additional documentation
-└── .github/workflows/      # CI/CD pipelines
-```
-
-### Architecture
-
-Gitduda uses a **multi-process architecture** powered by Tauri:
-
-- **Frontend Process**: Web-based UI built with Lit web components, running in a WebView
-- **Backend Process**: Rust application handling Git operations via libgit2 and system Git
-- **IPC Communication**: Type-safe communication between frontend and backend using Tauri's command system
-
-**Key Design Decisions**:
-
-- **libgit2** for core Git operations (staging, commits, branches) for speed and portability
-- **System Git** (via shell) for complex operations (rebase, submodules) to avoid libgit2 limitations
-- **Zustand** for reactive state management on the frontend
-- **SQLite** for caching repository metadata and indexing
-- **AI Providers** — pluggable local (Ollama, LM Studio) and cloud (OpenAI, Anthropic, GitHub Models, Google Gemini) providers, plus local Candle embeddings for semantic search
-
-### Development Workflow
-
-1. **Start Development Server**:
-   ```bash
-   npm run tauri:dev
-   ```
-   This starts both the Vite dev server (frontend) and the Rust/Tauri app (backend) with hot reload.
-
-2. **Make Changes**:
-   - Frontend changes (TypeScript/Lit) hot-reload automatically
-   - Backend changes (Rust) trigger automatic recompilation and app restart
-
-3. **Lint and Format**:
-   ```bash
-   npm run lint          # Lint TypeScript
-   npm run format        # Format with Prettier
-   cd src-tauri && cargo fmt  # Format Rust
-   ```
-
-4. **Type Check**:
-   ```bash
-   npm run typecheck     # Check TypeScript types
-   cd src-tauri && cargo check  # Check Rust compilation
-   ```
-
-5. **Run Tests** (see [Testing](#testing) section below)
-
-6. **Build for Production**:
-   ```bash
-   npm run tauri:build
-   ```
-
-### Contributing Guide
-
-Before submitting a pull request:
-
-1. Read the [Contributing](#contributing) section
-2. Ensure all tests pass (`npm test`)
-3. Run linters and formatters
-4. Test on your target platform
-5. Update documentation if adding new features
-
-For detailed OAuth setup instructions (for integration features), see [docs/oauth-setup.md](docs/oauth-setup.md).
-
-### Localisation
-
-The UI is translated with [`@lit/localize`](https://lit.dev/docs/localization/overview/)
-in runtime mode, so the language can be changed in Settings → Appearance →
-Language and applies immediately, without a restart. English (`en`) is the source
-locale; French (`fr`) ships alongside it.
-
-```bash
-npm run localize:extract   # pull new msg() strings into src/i18n/xliff/*.xlf
-npm run localize:build     # regenerate src/i18n/generated/ from the translations
-```
-
-Adoption is incremental: the welcome screen and the Settings dialog are
-localised, the rest of the app is still English. See
-[docs/localisation.md](docs/localisation.md) for how to add a string, translate
-it, or add a locale.
-
-## Tech Stack
-
-### Frontend
-- [Lit](https://lit.dev/) - Web components framework
-- [Vite](https://vitejs.dev/) - Build tool
-- [Zustand](https://zustand-demo.pmnd.rs/) - State management
-- [Shiki](https://shiki.style/) - Syntax highlighting
-- [TypeScript](https://www.typescriptlang.org/) - Type safety
-
-### Backend
-- [Tauri 2.0](https://v2.tauri.app/) - Desktop application framework
-- [Rust](https://www.rust-lang.org/) - Systems programming language
-- [git2-rs](https://github.com/rust-lang/git2-rs) - libgit2 bindings
-- [Tokio](https://tokio.rs/) - Async runtime
-- [SQLite](https://www.sqlite.org/) - Local database
-- [Candle](https://github.com/huggingface/candle) - Pure-Rust local embeddings for semantic commit search
-
-### Additional Tools
-
-- **Git**: [libgit2](https://libgit2.org/) for core operations, system Git for advanced features
-- **AI Providers**: Supports Ollama, LM Studio, OpenAI, Anthropic, GitHub Models, and Google Gemini
-- **Testing**: [Web Test Runner](https://modern-web.dev/docs/test-runner/overview/), [Playwright](https://playwright.dev/)
-- **Build**: [Vite](https://vitejs.dev/) for frontend, [Cargo](https://doc.rust-lang.org/cargo/) for backend
-- **CI/CD**: GitHub Actions for automated testing and releases
-
-## Testing
-
-Gitduda has a comprehensive testing strategy covering unit tests, integration tests, and end-to-end tests.
-
-### Running Tests
-
-```bash
-# Run all unit tests
-npm test
-
-# Run unit tests in watch mode (for development)
-npm run test:watch
-
-# Run end-to-end tests
-npm run test:e2e
-
-# Run E2E tests with UI (interactive mode)
-npm run test:e2e:ui
-
-# Run E2E tests in headed mode (see browser)
-npm run test:e2e:headed
-
-# Type checking (no test execution)
-npm run typecheck
-```
-
-### Test Coverage
-
-- **Unit Tests**: Test individual components and services in isolation
-  - Location: `src/**/__tests__/*.test.ts`
-  - Framework: Web Test Runner with `@open-wc/testing`
-  - Mocks: Tauri IPC, Git operations, external APIs
-
-- **Integration Tests**: Test Rust backend logic and Tauri commands
-  - Location: `src-tauri/tests/`
-  - Framework: Rust's built-in test framework
-  - Coverage: Git operations, file system, database
-
-- **E2E Tests**: Test complete user workflows in the full application
-  - Location: `e2e/tests/*.spec.ts`
-  - Framework: Playwright
-  - Coverage: User interactions, dialogs, Git workflows
-
-### Writing Tests
-
-When adding new features:
-
-1. **Unit test** new components and services
-2. **Integration test** new Tauri commands
-3. **E2E test** user-facing workflows if applicable
-
-Example unit test:
-```typescript
-import { expect, fixture, html } from '@open-wc/testing';
-import '../my-component';
-
-describe('MyComponent', () => {
-  it('renders correctly', async () => {
-    const el = await fixture(html`<my-component></my-component>`);
-    expect(el).to.exist;
-  });
-});
-```
-
-See [.github/copilot-instructions.md](.github/copilot-instructions.md) for detailed testing guidelines.
-
-## Troubleshooting
-
-### AI Commit Message Generation
-
-Gitduda supports 6 AI providers for commit message generation: local providers (Ollama, LM Studio) and cloud providers (OpenAI, Anthropic, GitHub Models, Google Gemini). Configure and test your provider in Settings > AI Providers.
-
-- **Local providers not detected**: Make sure Ollama (`http://localhost:11434`) or LM Studio (`http://localhost:1234`) is running with at least one model loaded, then re-test the connection in Settings > AI Providers.
-- **Cloud providers**: Verify your API key and selected model in Settings > AI Providers, and ensure Offline Mode is disabled.
-
-## FAQ
-
-### General Questions
-
-**Q: Is Gitduda really free?**  
-A: Yes! Gitduda is open source under the MIT license. There are no subscription fees, account requirements, or feature paywalls.
-
-**Q: Does Gitduda send any data to external servers?**  
-A: No. Gitduda has zero telemetry and no analytics. The only network requests are Git operations (push/pull/fetch), optional integrations (GitHub, GitLab, etc.) that you explicitly configure, and — if you turn on the "Show Avatars" setting, which is off by default — author avatar images from gravatar.com, each request carrying an MD5 hash of that commit author's email address. Offline Mode and the remote allowlist block all of them.
-
-**Q: Can I use Gitduda offline?**  
-A: Absolutely. Gitduda works perfectly offline. All core Git features work locally, and AI features work offline when paired with a local provider (Ollama or LM Studio).
-
-**Q: How does Gitduda compare to other Git clients?**  
-A: See the [comparison table](#why-gitduda) above. Gitduda focuses on privacy, performance, and being fully open source.
-
-### Technical Questions
-
-**Q: Which Git operations use libgit2 vs system Git?**  
-A: Gitduda uses libgit2 for most operations (staging, commits, branches, status, diffs) for speed and portability. Complex operations like interactive rebase and submodules use system Git for compatibility.
-
-**Q: Does Gitduda support Git LFS?**  
-A: Yes! Gitduda has built-in support for Git LFS including tracking patterns, pull/fetch/prune operations.
-
-**Q: Can I use Gitduda with large repositories (monorepos)?**  
-A: Yes. Gitduda is optimized for large repositories with features like virtual scrolling, lazy loading, and background indexing. It's been tested with repositories containing 100,000+ commits.
-
-**Q: Does Gitduda work with my Git hosting provider?**  
-A: Gitduda works with any Git remote (GitHub, GitLab, Bitbucket, Azure DevOps, self-hosted, etc.). It also has native integrations for viewing PRs, issues, and CI/CD status for major platforms.
-
-### AI Features
-
-**Q: How does the AI commit message generation work?**  
-A: Gitduda supports 6 AI providers: local providers (Ollama, LM Studio) and cloud providers (OpenAI, Anthropic, GitHub Models, Google Gemini). The AI analyzes your staged changes and generates [conventional commit messages](https://www.conventionalcommits.org/) (e.g., `feat:`, `fix:`, `docs:`).
-
-**Q: Do I need an internet connection for AI features?**  
-A: It depends on which AI provider you use. Local providers (Ollama, LM Studio) and Candle-based semantic search work completely offline. Cloud-based providers (OpenAI, Anthropic, GitHub Models, Google Gemini) require an active internet connection.
-
-**Q: Can I use my own AI backend (Ollama, LM Studio)?**  
-A: Yes! Gitduda supports local providers (Ollama, LM Studio) and cloud-based providers (OpenAI, Anthropic, GitHub Models, Google Gemini). The application auto-detects local providers and allows you to configure them in settings.
-
-### Privacy & Security
-
-**Q: Where is my data stored?**  
-A: All data is stored locally on your machine:
-- Repository data: In your Git repositories (standard Git storage)
-- App settings: Platform-specific config directories (see [Troubleshooting](#troubleshooting))
-- Semantic search embeddings: Local SQLite index and Candle embedding model cache
-
-**Q: Is Gitduda audited for security?**  
-A: Gitduda is open source, so the code is publicly auditable. We use Rust for memory safety and follow security best practices. If you find security issues, please report them via GitHub Security Advisories.
-
-**Q: Does Gitduda support GPG commit signing?**  
-A: Yes! Gitduda has full support for GPG signing of commits and tags, including key management, signature verification, and trust levels.
-
-### Platform-Specific
-
-**Q: Why isn't there an installer for my Linux distribution?**  
-A: Gitduda provides `.deb` packages (Debian/Ubuntu) and `.AppImage` (universal). Additional formats (Flatpak, Snap, RPM) are on the roadmap.
-
-**Q: Does Gitduda work on Apple Silicon (M1/M2/M3)?**  
-A: Yes! Gitduda builds are Apple Silicon (ARM64) only — Metal GPU acceleration for AI features works out of the box. There is no Intel or universal build, and none is planned: Apple is winding down Intel support across macOS.
-
-**Q: Can I install Gitduda on Windows ARM?**  
-A: Not currently. Gitduda only supports x64 Windows. ARM64 Windows support may be added in the future.
-
-## Community & Support
-
-### Getting Help
-
-- **GitHub Issues**: Report bugs or request features at [github.com/rdias612/gitduda/issues](https://github.com/rdias612/gitduda/issues)
-- **GitHub Discussions**: Ask questions, share tips, or discuss the project at [github.com/rdias612/gitduda/discussions](https://github.com/rdias612/gitduda/discussions)
-- **Documentation**: Check the [docs/](docs/) folder for guides and technical documentation
-
-### Reporting Issues
-
-When reporting bugs, please include:
-
-1. **Version**: Your Gitduda version (from Help → About)
-2. **Platform**: OS version (e.g., "macOS 14.2", "Windows 11", "Ubuntu 22.04")
-3. **Steps to reproduce**: Clear steps to trigger the issue
-4. **Expected vs actual behavior**: What you expected vs what happened
-5. **Logs**: Check the console logs (Help → Open Logs Directory)
-
-### Feature Requests
-
-Have an idea for a new feature? Check the [existing issues](https://github.com/rdias612/gitduda/issues) first to see if it's already planned or requested, then:
-
-1. Search existing issues to avoid duplicates
-2. Open a new issue with the `enhancement` label
-3. Describe the use case and why it would be valuable
-4. Provide examples or mockups if applicable
-
-### Stay Updated
-
-- **Watch the Repository**: Click "Watch" on GitHub to get notified of releases
-- **Releases**: Check the [Releases](https://github.com/rdias612/gitduda/releases) page for new versions
-- **Changelog**: See release notes for detailed changes in each version
-
-## Contributing
-
-Contributions are welcome! Gitduda is built by the community, for the community.
-
-### Ways to Contribute
-
-- **Code**: Submit pull requests for bug fixes or new features
-- **Documentation**: Improve README, docs, or code comments
-- **Testing**: Report bugs, test pre-releases, or add test coverage
-- **Design**: Suggest UI/UX improvements or create mockups
-- **Translations**: Help translate Gitduda (i18n coming soon)
-- **Community**: Help others in Discussions or answer issues
-
-### Development Setup
-
-1. **Fork the repository**
-2. **Clone your fork**:
-   ```bash
-   git clone https://github.com/YOUR_USERNAME/gitduda.git
-   cd gitduda
-   ```
-3. **Install dependencies**:
-   ```bash
-   npm install
-   ```
-4. **Start development mode**:
-   ```bash
-   npm run tauri:dev
-   ```
-
-### Making Changes
-
-1. **Create a feature branch**:
-   ```bash
-   git checkout -b feature/amazing-feature
-   ```
-
-2. **Make your changes** following these guidelines:
-   - Follow existing code style (TypeScript/Lit for frontend, Rust for backend)
-   - Add tests for new functionality
-   - Update documentation if needed
-   - Keep commits focused and write clear commit messages
-
-3. **Test your changes**:
-   ```bash
-   npm run lint              # Lint TypeScript
-   npm run typecheck         # Type check
-   npm test                  # Run unit tests
-   npm run test:e2e          # Run E2E tests (optional)
-   cd src-tauri && cargo fmt # Format Rust
-   cd src-tauri && cargo clippy # Lint Rust
-   ```
-
-4. **Commit your changes**:
-   ```bash
-   git commit -m 'Add amazing feature'
-   ```
-   Use [conventional commits](https://www.conventionalcommits.org/) when possible (e.g., `feat:`, `fix:`, `docs:`).
-
-5. **Push to your fork**:
-   ```bash
-   git push origin feature/amazing-feature
-   ```
-
-6. **Open a Pull Request**:
-   - Go to the [Gitduda repository](https://github.com/rdias612/gitduda)
-   - Click "Pull Requests" → "New Pull Request"
-   - Select your fork and branch
-   - Fill in the PR template with details
-   - Submit and wait for review
-
-### Code Review Process
-
-1. Maintainers will review your PR (usually within a few days)
-2. Address any requested changes
-3. Once approved, your PR will be merged
-4. Your contribution will be included in the next release
-
-### Coding Standards
-
-- **TypeScript**: Use ESLint rules defined in `eslint.config.mjs`
-- **Rust**: Follow `rustfmt` and `clippy` recommendations
-- **Testing**: Aim for good test coverage of new features
-- **Documentation**: Document public APIs and complex logic
-- **Accessibility**: Ensure UI changes are keyboard-accessible
-
-See [.github/copilot-instructions.md](.github/copilot-instructions.md) for detailed development guidelines.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Acknowledgments
-
-Gitduda stands on the shoulders of giants. We're grateful to these projects and communities:
-
-- **[Gitnado](https://github.com/hegsie/gitnado)** - The original open-source Git GUI project from which Gitduda was forked
-- **[libgit2](https://libgit2.org/)** - The Git library powering core operations
-- **[Tauri](https://tauri.app/)** - For making cross-platform desktop apps accessible with Rust and web technologies
-- **[Lit](https://lit.dev/)** - Lightweight web components framework
-- **[Shiki](https://shiki.style/)** - Beautiful syntax highlighting
-- **[Candle](https://github.com/huggingface/candle)** - Pure-Rust ML framework powering local semantic search embeddings
-- **[Rust](https://www.rust-lang.org/)** & **[TypeScript](https://www.typescriptlang.org/)** - Languages that make this project possible
-- The **open source community** for inspiration, feedback, and contributions
-
-Special thanks to all contributors who have helped make Gitduda better!
+> [!NOTE]
+> **Zero telemetry by design.** Everything runs locally on your machine. The only network traffic is Git push/pull/fetch, integrations and cloud AI providers you explicitly configure, and the opt-in **Show Avatars** setting — off by default, it sends an MD5 hash of commit author emails to gravatar.com, and is blocked whenever Offline Mode or the remote allowlist is active.
 
 ---
 
-**Made with ❤️ by the Gitduda community**
+## Why Gitduda?
 
-*Gitduda: A privacy-first Git GUI for the modern developer*
+Gitduda started as an active fork of [Gitnado](https://github.com/hegsie/gitnado) by Ben Hegarty, sharpening the daily developer loop and slimming the runtime while staying fully independent:
+
+- **Full Side-by-Side Isolation** — Uses dedicated config/keyring namespaces, `gitduda://` deep links, and bundle ID `io.github.rdias612.gitduda`, so it runs alongside Gitnado with zero state or credential collisions.
+- **Leaner AI Runtime** — Removed the embedded `llama-cpp-2`/GGUF engine for faster builds and smaller binaries. AI features connect to **6 pluggable providers** (local: **Ollama**, **LM Studio** · cloud: **OpenAI**, **Anthropic**, **GitHub Models**, **Google Gemini**), while semantic commit search stays 100% on-device with pure-Rust **Candle** + `sqlite-vec` (Metal on Apple Silicon, automatic CPU fallback).
+- **Instant Editor Round-Trips** — Global `Ctrl+Shift+A` (`Cmd+Shift+A` on macOS) shortcut opens the active repository in your configured external editor, with automatic editor detection in Settings (`open-in-editor`).
+- **Sharper Stage-to-Commit Ergonomics** — Explicit **Stage All / Unstage All** buttons, multi-file selection in context menus, and a default commit message pre-filled from staged files.
+- **Workspace & Tag Agility** — Switch workspaces directly from the repository selector, and create branches straight from any tag's context menu.
+- **Safer In-App Updates** — Prompts for explicit confirmation before downloading or installing updates.
+- **Streamlined Windows Dev Tooling** — Ships [`run-dev.ps1`](run-dev.ps1) (`-Release`, `-Install`, `-Check`) and [`run-dev.bat`](run-dev.bat) for one-command local builds.
+
+### At a Glance
+
+| Capability | Gitduda | GitHub Desktop | GitKraken | Sourcetree |
+| :--- | :---: | :---: | :---: | :---: |
+| Zero telemetry / no account required | ✅ | ❌ | ❌ | ❌ |
+| Open source (MIT) | ✅ | ✅ | ❌ | ❌ |
+| Local AI providers (Ollama / LM Studio) | ✅ | ❌ | ❌ (cloud only) | ❌ |
+| On-device semantic commit search | ✅ | ❌ | ❌ | ❌ |
+| AI conflict resolution & changelog | ✅ | ❌ | ❌ | ❌ |
+| Built-in MCP server (Bearer auth) | ✅ | ❌ | ❌ | ❌ |
+| Git worktrees UI | ✅ | ❌ | ❌ | ❌ |
+| 4-mode image diff viewer | ✅ | ❌ | ❌ | ❌ |
+| Interactive rebase UI | ✅ | ❌ | ✅ | ✅ |
+| 3-way merge conflict editor | ✅ | ❌ | ✅ | ✅ |
+
+---
+
+## Essential Features
+
+| Area | Capabilities |
+| :--- | :--- |
+| **Core Git & History** | Interactive commit graph, branches, tags, remotes, stashes, amend, interactive rebase, cherry-pick, visual reflog undo/redo, worktrees, submodules, and Git LFS |
+| **Diff, Merge & Terminal** | Hunk-level staging/unstaging, Shiki syntax highlighting, 4-mode image diff viewer (*side-by-side*, *onion-skin*, *swipe*, *difference*), 3-way merge conflict editor, and integrated `@xterm/xterm` terminal |
+| **AI & Semantic Search** | 6 configurable providers (**Ollama**, **LM Studio**, **OpenAI**, **Anthropic**, **GitHub Models**, **Google Gemini**) for commit messages, 3-way conflict suggestions, and changelogs; on-device Candle + `sqlite-vec` semantic search |
+| **MCP Server** | Built-in Model Context Protocol server (**Settings → MCP Server**) secured with `Authorization: Bearer <token>`, consent-gated write tools (off by default), and `--mcp-stdio` support |
+| **Profiles & Forges** | Unified work/personal identities, GPG signing, SSH key management, chunked OS keyring storage, and **GitHub / GitLab / Azure DevOps / Bitbucket** integrations with URL-based profile auto-switching |
+| **Localization** | Runtime language switching via `@lit/localize` (`en` and `fr` today, incremental rollout) |
+
+<details>
+<summary><strong>Quick-connect your AI coding assistant via MCP (Claude Code, Cursor, VS Code)</strong></summary>
+
+1. Open **Settings → MCP Server** and enable the server.
+2. Copy the generated Bearer token (write tools — `stage`, `commit`, `create_branch`, `create_worktree`, `stash`, `checkout` — are **off by default** and require per-call consent or branch policy approval).
+3. Paste the client snippet generated in Settings:
+
+```bash
+# Claude Code (HTTP transport)
+claude mcp add --transport http gitduda http://127.0.0.1:<port>/mcp \
+  --header 'Authorization: Bearer <token>'
+```
+
+```json
+// Cursor (.cursor/mcp.json)
+{
+  "mcpServers": {
+    "gitduda": {
+      "url": "http://127.0.0.1:<port>/mcp",
+      "headers": { "Authorization": "Bearer <token>" }
+    }
+  }
+}
+```
+
+```json
+// VS Code (.vscode/mcp.json)
+{
+  "servers": {
+    "gitduda": {
+      "type": "http",
+      "url": "http://127.0.0.1:<port>/mcp",
+      "headers": { "Authorization": "Bearer <token>" }
+    }
+  }
+}
+```
+
+</details>
+
+---
+
+## Installation
+
+| Platform | Minimum OS / Arch | Installers ([Releases](https://github.com/rdias612/gitduda/releases)) | Package Manager |
+| :--- | :--- | :--- | :--- |
+| **macOS** | macOS 11+ (Apple Silicon only) | `.dmg` | `brew install --cask rdias612/gitduda/gitduda` |
+| **Windows** | Windows 10+ (x64) | `.msi`, `.exe` | `winget install rdias612.Gitduda` |
+| **Linux** | x64 with GTK 3.24+ | `.deb`, `.AppImage`, `.rpm` | Download from Releases |
+
+```powershell
+# Windows (winget or Scoop)
+winget install rdias612.Gitduda
+scoop install https://raw.githubusercontent.com/rdias612/gitduda/main/packaging/scoop/gitduda.json
+```
+
+```bash
+# macOS (Homebrew — Apple Silicon)
+brew install --cask rdias612/gitduda/gitduda
+```
+
+> [!NOTE]
+> **Linux Keyring Requirement:** Credentials are stored via `keyutils` backed by the freedesktop Secret Service API. An unlocked provider (such as **GNOME Keyring** or **KWallet**) must be running, or saving credentials will fail.
+
+### First Launch in 3 Steps
+
+1. **Open or Clone** — Press `Cmd/Ctrl+O` to open a repo, or switch workspaces directly from the repository selector.
+2. **Stage & Commit** — Use `Cmd/Ctrl+P` for the Command Palette, **Stage All / Unstage All**, hunk staging, or multi-select context actions, then review the auto-filled or AI-generated commit message and press `Cmd/Ctrl+Enter`.
+3. **Jump Straight to Code** — Press **`Ctrl+Shift+A`** (**`Cmd+Shift+A`** on macOS) to open the active repository in your configured external editor (press `?` anytime for all shortcuts).
+
+---
+
+## Build & Development
+
+Gitduda is built with **Tauri 2.0**, **Rust (`1.95+`)**, **Lit 3**, **TypeScript**, **Vite**, **Zustand**, **Shiki**, **`@xterm/xterm`**, and **SQLite + `sqlite-vec` + Candle**.
+
+### Prerequisites
+
+- **Node.js 20+**, **Rust 1.95+**, and **Git 2.20+**
+- **Windows**: [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) (*Desktop development with C++*) plus NASM and LLVM — [`run-dev.ps1`](run-dev.ps1) locates them automatically
+- **macOS**: Xcode Command Line Tools (`xcode-select --install`)
+- **Linux (Debian/Ubuntu)**: `libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libssl-dev libgtk-3-dev libglib2.0-dev libdbus-1-dev`
+
+### Running & Testing Locally
+
+```bash
+git clone https://github.com/rdias612/gitduda.git
+cd gitduda
+npm install
+npm run tauri:dev            # Start app in dev mode (builds go to src-tauri/target/release/bundle/)
+```
+
+On **Windows**, the helper scripts bootstrap dependencies and native toolchains automatically (`run-dev.bat` works from Command Prompt with the same flags):
+
+```powershell
+.\run-dev.ps1                 # Install deps if needed and launch tauri:dev
+.\run-dev.ps1 -Check          # Run typecheck & lint before launching
+.\run-dev.ps1 -Release        # Build and launch release binary (--no-bundle)
+.\run-dev.ps1 -Install        # Force fresh npm install before launching
+```
+
+```bash
+# Verification suite
+npm run typecheck             # TypeScript checks (app + E2E)
+npm run lint                  # ESLint (src + e2e)
+npm test                      # Contract tests + Web Test Runner unit suite
+npm run test:e2e              # Playwright E2E suite
+cd src-tauri && cargo fmt --check && cargo clippy && cargo test
+```
+
+### Project Documentation
+
+- [Packaging & Release Automation](docs/packaging.md) — Homebrew, winget, Scoop, and MSIX pipelines
+- [Microsoft Store Web Installer](docs/microsoft-store-web-installer.md) — Store web installer setup details
+- [OAuth Setup](docs/oauth-setup.md) — Forge OAuth apps and `gitduda://` callbacks
+- [Localisation Guide](docs/localisation.md) — Adding or updating `@lit/localize` translations (`en`, `fr`)
+- [Website Maintenance](docs/website.md) — Managing [gitduda.dev.br](https://gitduda.dev.br)
+
+---
+
+## Contributing, License & Acknowledgments
+
+Contributions are welcome! Fork the repo, create a branch (`feat/your-feature`), verify with `npm run typecheck`, `npm run lint`, and `npm test` (see [.github/copilot-instructions.md](.github/copilot-instructions.md) for conventions), and open a Pull Request against `main`.
+
+- **License**: [MIT License](LICENSE) (`Copyright (c) 2025 Ben Hegarty`, `Copyright (c) 2026 Rian Dias`).
+- **Acknowledgments**: Forked from **[Gitnado](https://github.com/hegsie/gitnado)** by Ben Hegarty, and built on **[Tauri](https://tauri.app/)**, **[libgit2](https://libgit2.org/)**, **[Lit](https://lit.dev/)**, **[Shiki](https://shiki.style/)**, **[Candle](https://github.com/huggingface/candle)**, and **`sqlite-vec`**.

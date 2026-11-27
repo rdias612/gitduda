@@ -29,32 +29,6 @@ function Assert-Command {
     }
 }
 
-function Ensure-CMake {
-    if (Get-Command "cmake" -ErrorAction SilentlyContinue) {
-        return
-    }
-
-    $candidates = @(
-        "C:\Program Files\CMake\bin\cmake.exe",
-        "C:\Program Files (x86)\CMake\bin\cmake.exe",
-        "C:\Program Files\Microsoft Visual Studio\*\*\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe",
-        "C:\Program Files (x86)\Microsoft Visual Studio\*\*\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe"
-    )
-
-    foreach ($pattern in $candidates) {
-        $match = Get-Item $pattern -ErrorAction SilentlyContinue | Select-Object -First 1
-        if ($match) {
-            $cmakeDir = Split-Path -Parent $match.FullName
-            $env:PATH = "$cmakeDir;$env:PATH"
-            Write-Host "==> CMake encontrado e adicionado ao PATH: $cmakeDir" -ForegroundColor DarkGray
-            return
-        }
-    }
-
-    Write-Host "[ERRO] 'cmake' nao encontrado no PATH nem no Visual Studio Build Tools. Instale o CMake ou o workload C++ do Visual Studio Build Tools." -ForegroundColor Red
-    exit 1
-}
-
 function Ensure-Nasm {
     if (Get-Command "nasm" -ErrorAction SilentlyContinue) {
         return
@@ -137,7 +111,6 @@ try {
     Assert-Command "npm" "Instale o Node.js/npm."
     Assert-Command "cargo" "Instale o Rust via rustup (https://rustup.rs/)."
     Assert-Command "git" "Instale o Git (https://git-scm.com/)."
-    Ensure-CMake
     Ensure-Nasm
     Ensure-LibClang
 
