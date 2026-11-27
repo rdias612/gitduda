@@ -740,6 +740,14 @@
   <source>Block every operation that leaves this machine — fetch, pull, push, clone, tag push, remote prune, LFS, submodules, auto-fetch, provider APIs (pull requests, issues, releases, CI), and cloud AI providers (OpenAI, Anthropic, Google Gemini, GitHub Models). Local AI — Ollama and LM Studio — keeps working.</source>
   <target>Bloquer toute opération qui sort de cette machine — fetch, pull, push, clonage, envoi d'étiquettes, nettoyage des distants, LFS, sous-modules, récupération automatique, API des fournisseurs (pull requests, tickets, versions, CI) et fournisseurs d'IA en ligne (OpenAI, Anthropic, Google Gemini, GitHub Models). L'IA locale — Ollama et LM Studio — continue de fonctionner.</target>
 </trans-unit>
+<trans-unit id="s8fc087ca0e61c278">
+  <source>Commit Subject Length</source>
+  <target>Longueur du sujet de commit</target>
+</trans-unit>
+<trans-unit id="sc2709ebbef645fb8">
+  <source>Recommended maximum characters for the commit subject line, including the conventional type(scope) prefix. Going over only shows a warning. A repository commit-rules file overrides this.</source>
+  <target>Nombre maximal recommandé de caractères pour la ligne de sujet du commit, y compris le préfixe conventionnel type(scope). Un dépassement affiche uniquement un avertissement. Un fichier de règles de commit du dépôt remplace cette valeur.</target>
+</trans-unit>
 </body>
 </file>
 </xliff>

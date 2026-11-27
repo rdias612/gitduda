@@ -29,6 +29,16 @@ export function clampDiffContextLines(value: number): number {
   return Math.min(MAX_DIFF_CONTEXT_LINES, Math.max(MIN_DIFF_CONTEXT_LINES, Math.trunc(value)));
 }
 
+export const MIN_COMMIT_SUBJECT_LIMIT = 50;
+export const MAX_COMMIT_SUBJECT_LIMIT = 120;
+export const DEFAULT_COMMIT_SUBJECT_LIMIT = 72;
+
+/** Clamp any user- or storage-supplied commit subject length limit into range. */
+export function clampCommitSubjectLimit(value: number): number {
+  if (!Number.isFinite(value)) return DEFAULT_COMMIT_SUBJECT_LIMIT;
+  return Math.min(MAX_COMMIT_SUBJECT_LIMIT, Math.max(MIN_COMMIT_SUBJECT_LIMIT, Math.trunc(value)));
+}
+
 /**
  * Labels for the whitespace modes the backend implements, in menu order.
  *
@@ -105,6 +115,7 @@ export interface SettingsState {
   openLastRepository: boolean;
   autoStashOnCheckout: boolean; // Automatically stash/pop when switching branches
   alwaysSignOff: boolean; // Start every new commit message with Sign off enabled
+  commitSubjectLimit: number; // Soft recommended character limit for commit subject lines
 
   // Branch settings
   staleBranchDays: number; // Days without commits before a branch is considered stale (0 = disabled)
@@ -155,6 +166,7 @@ export interface SettingsState {
   setOpenLastRepository: (open: boolean) => void;
   setAutoStashOnCheckout: (enabled: boolean) => void;
   setAlwaysSignOff: (enabled: boolean) => void;
+  setCommitSubjectLimit: (limit: number) => void;
   setStaleBranchDays: (days: number) => void;
   setPushGuardrail: (mode: PushGuardrailMode) => void;
   setPushGuardrailScope: (scope: PushGuardrailScope) => void;
@@ -203,6 +215,7 @@ const defaultSettings = {
   // Defaults OFF: sign-off is a project requirement, not a universal one, and
   // adding a trailer nobody asked for would rewrite every commit message.
   alwaysSignOff: false,
+  commitSubjectLimit: DEFAULT_COMMIT_SUBJECT_LIMIT,
   staleBranchDays: 90,
   // Warn, not block, by default and only on agent branches: a guardrail that
   // interrupts every push of a person's own work gets switched off.
@@ -299,6 +312,9 @@ export function migrateSettings(persisted: unknown, fromVersion: number): Settin
   if (state.diffContextLines !== undefined) {
     state.diffContextLines = clampDiffContextLines(Number(state.diffContextLines));
   }
+  if (state.commitSubjectLimit !== undefined) {
+    state.commitSubjectLimit = clampCommitSubjectLimit(Number(state.commitSubjectLimit));
+  }
   return state as SettingsState;
 }
 
@@ -388,6 +404,9 @@ export const settingsStore = createStore<SettingsState>()(
       setAutoStashOnCheckout: (autoStashOnCheckout) => set({ autoStashOnCheckout }),
 
       setAlwaysSignOff: (alwaysSignOff) => set({ alwaysSignOff }),
+
+      setCommitSubjectLimit: (commitSubjectLimit) =>
+        set({ commitSubjectLimit: clampCommitSubjectLimit(commitSubjectLimit) }),
 
       setStaleBranchDays: (staleBranchDays) => set({ staleBranchDays }),
       setPushGuardrail: (pushGuardrail) => set({ pushGuardrail }),

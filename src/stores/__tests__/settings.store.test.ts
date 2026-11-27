@@ -8,6 +8,10 @@ import {
   clampDiffContextLines,
   MIN_DIFF_CONTEXT_LINES,
   MAX_DIFF_CONTEXT_LINES,
+  clampCommitSubjectLimit,
+  MIN_COMMIT_SUBJECT_LIMIT,
+  MAX_COMMIT_SUBJECT_LIMIT,
+  DEFAULT_COMMIT_SUBJECT_LIMIT,
   migrateSettings,
   watchSystemContrast,
 } from '../settings.store.ts';
@@ -120,6 +124,10 @@ describe('settings.store', () => {
       // Sign-off is a project requirement, not a universal one: defaulting it
       // on would add a trailer to every commit message unasked.
       expect(settingsStore.getState().alwaysSignOff).to.be.false;
+    });
+
+    it('should have 72 commit subject limit by default', () => {
+      expect(settingsStore.getState().commitSubjectLimit).to.equal(DEFAULT_COMMIT_SUBJECT_LIMIT);
     });
 
     it('should have 90 stale branch days by default', () => {
@@ -295,6 +303,20 @@ describe('settings.store', () => {
       expect(settingsStore.getState().alwaysSignOff).to.be.true;
     });
 
+    it('should set commit subject limit and clamp into range', () => {
+      settingsStore.getState().setCommitSubjectLimit(80);
+      expect(settingsStore.getState().commitSubjectLimit).to.equal(80);
+
+      settingsStore.getState().setCommitSubjectLimit(10);
+      expect(settingsStore.getState().commitSubjectLimit).to.equal(MIN_COMMIT_SUBJECT_LIMIT);
+
+      settingsStore.getState().setCommitSubjectLimit(500);
+      expect(settingsStore.getState().commitSubjectLimit).to.equal(MAX_COMMIT_SUBJECT_LIMIT);
+
+      settingsStore.getState().setCommitSubjectLimit(Number.NaN);
+      expect(settingsStore.getState().commitSubjectLimit).to.equal(DEFAULT_COMMIT_SUBJECT_LIMIT);
+    });
+
     it('should set stale branch days', () => {
       settingsStore.getState().setStaleBranchDays(30);
       expect(settingsStore.getState().staleBranchDays).to.equal(30);
@@ -321,12 +343,14 @@ describe('settings.store', () => {
       settingsStore.getState().setFontSize('large');
       settingsStore.getState().setAutoFetchInterval(10);
       settingsStore.getState().setConfirmBeforeDiscard(false);
+      settingsStore.getState().setCommitSubjectLimit(100);
 
       settingsStore.getState().resetToDefaults();
 
       expect(settingsStore.getState().fontSize).to.equal('medium');
       expect(settingsStore.getState().autoFetchInterval).to.equal(0);
       expect(settingsStore.getState().confirmBeforeDiscard).to.be.true;
+      expect(settingsStore.getState().commitSubjectLimit).to.equal(DEFAULT_COMMIT_SUBJECT_LIMIT);
     });
 
     it('should reset theme to dark', () => {
@@ -1085,6 +1109,21 @@ describe('settings.store', () => {
         migrateSettings({ diffContextLines: 7 } as Partial<SettingsState>, 4).diffContextLines,
         'an in-range value is untouched'
       ).to.equal(7);
+    });
+
+    it('clamps a stored commit subject limit into range', () => {
+      expect(
+        migrateSettings({ commitSubjectLimit: 10 } as Partial<SettingsState>, 8).commitSubjectLimit
+      ).to.equal(MIN_COMMIT_SUBJECT_LIMIT);
+      expect(
+        migrateSettings({ commitSubjectLimit: 500 } as Partial<SettingsState>, 8).commitSubjectLimit
+      ).to.equal(MAX_COMMIT_SUBJECT_LIMIT);
+      expect(
+        migrateSettings({ commitSubjectLimit: Number.NaN } as Partial<SettingsState>, 8).commitSubjectLimit
+      ).to.equal(DEFAULT_COMMIT_SUBJECT_LIMIT);
+      expect(
+        clampCommitSubjectLimit(88)
+      ).to.equal(88);
     });
 
     it('applies every step for a v3 install upgrading to the current version', () => {

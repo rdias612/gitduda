@@ -5,6 +5,7 @@ import {
   settingsStore,
   getGraphColorSchemes,
   clampDiffContextLines,
+  clampCommitSubjectLimit,
   getDiffWhitespaceModes,
   MIN_DIFF_CONTEXT_LINES,
   MAX_DIFF_CONTEXT_LINES,
@@ -465,6 +466,7 @@ export class GnSettingsDialog extends LitElement {
   @state() private remoteAllowlist: string[] = [];
   @state() private autoStashOnCheckout = false;
   @state() private alwaysSignOff = false;
+  @state() private commitSubjectLimit = 72;
   @state() private staleBranchDays = 90;
   @state() private pushGuardrail: PushGuardrailMode = 'warn';
   @state() private pushGuardrailScope: PushGuardrailScope = 'agent';
@@ -761,6 +763,7 @@ export class GnSettingsDialog extends LitElement {
     this.remoteAllowlist = settings.remoteAllowlist;
     this.autoStashOnCheckout = settings.autoStashOnCheckout;
     this.alwaysSignOff = settings.alwaysSignOff;
+    this.commitSubjectLimit = clampCommitSubjectLimit(settings.commitSubjectLimit);
     this.staleBranchDays = settings.staleBranchDays;
     this.pushGuardrail = settings.pushGuardrail;
     this.pushGuardrailScope = settings.pushGuardrailScope;
@@ -1290,6 +1293,15 @@ export class GnSettingsDialog extends LitElement {
     input.value = String(value);
     this.diffContextLines = value;
     settingsStore.getState().setDiffContextLines(value);
+    window.dispatchEvent(new CustomEvent('settings-changed'));
+  }
+
+  private handleCommitSubjectLimitChange(e: Event): void {
+    const input = e.target as HTMLInputElement;
+    const value = clampCommitSubjectLimit(parseInt(input.value, 10));
+    input.value = String(value);
+    this.commitSubjectLimit = value;
+    settingsStore.getState().setCommitSubjectLimit(value);
     window.dispatchEvent(new CustomEvent('settings-changed'));
   }
 
@@ -2159,6 +2171,24 @@ export class GnSettingsDialog extends LitElement {
             this.alwaysSignOff,
             'alwaysSignOff'
           )}
+
+          <div class="setting-row">
+            <div class="setting-label">
+              <span class="setting-name" id="commit-subject-limit-label">${msg('Commit Subject Length')}</span>
+              <span class="setting-description">${msg('Recommended maximum characters for the commit subject line, including the conventional type(scope) prefix. Going over only shows a warning. A repository commit-rules file overrides this.')}</span>
+            </div>
+            <input
+              id="commit-subject-limit-input"
+              type="number"
+              min="50"
+              max="120"
+              step="1"
+              aria-labelledby="commit-subject-limit-label"
+              .value=${String(this.commitSubjectLimit)}
+              @change=${this.handleCommitSubjectLimitChange}
+              style="width: 80px;"
+            />
+          </div>
 
           <div class="setting-row">
             <div class="setting-label">
