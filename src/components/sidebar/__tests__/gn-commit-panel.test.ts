@@ -29,6 +29,7 @@ const invokeHistory: Array<{ command: string; args?: unknown }> = [];
 // ── Imports (after Tauri mock) ─────────────────────────────────────────────
 import { expect, fixture, html } from '@open-wc/testing';
 import { repositoryStore } from '../../../stores/repository.store.ts';
+import { settingsStore, DEFAULT_COMMIT_SUBJECT_LIMIT } from '../../../stores/settings.store.ts';
 import type { GnCommitPanel } from '../gn-commit-panel.ts';
 import '../gn-commit-panel.ts';
 import { uiStore } from '../../../stores/ui.store.ts';
@@ -114,12 +115,16 @@ describe('gn-commit-panel', () => {
   beforeEach(() => {
     invokeHistory.length = 0;
     localStorage.removeItem('gitduda-commit-history');
+    settingsStore.getState().setCommitSubjectLimit(DEFAULT_COMMIT_SUBJECT_LIMIT);
+    localStorage.removeItem('gitduda-settings');
     setupDefaultMocks();
     setupStore();
   });
 
   afterEach(() => {
     repositoryStore.getState().reset();
+    settingsStore.getState().setCommitSubjectLimit(DEFAULT_COMMIT_SUBJECT_LIMIT);
+    localStorage.removeItem('gitduda-settings');
   });
 
   // ── Rendering ──────────────────────────────────────────────────────────
@@ -182,7 +187,7 @@ describe('gn-commit-panel', () => {
       const el = await renderCommitPanel();
       const charCount = el.shadowRoot!.querySelector('.char-count');
       expect(charCount).to.exist;
-      expect(charCount!.textContent).to.include('/72');
+      expect(charCount!.textContent?.trim()).to.equal('0/72');
     });
   });
 
@@ -1191,6 +1196,117 @@ describe('gn-commit-panel', () => {
 
       expect(countAiChecks(), 'is_ai_available re-invoked once more').to.equal(2);
       expect(el.shadowRoot!.querySelector('.generate-btn')!.classList.contains('ai-ready')).to.be.true;
+    });
+  });
+
+  describe('subject length counter', () => {
+    it('includes conventional prefix in subject length counter', async () => {
+      const el = await renderCommitPanel();
+      const internal = el as unknown as {
+        conventionalMode: boolean;
+        selectedType: string;
+        scope: string;
+        summary: string;
+      };
+      internal.conventionalMode = true;
+      internal.selectedType = 'feat';
+      internal.scope = 'ui';
+      internal.summary = '1234567890';
+      await el.updateComplete;
+
+      const charCount = el.shadowRoot!.querySelector('.char-count');
+      expect(charCount!.textContent?.trim()).to.equal('20/72');
+    });
+
+    it('updates denominator and clears over-limit when settings limit increases to 100', async () => {
+      const el = await renderCommitPanel();
+      const internal = el as unknown as { summary: string };
+      internal.summary = 'A'.repeat(80);
+      await el.updateComplete;
+
+      expect(el.shadowRoot!.querySelector('.char-count')!.textContent?.trim()).to.equal('80/72');
+      expect(el.shadowRoot!.querySelector('.char-count')!.classList.contains('over-limit')).to.be.true;
+
+      settingsStore.getState().setCommitSubjectLimit(100);
+      await el.updateComplete;
+
+      const summaryInput = el.shadowRoot!.querySelector('.summary-input');
+      const charCount = el.shadowRoot!.querySelector('.char-count') as HTMLElement;
+      expect(charCount.textContent?.trim()).to.equal('80/100');
+      expect(charCount.classList.contains('over-limit')).to.be.false;
+      expect(summaryInput!.classList.contains('over-limit')).to.be.false;
+      expect(charCount.getAttribute('title')).to.include('Settings');
+    });
+
+    it('prefers repository commitRules.maxSubjectLength over settings limit', async () => {
+      settingsStore.getState().setCommitSubjectLimit(100);
+      const baseMock = mockInvoke;
+      mockInvoke = async (command: string, args?: unknown) => {
+        if (command === 'get_commit_message_rules') {
+          return {
+            maxSubjectLength: 50,
+            maxBodyLineLength: null,
+            requireBlankLineBeforeBody: false,
+            requireConventionalFormat: false,
+            allowedTypes: [],
+            requireScope: false,
+            requireBody: false,
+            forbiddenPhrases: [],
+          };
+        }
+        return baseMock(command, args);
+      };
+
+      const el = await renderCommitPanel();
+      const internal = el as unknown as { summary: string };
+      internal.summary = 'A'.repeat(55);
+      await el.updateComplete;
+
+      const charCount = el.shadowRoot!.querySelector('.char-count') as HTMLElement;
+      expect(charCount.textContent?.trim()).to.equal('55/50');
+      expect(charCount.classList.contains('over-limit')).to.be.true;
+      expect(charCount.getAttribute('title')).to.include('commit_rules.json');
+    });
+
+    it('counts UTF-8 bytes when commitRules.maxSubjectLength is set', async () => {
+      const baseMock = mockInvoke;
+      mockInvoke = async (command: string, args?: unknown) => {
+        if (command === 'get_commit_message_rules') {
+          return {
+            maxSubjectLength: 50,
+            maxBodyLineLength: null,
+            requireBlankLineBeforeBody: false,
+            requireConventionalFormat: false,
+            allowedTypes: [],
+            requireScope: false,
+            requireBody: false,
+            forbiddenPhrases: [],
+          };
+        }
+        return baseMock(command, args);
+      };
+
+      const el = await renderCommitPanel();
+      const internal = el as unknown as { summary: string };
+      // 26 'é' chars = 26 UTF-16 chars (<= 50) but 52 UTF-8 bytes (> 50)
+      internal.summary = 'é'.repeat(26);
+      await el.updateComplete;
+
+      const charCount = el.shadowRoot!.querySelector('.char-count');
+      expect(charCount!.textContent?.trim()).to.equal('52/50');
+      expect(charCount!.classList.contains('over-limit')).to.be.true;
+    });
+
+    it('does not disable commit button or add maxlength attribute when over limit', async () => {
+      const el = await renderCommitPanel(1);
+      const internal = el as unknown as { summary: string };
+      internal.summary = 'A'.repeat(80);
+      await el.updateComplete;
+
+      const summaryInput = el.shadowRoot!.querySelector('.summary-input') as HTMLTextAreaElement;
+      const commitBtn = el.shadowRoot!.querySelector('.commit-btn') as HTMLButtonElement;
+      expect(summaryInput.hasAttribute('maxlength')).to.be.false;
+      expect(commitBtn.disabled).to.be.false;
     });
   });
 });

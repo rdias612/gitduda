@@ -6,6 +6,7 @@ import * as aiService from '../../services/ai.service.ts';
 import { showToast } from '../../services/notification.service.ts';
 import { showPrompt } from '../../services/dialog.service.ts';
 import { repositoryStore, settingsStore } from '../../stores/index.ts';
+import { clampCommitSubjectLimit } from '../../stores/settings.store.ts';
 import type { CommitTemplate, ConventionalType, CommitMessageRules } from '../../services/git.service.ts';
 import type { Commit, StatusEntry } from '../../types/git.types.ts';
 import { buildDefaultCommitMessage } from '../../utils/default-commit-message.ts';
@@ -908,6 +909,7 @@ export class GnCommitPanel extends LitElement {
 
   // Commit message rules state
   @state() private commitRules: CommitMessageRules | null = null;
+  @state() private softSubjectLimit: number = clampCommitSubjectLimit(settingsStore.getState().commitSubjectLimit);
 
   // Trailer state (Signed-off-by / Co-authored-by)
   @state() private signOff: boolean = false;
@@ -969,8 +971,6 @@ export class GnCommitPanel extends LitElement {
 
   @query('.summary-input') private summaryInput!: HTMLTextAreaElement;
 
-  private readonly SUMMARY_LIMIT = 72;
-
   private readonly HISTORY_STORAGE_KEY = 'gitduda-commit-history';
   private readonly HISTORY_MAX_ENTRIES = 20;
 
@@ -994,9 +994,14 @@ export class GnCommitPanel extends LitElement {
   // waiting for the next unrelated refresh, commit or tab switch.
   private boundHandleIdentityChanged = () => this.loadAuthorName();
   private unsubscribeStore?: () => void;
+  private unsubscribeSettings?: () => void;
 
   async connectedCallback(): Promise<void> {
     super.connectedCallback();
+    this.softSubjectLimit = clampCommitSubjectLimit(settingsStore.getState().commitSubjectLimit);
+    this.unsubscribeSettings = settingsStore.subscribe((s) => {
+      this.softSubjectLimit = clampCommitSubjectLimit(s.commitSubjectLimit);
+    });
     this.loadCommitHistory();
     await this.loadTemplates();
     await this.loadConventionalTypes();
@@ -1040,6 +1045,8 @@ export class GnCommitPanel extends LitElement {
     window.removeEventListener('repository-refresh', this.boundHandleRepositoryRefresh);
     window.removeEventListener('git-identity-changed', this.boundHandleIdentityChanged);
     this.unsubscribeStore?.();
+    this.unsubscribeSettings?.();
+    this.unsubscribeSettings = undefined;
   }
 
   willUpdate(changed: PropertyValues): void {
@@ -1499,14 +1506,29 @@ export class GnCommitPanel extends LitElement {
     this.scopeChosen = target.value.trim().length > 0;
   }
 
-  private buildCommitMessage(): string {
-    let summary = this.summary;
-
-    // If conventional mode, prepend type and scope
+  private get subjectPrefix(): string {
     if (this.conventionalMode && this.selectedType) {
       const scopePart = this.scope ? `(${this.scope})` : '';
-      summary = `${this.selectedType}${scopePart}: ${summary}`;
+      return `${this.selectedType}${scopePart}: `;
     }
+    return '';
+  }
+
+  private get subjectLimit(): number {
+    return this.commitRules?.maxSubjectLength ?? this.softSubjectLimit;
+  }
+
+  private get subjectLength(): number {
+    const fullSubject = `${this.subjectPrefix}${this.summary}`;
+    if (this.commitRules?.maxSubjectLength != null) {
+      // Repository rules validate subject length in UTF-8 bytes on the backend (`subject.len()`).
+      return new TextEncoder().encode(fullSubject).length;
+    }
+    return fullSubject.length;
+  }
+
+  private buildCommitMessage(): string {
+    const summary = `${this.subjectPrefix}${this.summary}`;
 
     const message = this.description ? `${summary}\n\n${this.description}` : summary;
 
@@ -2155,7 +2177,7 @@ export class GnCommitPanel extends LitElement {
   }
 
   render() {
-    const summaryOverLimit = this.summary.length > this.SUMMARY_LIMIT;
+    const summaryOverLimit = this.subjectLength > this.subjectLimit;
     const identityMissing = this.identityLoaded && !this.hasIdentity;
 
     return html`
@@ -2343,8 +2365,13 @@ export class GnCommitPanel extends LitElement {
         ></textarea>
 
         <div class="summary-meta">
-          <span class="char-count ${summaryOverLimit ? 'over-limit' : ''}">
-            ${this.summary.length}/${this.SUMMARY_LIMIT}
+          <span
+            class="char-count ${summaryOverLimit ? 'over-limit' : ''}"
+            title=${this.commitRules?.maxSubjectLength != null
+              ? `Repository limit from commit_rules.json (${this.subjectLimit} UTF-8 bytes; blocks commit)`
+              : `Recommended limit from Settings (${this.subjectLimit} characters; soft warning only)`}
+          >
+            ${this.subjectLength}/${this.subjectLimit}
           </span>
           <div class="history-wrapper">
             <button
