@@ -84,7 +84,9 @@ test.describe('Repository Tabs - multiple repos', () => {
   test('the all-repositories dropdown lists every repo and switches tabs', async ({ page }) => {
     await page.locator('gn-toolbar .tab-list-btn').click();
 
-    const items = page.locator('gn-toolbar .tab-list-item');
+    await expect(page.getByRole('group', { name: 'Workspaces', exact: true }))
+      .toContainText('No workspaces yet');
+    const items = page.getByRole('group', { name: 'Open repositories' }).getByRole('button');
     await expect(items).toHaveCount(3);
     await expect(items.nth(0).locator('.item-path')).toContainText('/tmp/test-repo');
 
@@ -158,6 +160,63 @@ test.describe('Repository Tabs - multiple repos', () => {
       '/work/client-b/api'
     );
   });
+});
+
+test('the toolbar opens a workspace and still switches individual repositories', async ({ page }) => {
+  const workspaceRepo = {
+    path: '/tmp/client-api',
+    name: 'client-api',
+    isValid: true,
+    isBare: false,
+    headRef: 'main',
+    state: 'clean',
+  };
+  await setupOpenRepository(page, {
+    workspaces: [{
+      id: 'client',
+      name: 'Client',
+      description: '',
+      color: '#4fc3f7',
+      repositories: [{ path: workspaceRepo.path, name: workspaceRepo.name }],
+      createdAt: '2026-01-01T00:00:00Z',
+      lastOpened: null,
+    }],
+  });
+  await startCommandCaptureWithMocks(page, {
+    open_repository: workspaceRepo,
+    update_workspace_last_opened: null,
+  });
+
+  const trigger = page.getByRole('button', { name: 'Switch workspace or repository' });
+  const workspaceColumn = page.getByRole('group', { name: 'Workspaces', exact: true });
+  const repoColumn = page.getByRole('group', { name: 'Open repositories' });
+  const workspaceButton = workspaceColumn.getByRole('button', { name: 'Client', exact: true });
+  const initialRepo = repoColumn.getByRole('button', { name: /test-repo/ });
+
+  await trigger.press('Enter');
+  await expect(workspaceButton).toBeFocused();
+  expect((await workspaceColumn.boundingBox())!.x).toBeLessThan((await repoColumn.boundingBox())!.x);
+  await expect(initialRepo).toHaveAttribute('aria-current', 'true');
+  await workspaceButton.press('Enter');
+
+  await expect(workspaceColumn).toHaveCount(0);
+  await expect(page.locator('gn-toolbar .tab.active')).toHaveAttribute('title', workspaceRepo.path);
+  expect(await findCommand(page, 'open_repository')).toEqual([
+    expect.objectContaining({ args: { path: workspaceRepo.path } }),
+  ]);
+  await waitForCommand(page, 'update_workspace_last_opened');
+
+  await trigger.click();
+  await expect(workspaceButton).toHaveAttribute('aria-current', 'true');
+  await expect(repoColumn.getByRole('button', { name: /client-api/ }))
+    .toHaveAttribute('aria-current', 'true');
+  await initialRepo.click();
+  await expect(page.locator('gn-toolbar .tab.active')).toHaveAttribute('title', '/tmp/test-repo');
+
+  await trigger.press('Enter');
+  await page.keyboard.press('Escape');
+  await expect(trigger).toBeFocused();
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false');
 });
 
 test.describe('Repository Tabs - single repo', () => {

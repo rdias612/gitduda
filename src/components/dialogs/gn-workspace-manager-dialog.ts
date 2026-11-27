@@ -10,7 +10,6 @@ import * as workspaceService from '../../services/workspace.service.ts';
 import * as gitService from '../../services/git.service.ts';
 import { openRepositoryDialog, openDialog, saveDialog, showConfirm } from '../../services/dialog.service.ts';
 import { showToast } from '../../services/notification.service.ts';
-import { repositoryStore } from '../../stores/index.ts';
 import { workspaceStore } from '../../stores/workspace.store.ts';
 import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
 import type { Workspace, WorkspaceRepoStatus, WorkspaceSearchResult } from '../../types/git.types.ts';
@@ -1117,52 +1116,10 @@ export class GnWorkspaceManagerDialog extends LitElement {
 
   private async handleOpenWorkspace(): Promise<void> {
     const ws = this.selectedWorkspace;
-    if (!ws || ws.repositories.length === 0) return;
+    if (!ws || ws.repositories.length === 0 || workspaceStore.getState().isLoading) return;
 
-    const store = repositoryStore.getState();
-
-    // Open WITHOUT activating each repo: addRepository's default activation
-    // would fire the per-activation side effects (index builds, integration
-    // checks) once per repo — a 10-repo workspace would still kick off 10
-    // concurrent history walks. Activate only the final repo; the rest get
-    // their indexes lazily when their tab is first activated.
-    let lastOpenedPath: string | null = null;
-    let failedCount = 0;
-    for (const repo of ws.repositories) {
-      const status = this.repoStatuses.get(repo.path);
-      if (status && (!status.exists || !status.isValidRepo)) {
-        failedCount++;
-        continue;
-      }
-
-      const result = await gitService.openRepository({ path: repo.path });
-      if (result.success && result.data) {
-        store.addRepository(result.data, { activate: false });
-        lastOpenedPath = result.data.path;
-      } else {
-        failedCount++;
-      }
-    }
-    if (lastOpenedPath) {
-      store.setActiveByPath(lastOpenedPath);
-    }
-
-    workspaceStore.getState().setActiveWorkspaceId(ws.id);
-    await workspaceService.updateWorkspaceLastOpened(ws.id);
-
+    await workspaceService.openWorkspace(ws, this.repoStatuses);
     this.close();
-    // A repo that failed to open (moved, deleted, invalid) must not hide
-    // behind a green success toast
-    if (failedCount === 0) {
-      showToast(`Opened workspace: ${ws.name}`, 'success');
-    } else if (lastOpenedPath) {
-      showToast(
-        `Opened workspace: ${ws.name} (${failedCount} of ${ws.repositories.length} repositories failed to open)`,
-        'warning',
-      );
-    } else {
-      showToast(`Could not open workspace: ${ws.name} — no repository could be opened`, 'error');
-    }
   }
 
   private async handleSearch(): Promise<void> {

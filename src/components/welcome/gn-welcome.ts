@@ -9,11 +9,10 @@ import { localized, msg, str } from '@lit/localize';
 import { sharedStyles } from '../../styles/shared-styles.ts';
 import { repositoryStore, type RecentRepository } from '../../stores/index.ts';
 import { workspaceStore } from '../../stores/workspace.store.ts';
-import { openRepository } from '../../services/git.service.ts';
 import { openRepositoryDialog, openDialog } from '../../services/dialog.service.ts';
 import { openRepositoryPath } from '../../services/repository-open.service.ts';
 import { showToast } from '../../services/notification.service.ts';
-import * as workspaceService from '../../services/workspace.service.ts';
+import { openWorkspace } from '../../services/workspace.service.ts';
 import type { Workspace } from '../../types/git.types.ts';
 import { loggers } from '../../utils/logger.ts';
 
@@ -514,48 +513,8 @@ export class GnWelcome extends LitElement {
     repositoryStore.getState().clearRecentRepositories();
   }
 
-  private async handleWorkspaceClick(workspace: Workspace): Promise<void> {
-    const store = repositoryStore.getState();
-
-    // Open WITHOUT activating each repo: addRepository's default activation
-    // would fire the per-activation side effects (index builds, integration
-    // checks) once per repo — a 10-repo workspace would still kick off 10
-    // concurrent history walks. Activate only the final repo; the rest get
-    // their indexes lazily when their tab is first activated.
-    let lastOpenedPath: string | null = null;
-    let failedCount = 0;
-    for (const repo of workspace.repositories) {
-      const result = await openRepository({ path: repo.path });
-      if (result.success && result.data) {
-        store.addRepository(result.data, { activate: false });
-        lastOpenedPath = result.data.path;
-      } else {
-        failedCount++;
-      }
-    }
-    if (lastOpenedPath) {
-      store.setActiveByPath(lastOpenedPath);
-    }
-
-    workspaceStore.getState().setActiveWorkspaceId(workspace.id);
-    await workspaceService.updateWorkspaceLastOpened(workspace.id);
-    // A repo that failed to open (moved, deleted) must not hide behind a
-    // green success toast
-    if (failedCount === 0) {
-      showToast(msg(str`Opened workspace: ${workspace.name}`), 'success');
-    } else if (lastOpenedPath) {
-      showToast(
-        msg(
-          str`Opened workspace: ${workspace.name} (${failedCount} of ${workspace.repositories.length} repositories failed to open)`,
-        ),
-        'warning',
-      );
-    } else {
-      showToast(
-        msg(str`Could not open workspace: ${workspace.name} — no repository could be opened`),
-        'error',
-      );
-    }
+  private handleWorkspaceClick(workspace: Workspace): Promise<void> {
+    return openWorkspace(workspace);
   }
 
   private handleManageWorkspaces(): void {

@@ -5,11 +5,14 @@
 
 import { LitElement, html, css, nothing } from 'lit';
 import { customElement, state, query } from 'lit/decorators.js';
+import { localized, msg } from '@lit/localize';
 import { sharedStyles } from '../../styles/shared-styles.ts';
-import { repositoryStore, type OpenRepository } from '../../stores/index.ts';
+import { repositoryStore, workspaceStore, type OpenRepository } from '../../stores/index.ts';
 import { openRepository } from '../../services/git.service.ts';
+import { openWorkspace } from '../../services/workspace.service.ts';
 import { openRepositoryDialog } from '../../services/dialog.service.ts';
 import { showToast } from '../../services/notification.service.ts';
+import type { Workspace } from '../../types/git.types.ts';
 import {
   openRepositoryInTerminal,
   openRepositoryInFileManager,
@@ -52,6 +55,7 @@ const REMOTE_SHORTCUT_KEYS: Record<RemoteOp, string> = {
   push: 'U',
 };
 
+@localized()
 @customElement('gn-toolbar')
 export class GnToolbar extends LitElement {
   static styles = [
@@ -294,8 +298,6 @@ export class GnToolbar extends LitElement {
       .tab-context-menu {
         position: fixed;
         z-index: 1000;
-        min-width: 220px;
-        max-width: 360px;
         max-height: 60vh;
         overflow-y: auto;
         padding: var(--spacing-xs);
@@ -304,6 +306,37 @@ export class GnToolbar extends LitElement {
         border-radius: var(--radius-md);
         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
         -webkit-app-region: no-drag;
+      }
+
+      .tab-context-menu {
+        min-width: 220px;
+        max-width: 360px;
+      }
+
+      .tab-list-menu {
+        --tab-list-width: min(32rem, calc(100vw - 16px));
+        left: clamp(8px, calc(var(--tab-list-anchor) - var(--tab-list-width)),
+          calc(100vw - var(--tab-list-width) - 8px));
+        box-sizing: border-box;
+        width: var(--tab-list-width);
+        display: grid;
+        grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+      }
+
+      .tab-list-column {
+        padding: 0 var(--spacing-xs);
+      }
+
+      .tab-list-column + .tab-list-column {
+        border-left: 1px solid var(--color-border);
+      }
+
+      .tab-list-heading,
+      .tab-list-empty {
+        margin: 0;
+        padding: var(--spacing-xs) var(--spacing-sm);
+        font-size: var(--font-size-xs);
+        color: var(--color-text-muted);
       }
 
       gn-clone-dialog,
@@ -326,8 +359,14 @@ export class GnToolbar extends LitElement {
         text-align: left;
       }
 
-      .tab-list-item:hover {
+      .tab-list-item:hover:not(:disabled),
+      .tab-list-item:focus-visible {
         background: var(--color-bg-hover);
+      }
+
+      .tab-list-item:disabled {
+        opacity: 0.6;
+        cursor: default;
       }
 
       .tab-list-item .check {
@@ -343,12 +382,16 @@ export class GnToolbar extends LitElement {
         flex-direction: column;
       }
 
+      .tab-list-item .item-name,
       .tab-list-item .item-path {
-        color: var(--color-text-muted);
-        font-size: var(--font-size-xs);
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+      }
+
+      .tab-list-item .item-path {
+        color: var(--color-text-muted);
+        font-size: var(--font-size-xs);
         direction: rtl;
         text-align: left;
       }
@@ -448,22 +491,28 @@ export class GnToolbar extends LitElement {
   @state() private openRepositories: OpenRepository[] = [];
   @state() private activeIndex = -1;
   @state() private isLoading = false;
+  @state() private workspaces: Workspace[] = [];
+  @state() private activeWorkspaceId: string | null = null;
+  @state() private isOpeningWorkspace = false;
 
   @query('gn-clone-dialog') private cloneDialog!: GnCloneDialog;
   @query('gn-init-dialog') private initDialog!: GnInitDialog;
   @query('gn-search-bar') private searchBar!: GnSearchBar;
   @query('.tabs') private tabsContainer!: HTMLElement;
+  @query('.tab-list-btn') private tabListButton!: HTMLButtonElement | null;
+  @query('.tab-list-menu') private tabListMenu!: HTMLElement | null;
 
   @state() private showSearch = false;
   @state() private semanticAvailable = false;
   @state() private canScrollLeft = false;
   @state() private canScrollRight = false;
-  // Anchor for the "all open repositories" dropdown (null = closed)
+  // Anchor for the workspace and repository dropdown (null = closed)
   @state() private tabListAnchor: { x: number; y: number } | null = null;
   // Right-click context menu on a tab (null = closed)
   @state() private tabContextMenu: { x: number; y: number; index: number } | null = null;
 
   private unsubscribe?: () => void;
+  private unsubscribeWorkspaces?: () => void;
   private _resizeObserver?: ResizeObserver;
 
   connectedCallback(): void {
@@ -489,6 +538,9 @@ export class GnToolbar extends LitElement {
         }
       }
     });
+
+    this.syncWorkspaces(workspaceStore.getState());
+    this.unsubscribeWorkspaces = workspaceStore.subscribe((state) => this.syncWorkspaces(state));
 
     // Listen for focus-search event from app-shell
     this.addEventListener('focus-search', () => {
@@ -521,6 +573,7 @@ export class GnToolbar extends LitElement {
   disconnectedCallback(): void {
     super.disconnectedCallback();
     this.unsubscribe?.();
+    this.unsubscribeWorkspaces?.();
     this._resizeObserver?.disconnect();
     this.removeEventListener('open-repository', this.handleMenuOpenRepo);
     this.removeEventListener('clone-repository', this.handleMenuCloneRepo);
@@ -529,6 +582,12 @@ export class GnToolbar extends LitElement {
       document.removeEventListener('keydown', this.handleMenuEscape, { capture: true });
       this.menuEscapeListenerAttached = false;
     }
+  }
+
+  private syncWorkspaces(state: ReturnType<typeof workspaceStore.getState>): void {
+    this.workspaces = state.workspaces;
+    this.activeWorkspaceId = state.activeWorkspaceId;
+    this.isOpeningWorkspace = state.isLoading;
   }
 
   private async handleOpenRepo(): Promise<void> {
@@ -678,19 +737,38 @@ export class GnToolbar extends LitElement {
     await openRepositoryInEditor(path);
   }
 
-  private handleToggleTabList(e: MouseEvent): void {
+  private async handleToggleTabList(e: MouseEvent): Promise<void> {
     if (this.tabListAnchor) {
-      this.tabListAnchor = null;
+      this.closeTabList();
       return;
     }
     this.tabContextMenu = null;
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     this.tabListAnchor = { x: rect.right, y: rect.bottom + 4 };
+    await this.updateComplete;
+    const firstItem = this.tabListMenu?.querySelector<HTMLButtonElement>('button:not(:disabled)');
+    (firstItem ?? this.tabListMenu)?.focus();
+  }
+
+  private closeTabList(): void {
+    this.tabListAnchor = null;
+    this.tabListButton?.focus();
+  }
+
+  private handleTabListFocusOut(e: FocusEvent): void {
+    if (e.relatedTarget instanceof Node && !this.tabListMenu?.contains(e.relatedTarget)) {
+      this.tabListAnchor = null;
+    }
   }
 
   private handleTabListSelect(index: number): void {
-    this.tabListAnchor = null;
-    repositoryStore.getState().setActiveIndex(index);
+    this.closeTabList();
+    this.handleTabClick(index);
+  }
+
+  private handleWorkspaceSelect(workspace: Workspace): void {
+    this.closeTabList();
+    void openWorkspace(workspace);
   }
 
   /**
@@ -1054,7 +1132,7 @@ export class GnToolbar extends LitElement {
     if (!isTopOverlay(this)) return;
     if (e.key === 'Escape') {
       e.stopPropagation();
-      this.tabListAnchor = null;
+      if (this.tabListAnchor) this.closeTabList();
       this.tabContextMenu = null;
     }
   };
@@ -1153,37 +1231,74 @@ export class GnToolbar extends LitElement {
     `;
   }
 
+  private renderTabListCheck(isActive: boolean) {
+    return html`
+      <span class="check" aria-hidden="true">
+        ${isActive
+          ? html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>`
+          : nothing}
+      </span>
+    `;
+  }
+
   private renderTabListMenu() {
     if (!this.tabListAnchor) return nothing;
     return html`
-      <div class="menu-backdrop" @click=${() => (this.tabListAnchor = null)}></div>
+      <div class="menu-backdrop" @click=${this.closeTabList}></div>
       <div
+        id="tab-list-menu"
         class="tab-list-menu"
-        role="menu"
-        aria-label="Open repositories"
-        style="top: ${this.tabListAnchor.y}px; left: ${this.tabListAnchor.x}px; transform: translateX(-100%);"
+        role="region"
+        aria-label=${msg('Switch workspace or repository')}
+        tabindex="-1"
+        data-keyboard-nav
+        style="top: ${this.tabListAnchor.y}px; --tab-list-anchor: ${this.tabListAnchor.x}px;"
+        @focusout=${this.handleTabListFocusOut}
       >
-        ${this.openRepositories.map(
-          (repo, index) => html`
-            <button
-              class="tab-list-item"
-              role="menuitem"
-              @click=${() => this.handleTabListSelect(index)}
-            >
-              <span class="check">
-                ${index === this.activeIndex
-                  ? html`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                      <polyline points="20 6 9 17 4 12"></polyline>
-                    </svg>`
-                  : nothing}
-              </span>
-              <span class="item-texts">
-                <span>${repo.repository.name}</span>
-                <span class="item-path">${repo.repository.path}</span>
-              </span>
-            </button>
-          `
-        )}
+        <div class="tab-list-column" role="group" aria-labelledby="tab-list-workspaces">
+          <h2 class="tab-list-heading" id="tab-list-workspaces">${msg('Workspaces')}</h2>
+          ${this.workspaces.length
+            ? this.workspaces.map((workspace) => {
+                const isActive = workspace.id === this.activeWorkspaceId;
+                return html`
+                  <button
+                    class="tab-list-item"
+                    aria-current=${isActive ? 'true' : nothing}
+                    ?disabled=${this.isOpeningWorkspace}
+                    title=${workspace.name}
+                    @click=${() => this.handleWorkspaceSelect(workspace)}
+                  >
+                    ${this.renderTabListCheck(isActive)}
+                    <span class="item-texts"><span class="item-name">${workspace.name}</span></span>
+                  </button>
+                `;
+              })
+            : html`<p class="tab-list-empty">${msg('No workspaces yet')}</p>`}
+        </div>
+        <div class="tab-list-column" role="group" aria-labelledby="tab-list-repositories">
+          <h2 class="tab-list-heading" id="tab-list-repositories">${msg('Open repositories')}</h2>
+          ${this.openRepositories.length
+            ? this.openRepositories.map((repo, index) => {
+                const isActive = index === this.activeIndex;
+                return html`
+                  <button
+                    class="tab-list-item"
+                    aria-current=${isActive ? 'true' : nothing}
+                    title=${repo.repository.path}
+                    @click=${() => this.handleTabListSelect(index)}
+                  >
+                    ${this.renderTabListCheck(isActive)}
+                    <span class="item-texts">
+                      <span class="item-name">${repo.repository.name}</span>
+                      <span class="item-path">${repo.repository.path}</span>
+                    </span>
+                  </button>
+                `;
+              })
+            : html`<p class="tab-list-empty">${msg('No repositories open')}</p>`}
+        </div>
       </div>
     `;
   }
@@ -1339,7 +1454,7 @@ export class GnToolbar extends LitElement {
         </button>
         <div class="tabs" role="tablist" @scroll=${this.handleTabsScroll}>
           ${this.openRepositories.length === 0
-            ? html`<span class="no-repos">No repositories open</span>`
+            ? html`<span class="no-repos">${msg('No repositories open')}</span>`
             : this.openRepositories.map(
                 (repo, index) => html`
                   <button
@@ -1385,13 +1500,15 @@ export class GnToolbar extends LitElement {
             <polyline points="9 18 15 12 9 6"></polyline>
           </svg>
         </button>
-        ${this.openRepositories.length > 0
+        ${this.openRepositories.length > 0 || this.workspaces.length > 0 || this.tabListAnchor
           ? html`
               <button
                 class="menu-btn tab-list-btn"
-                title="All open repositories"
-                aria-label="List all open repositories"
+                title=${msg('Switch workspace or repository')}
+                aria-label=${msg('Switch workspace or repository')}
                 aria-expanded=${this.tabListAnchor !== null}
+                aria-controls=${this.tabListAnchor ? 'tab-list-menu' : nothing}
+                data-keyboard-nav
                 @click=${this.handleToggleTabList}
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">

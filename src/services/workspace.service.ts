@@ -3,7 +3,11 @@
  * Manages multi-repository workspaces via Tauri commands
  */
 
+import { msg, str } from '@lit/localize';
+import { repositoryStore } from '../stores/repository.store.ts';
+import { workspaceStore } from '../stores/workspace.store.ts';
 import { invokeCommand } from './tauri-api.ts';
+import { openRepository } from './git/repository.ts';
 import { showToast } from './notification.service.ts';
 import type {
   Workspace,
@@ -59,6 +63,62 @@ export async function removeRepositoryFromWorkspace(
 
 export async function updateWorkspaceLastOpened(workspaceId: string): Promise<CommandResult<void>> {
   return invokeCommand<void>('update_workspace_last_opened', { workspaceId });
+}
+
+export async function openWorkspace(
+  workspace: Workspace,
+  repoStatuses?: ReadonlyMap<string, WorkspaceRepoStatus>,
+): Promise<void> {
+  const workspaceState = workspaceStore.getState();
+  if (workspaceState.isLoading) return;
+  workspaceState.setLoading(true);
+
+  try {
+    const store = repositoryStore.getState();
+    let lastOpenedPath: string | null = null;
+    let failedCount = 0;
+    for (const repo of workspace.repositories) {
+      const status = repoStatuses?.get(repo.path);
+      if (status && (!status.exists || !status.isValidRepo)) {
+        failedCount++;
+        continue;
+      }
+
+      const result = await openRepository({ path: repo.path });
+      if (result.success && result.data) {
+        // Activate once after the batch to avoid starting index builds for every repo.
+        store.addRepository(result.data, { activate: false });
+        lastOpenedPath = result.data.path;
+      } else {
+        failedCount++;
+      }
+    }
+
+    if (failedCount > 0 && !lastOpenedPath) {
+      showToast(
+        msg(str`Could not open workspace: ${workspace.name} — no repository could be opened`),
+        'error',
+      );
+      return;
+    }
+
+    if (lastOpenedPath) store.setActiveByPath(lastOpenedPath);
+    workspaceState.setActiveWorkspaceId(workspace.id);
+    await updateWorkspaceLastOpened(workspace.id);
+
+    if (failedCount === 0) {
+      showToast(msg(str`Opened workspace: ${workspace.name}`), 'success');
+    } else {
+      showToast(
+        msg(
+          str`Opened workspace: ${workspace.name} (${failedCount} of ${workspace.repositories.length} repositories failed to open)`,
+        ),
+        'warning',
+      );
+    }
+  } finally {
+    workspaceState.setLoading(false);
+  }
 }
 
 export async function validateWorkspaceRepositories(

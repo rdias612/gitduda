@@ -1,4 +1,5 @@
 import type { Page } from '@playwright/test';
+import type { Workspace } from '../../src/types/git.types';
 
 /**
  * Mock data types matching the Rust backend responses
@@ -75,6 +76,7 @@ export interface MockNote {
  * Default mock data for a typical repository state
  */
 export const defaultMockData = {
+  workspaces: [] as Workspace[],
   // Repository info
   repository: {
     path: '/tmp/test-repo',
@@ -825,6 +827,8 @@ export async function setupTauriMocks(
         switch (command) {
           case 'open_repository':
             return state.repository;
+          case 'get_workspaces':
+            return state.workspaces;
           case 'get_recent_repositories':
             return [state.repository];
           case 'get_branches':

@@ -848,6 +848,22 @@
   <source>Open a repository to configure merge and diff tools</source>
   <target>Ouvrez un dépôt pour configurer les outils de fusion et de comparaison</target>
 </trans-unit>
+<trans-unit id="s4552188a0a471823">
+  <source>Switch workspace or repository</source>
+  <target>Changer d’espace de travail ou de dépôt</target>
+</trans-unit>
+<trans-unit id="sa27133a840dc585e">
+  <source>No workspaces yet</source>
+  <target>Aucun espace de travail pour le moment</target>
+</trans-unit>
+<trans-unit id="s358bbfd134f6b9c7">
+  <source>Open repositories</source>
+  <target>Dépôts ouverts</target>
+</trans-unit>
+<trans-unit id="s1b205b0d79ef6c9a">
+  <source>No repositories open</source>
+  <target>Aucun dépôt ouvert</target>
+</trans-unit>
 </body>
 </file>
 </xliff>
