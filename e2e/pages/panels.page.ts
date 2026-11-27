@@ -212,6 +212,7 @@ export class RightPanelPage {
   readonly commitMessage: Locator;
   readonly commitButton: Locator;
   readonly aiGenerateButton: Locator;
+  readonly commitResizeHandle: Locator;
 
   // Commit details (Details tab)
   readonly commitDetails: Locator;
@@ -252,6 +253,7 @@ export class RightPanelPage {
     this.commitButton = page.getByRole('button', { name: 'Commit', exact: true });
     // AI generate button - use class selector for reliability (text varies: "Generate with AI" or "Configure AI")
     this.aiGenerateButton = page.locator('gn-commit-panel .generate-btn');
+    this.commitResizeHandle = page.locator('gn-right-panel .commit-resize-handle');
 
     // Commit details - gn-commit-details component
     this.commitDetails = page.locator('gn-commit-details');

@@ -1,5 +1,9 @@
 import { test, expect } from '@playwright/test';
-import { setupOpenRepository, withStagedFiles } from '../fixtures/tauri-mock';
+import {
+  initializeRepositoryStore,
+  setupOpenRepository,
+  withStagedFiles,
+} from '../fixtures/tauri-mock';
 import { RightPanelPage } from '../pages/panels.page';
 import {
   startCommandCaptureWithMocks,
@@ -253,6 +257,102 @@ test.describe('Commit Panel - Character Limit', () => {
     const charCount = page.locator('gn-commit-panel .char-count');
     await expect(charCount).toBeVisible();
     await expect(charCount).toContainText('80/72');
+  });
+
+  test('should count conventional commit prefix in character limit', async ({ page }) => {
+    await page.locator('gn-commit-panel .conventional-toggle input').check();
+
+    const summaryInput = page.locator('gn-commit-panel .summary-input');
+    await summaryInput.fill('add button');
+
+    const charCount = page.locator('gn-commit-panel .char-count');
+    await expect(charCount).toBeVisible();
+    await expect(charCount).toContainText('16/72');
+  });
+});
+
+test.describe('Commit Panel - Character Limit with Staged Files', () => {
+  test('should keep commit button enabled when over character limit', async ({ page }) => {
+    const rightPanel = new RightPanelPage(page);
+    await setupOpenRepository(
+      page,
+      withStagedFiles([{ path: 'src/main.ts', status: 'modified', isStaged: true, isConflicted: false }])
+    );
+
+    const summaryInput = page.locator('gn-commit-panel .summary-input');
+    await summaryInput.fill('A'.repeat(80));
+
+    const charCount = page.locator('gn-commit-panel .char-count');
+    await expect(charCount).toBeVisible();
+    await expect(charCount).toContainText('80/72');
+    await expect(charCount).toHaveClass(/over-limit/);
+    await expect(rightPanel.commitButton).toBeEnabled();
+  });
+});
+
+test.describe('Commit Panel - Resize', () => {
+  let rightPanel: RightPanelPage;
+
+  async function dragCommitResizeHandle(page: Parameters<typeof setupOpenRepository>[0], deltaY: number) {
+    await expect(rightPanel.commitPanel).toBeVisible();
+    await expect(rightPanel.commitResizeHandle).toBeVisible();
+
+    const initialPanelBox = await rightPanel.commitPanel.boundingBox();
+    const handleBox = await rightPanel.commitResizeHandle.boundingBox();
+    expect(initialPanelBox).not.toBeNull();
+    expect(handleBox).not.toBeNull();
+
+    const startX = handleBox!.x + handleBox!.width / 2;
+    const startY = handleBox!.y + handleBox!.height / 2;
+
+    await page.mouse.move(startX, startY);
+    await page.mouse.down();
+    await page.mouse.move(startX, startY + deltaY, { steps: 10 });
+    await page.mouse.up();
+
+    const resizedPanelBox = await rightPanel.commitPanel.boundingBox();
+    expect(resizedPanelBox).not.toBeNull();
+    return { initialPanelBox: initialPanelBox!, resizedPanelBox: resizedPanelBox! };
+  }
+
+  test.beforeEach(async ({ page }) => {
+    rightPanel = new RightPanelPage(page);
+    await setupOpenRepository(page);
+    await page.evaluate(() => {
+      localStorage.removeItem('gn-commit-panel-height');
+    });
+  });
+
+  test('should resize commit panel vertically and persist height across reload', async ({
+    page,
+  }) => {
+    const { initialPanelBox, resizedPanelBox } = await dragCommitResizeHandle(page, -120);
+    expect(resizedPanelBox.height).toBeGreaterThan(initialPanelBox.height + 80);
+
+    const storedHeight = await page.evaluate(() => localStorage.getItem('gn-commit-panel-height'));
+    expect(storedHeight).not.toBeNull();
+    expect(Number(storedHeight)).toBeGreaterThan(initialPanelBox.height);
+
+    await page.reload();
+    await initializeRepositoryStore(page);
+
+    const persistedPanelBox = await rightPanel.commitPanel.boundingBox();
+    expect(persistedPanelBox).not.toBeNull();
+    expect(Math.abs(persistedPanelBox!.height - resizedPanelBox.height)).toBeLessThanOrEqual(2);
+  });
+
+  test('should reset commit panel height on double-click', async ({ page }) => {
+    const { initialPanelBox, resizedPanelBox } = await dragCommitResizeHandle(page, -120);
+    expect(resizedPanelBox.height).toBeGreaterThan(initialPanelBox.height + 80);
+
+    await rightPanel.commitResizeHandle.dblclick();
+
+    const resetPanelBox = await rightPanel.commitPanel.boundingBox();
+    expect(resetPanelBox).not.toBeNull();
+    expect(Math.abs(resetPanelBox!.height - initialPanelBox.height)).toBeLessThanOrEqual(2);
+
+    const storedHeight = await page.evaluate(() => localStorage.getItem('gn-commit-panel-height'));
+    expect(storedHeight).toBeNull();
   });
 });
 
