@@ -11,6 +11,11 @@ import type { Commit, RefInfo, StatusEntry } from '../../types/git.types.ts';
 
 type TabType = 'changes' | 'details' | 'analytics';
 
+const COMMIT_PANEL_HEIGHT_KEY = 'gn-commit-panel-height';
+const FILE_STATUS_MIN_HEIGHT = 100; // Matches .file-status-container min-height
+const COMMIT_HANDLE_HEIGHT = 4;
+const COMMIT_HANDLE_STEP = 16;
+
 /**
  * Right panel container component
  * Contains file status, commit panel, and commit details in a unified tabbed interface
@@ -114,7 +119,12 @@ export class GnRightPanel extends LitElement {
         display: flex;
         flex-direction: column;
         flex: 1;
+        min-height: 0;
         overflow: hidden;
+      }
+
+      .changes-panel.resizing {
+        user-select: none;
       }
 
       .file-status-container {
@@ -123,9 +133,30 @@ export class GnRightPanel extends LitElement {
         min-height: 100px;
       }
 
+      .commit-resize-handle {
+        height: 4px;
+        cursor: row-resize;
+        background: transparent;
+        transition: background-color var(--transition-fast);
+        flex-shrink: 0;
+        z-index: 10;
+      }
+
+      .commit-resize-handle:hover,
+      .commit-resize-handle.dragging {
+        background: var(--color-primary);
+      }
+
       .commit-panel-container {
         flex-shrink: 0;
         border-top: 1px solid var(--color-border);
+      }
+
+      /* 104px = 100px (.file-status-container min-height) + 4px (.commit-resize-handle) */
+      .commit-panel-container.custom-height {
+        min-height: min-content;
+        box-sizing: border-box;
+        max-height: calc(100% - 104px);
       }
 
       /* Details panel layout */
@@ -182,12 +213,17 @@ export class GnRightPanel extends LitElement {
   @state() private githubOwner: string = '';
   @state() private githubRepo: string = '';
   @state() private hasUnseenChanges: boolean = false;
+  @state() private commitPanelHeight: number | null = null;
+  @state() private isResizingCommitPanel: boolean = false;
 
   private unsubscribe?: () => void;
   private previousCommitOid: string | null = null;
+  private commitResizeStartY = 0;
+  private commitResizeStartHeight = 0;
 
   connectedCallback(): void {
     super.connectedCallback();
+    this.commitPanelHeight = this.loadCommitPanelHeight();
     const initialState = repositoryStore.getState();
     const initialActiveRepo = initialState.getActiveRepository();
     this.repositoryPath = initialActiveRepo?.repository.path ?? null;
@@ -244,7 +280,88 @@ export class GnRightPanel extends LitElement {
     super.disconnectedCallback();
     this.unsubscribe?.();
     this.removeEventListener('keydown', this.handleKeyDown);
+    document.removeEventListener('mousemove', this.handleCommitResizeMove);
+    document.removeEventListener('mouseup', this.handleCommitResizeEnd);
+    this.isResizingCommitPanel = false;
   }
+
+  private loadCommitPanelHeight(): number | null {
+    try {
+      const raw = localStorage.getItem(COMMIT_PANEL_HEIGHT_KEY);
+      if (raw === null) return null;
+      const saved = Number(raw);
+      return Number.isFinite(saved) && saved > 0 ? saved : null;
+    } catch {
+      // Ignore storage access errors
+      return null;
+    }
+  }
+
+  private saveCommitPanelHeight(height: number): void {
+    try {
+      localStorage.setItem(COMMIT_PANEL_HEIGHT_KEY, String(height));
+    } catch {
+      // Ignore storage access errors
+    }
+  }
+
+  private clampCommitPanelHeight(value: number): number {
+    const changesPanel = this.shadowRoot?.querySelector('.changes-panel') as HTMLElement | null;
+    if (!changesPanel) return Math.max(0, Math.round(value));
+    const maxHeight = Math.max(
+      0,
+      changesPanel.clientHeight - FILE_STATUS_MIN_HEIGHT - COMMIT_HANDLE_HEIGHT,
+    );
+    return Math.max(0, Math.round(Math.min(value, maxHeight)));
+  }
+
+  private handleCommitResizeStart = (e: MouseEvent): void => {
+    const container = this.shadowRoot?.querySelector('.commit-panel-container') as HTMLElement | null;
+    if (!container) return;
+    e.preventDefault();
+    this.isResizingCommitPanel = true;
+    this.commitResizeStartY = e.clientY;
+    this.commitResizeStartHeight = container.getBoundingClientRect().height;
+    document.addEventListener('mousemove', this.handleCommitResizeMove);
+    document.addEventListener('mouseup', this.handleCommitResizeEnd);
+  };
+
+  private handleCommitResizeMove = (e: MouseEvent): void => {
+    if (!this.isResizingCommitPanel) return;
+    const rawHeight = this.commitResizeStartHeight + (this.commitResizeStartY - e.clientY);
+    this.commitPanelHeight = this.clampCommitPanelHeight(rawHeight);
+  };
+
+  private handleCommitResizeEnd = (): void => {
+    if (!this.isResizingCommitPanel) return;
+    this.isResizingCommitPanel = false;
+    document.removeEventListener('mousemove', this.handleCommitResizeMove);
+    document.removeEventListener('mouseup', this.handleCommitResizeEnd);
+    if (this.commitPanelHeight !== null) {
+      this.saveCommitPanelHeight(this.commitPanelHeight);
+    }
+  };
+
+  private handleCommitResizeReset = (): void => {
+    this.commitPanelHeight = null;
+    try {
+      localStorage.removeItem(COMMIT_PANEL_HEIGHT_KEY);
+    } catch {
+      // Ignore storage access errors
+    }
+  };
+
+  private handleCommitResizeKeyDown = (e: KeyboardEvent): void => {
+    if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+    const container = this.shadowRoot?.querySelector('.commit-panel-container') as HTMLElement | null;
+    if (!container) return;
+    e.preventDefault();
+    const currentHeight = container.getBoundingClientRect().height;
+    const delta = e.key === 'ArrowUp' ? COMMIT_HANDLE_STEP : -COMMIT_HANDLE_STEP;
+    const nextHeight = this.clampCommitPanelHeight(currentHeight + delta);
+    this.commitPanelHeight = nextHeight;
+    this.saveCommitPanelHeight(nextHeight);
+  };
 
   updated(changedProperties: Map<string, unknown>): void {
     // Auto-switch to details tab when a new commit is selected
@@ -346,14 +463,28 @@ export class GnRightPanel extends LitElement {
       <div class="tab-content">
         <!-- Changes Panel -->
         <div class="tab-panel ${this.activeTab === 'changes' ? 'active' : ''}">
-          <div class="changes-panel">
+          <div class="changes-panel ${this.isResizingCommitPanel ? 'resizing' : ''}">
             <div class="file-status-container">
               <gn-file-status
                 .repositoryPath=${this.repositoryPath}
                 @status-changed=${this.handleStatusChanged}
               ></gn-file-status>
             </div>
-            <div class="commit-panel-container">
+            <div
+              class="commit-resize-handle ${this.isResizingCommitPanel ? 'dragging' : ''}"
+              role="separator"
+              aria-orientation="horizontal"
+              aria-label="Resize commit panel"
+              tabindex="0"
+              title="Drag to resize the commit panel (double-click to reset)"
+              @mousedown=${this.handleCommitResizeStart}
+              @dblclick=${this.handleCommitResizeReset}
+              @keydown=${this.handleCommitResizeKeyDown}
+            ></div>
+            <div
+              class="commit-panel-container ${this.commitPanelHeight !== null ? 'custom-height' : ''}"
+              style=${this.commitPanelHeight !== null ? `height: ${this.commitPanelHeight}px` : nothing}
+            >
               <gn-commit-panel
                 .repositoryPath=${this.repositoryPath}
                 .stagedCount=${this.stagedCount}

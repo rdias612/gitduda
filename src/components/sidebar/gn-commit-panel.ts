@@ -42,6 +42,9 @@ export class GnCommitPanel extends LitElement {
       :host {
         display: flex;
         flex-direction: column;
+        height: 100%;
+        min-height: 0;
+        box-sizing: border-box;
         padding: var(--spacing-xs) var(--spacing-sm);
         gap: var(--spacing-xs);
         background: var(--color-bg-secondary);
@@ -154,6 +157,8 @@ export class GnCommitPanel extends LitElement {
       .message-container {
         display: flex;
         flex-direction: column;
+        flex: 1;
+        min-height: 0;
         gap: 2px;
       }
 
@@ -185,6 +190,7 @@ export class GnCommitPanel extends LitElement {
 
       .description-input {
         width: 100%;
+        flex: 1;
         min-height: 48px;
         padding: var(--spacing-xs) var(--spacing-sm);
         background: var(--color-bg-primary);
