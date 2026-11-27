@@ -92,15 +92,6 @@ const mockInvoke: MockInvoke = async (command: string, args?: unknown) => {
       return '0.1.0';
     case 'get_settings':
       return {};
-    case 'get_system_capabilities':
-      return { hasGpu: false, gpuName: null, totalRam: 8 };
-    case 'get_downloaded_models':
-      return [];
-    case 'get_model_status':
-    case 'get_local_model_status':
-      return { loaded: false, modelId: null };
-    case 'get_available_models':
-      return [];
     case 'get_mcp_status':
       return { servers: [], totalTools: 0 };
     case 'get_graph_color_schemes':

@@ -30,7 +30,7 @@ test('renames variants the way serde does', () => {
   assert.equal(serdeSnakeCase('LmStudio'), 'lm_studio');
   assert.equal(serdeSnakeCase('OpenAi'), 'open_ai');
   assert.equal(serdeSnakeCase('GithubCopilot'), 'github_copilot');
-  assert.equal(serdeSnakeCase('LocalInference'), 'local_inference');
+  assert.equal(serdeSnakeCase('CustomLocal'), 'custom_local');
 });
 
 test('reads a match arm per provider, empty endpoints included', () => {
@@ -39,14 +39,14 @@ test('reads a match arm per provider, empty endpoints included', () => {
         match self {
             AiProviderType::Ollama => "http://localhost:11434",
             AiProviderType::OpenAi => "https://api.openai.com/v1",
-            AiProviderType::LocalInference => "",
+            AiProviderType::CustomLocal => "",
         }
     }
   `);
   assert.deepEqual(endpoints, {
     ollama: 'http://localhost:11434',
     open_ai: 'https://api.openai.com/v1',
-    local_inference: '',
+    custom_local: '',
   });
   assert.deepEqual(unparsed, []);
 });

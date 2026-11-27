@@ -133,19 +133,14 @@ async function renderCommitPanel(stagedCount = 1): Promise<GnCommitPanel> {
 
 /**
  * Wait for the panel's mount to finish. connectedCallback chains several
- * lookups (templates, conventional types, AI availability, identity), only
- * THEN seeds sign-off and registers its window listeners, and its last act is
- * to subscribe to the model-download event — so that subscription reaching
- * the Tauri boundary is the signal the whole chain has run.
+ * lookups (templates, conventional types, AI availability, identity), then
+ * seeds sign-off and subscribes to the repository store (`unsubscribeStore`)
+ * synchronously before registering its window listeners — so `unsubscribeStore`
+ * being set guarantees the entire async mount chain has settled.
  */
 async function mounted(el: GnCommitPanel): Promise<void> {
   await waitUntil(
-    () =>
-      invokeHistory.some(
-        (h) =>
-          h.command === 'plugin:event|listen' &&
-          (h.args as { event?: string } | undefined)?.event === 'model-download-complete',
-      ),
+    () => Boolean((el as unknown as { unsubscribeStore?: unknown }).unsubscribeStore),
     'the commit panel to finish mounting',
   );
   await el.updateComplete;

@@ -47,70 +47,6 @@ const mockInvoke: MockInvoke = async (command: string) => {
       return '0.1.0';
     case 'get_settings':
       return {};
-    // A REAL `SystemCapabilities`. The old literal used none of the interface's
-    // field names, so `recommendedTier` was undefined, the Local AI status pill
-    // rendered empty, and the comparison below could not see the English it
-    // would otherwise have contained.
-    case 'get_system_capabilities':
-      return {
-        totalRamBytes: 17_179_869_184,
-        availableRamBytes: 8_589_934_592,
-        gpuInfo: null,
-        recommendedTier: 'standard',
-        gpuAccelerationAvailable: false,
-      };
-    // At least one model, for the same reason: with an empty registry no model
-    // row exists, so nothing inside it is ever compared.
-    case 'get_available_models':
-      return [
-        {
-          id: 'qwen2.5-coder-1.5b',
-          displayName: 'Qwen2.5 Coder 1.5B',
-          hfRepo: 'org/repo',
-          hfFilename: 'model.gguf',
-          sha256: 'x'.repeat(64),
-          sizeBytes: 1_073_741_824,
-          minRamBytes: 8_589_934_592,
-          tier: 'ultra_light',
-          architecture: 'qwen2',
-          contextLength: 32_768,
-        },
-      ];
-    // The model above, downloaded AND loaded. Without a downloaded model the
-    // model row only ever offers `Download`, so `Loaded` — named in the comment
-    // on the guard below — could not render either.
-    case 'get_downloaded_models':
-      return [
-        {
-          id: 'qwen2.5-coder-1.5b',
-          displayName: 'Qwen2.5 Coder 1.5B',
-          sizeBytes: 1_073_741_824,
-          path: '/models/qwen2.5-coder-1.5b.gguf',
-          status: 'ready',
-        },
-      ];
-    // `LocalModelStatus`, and the name the engine reports for what it loaded.
-    // The old `get_local_model_status` mock answered a command nothing invokes
-    // (`local-ai.service.ts:168` asks for `get_model_status`), so the Engine
-    // Status row never rendered at all.
-    case 'get_model_status':
-      return 'ready';
-    case 'get_loaded_model_name':
-      return 'Qwen2.5 Coder 1.5B';
-    // A second model, not downloaded, so the "Recommended" row renders too.
-    case 'get_recommended_model':
-      return {
-        id: 'qwen2.5-coder-7b',
-        displayName: 'Qwen2.5 Coder 7B',
-        hfRepo: 'org/repo-7b',
-        hfFilename: 'model-7b.gguf',
-        sha256: 'y'.repeat(64),
-        sizeBytes: 4_294_967_296,
-        minRamBytes: 17_179_869_184,
-        tier: 'standard',
-        architecture: 'qwen2',
-        contextLength: 32_768,
-      };
     case 'get_available_diff_tools':
     case 'get_available_merge_tools':
     case 'list_diff_tools':
@@ -280,10 +216,8 @@ describe('gn-settings-dialog language setting', () => {
      * be a word French borrows unchanged — if a row lands here because nobody
      * translated it, that is the bug this test exists to catch.
      */
-    // `Port` is a word French borrows unchanged. The model name is registry
-    // DATA, not a label: it is the product's own name and reads identically in
-    // every locale, so it is not evidence of a missing translation.
-    const SAME_IN_FRENCH = new Set(['Port', 'Qwen2.5 Coder 1.5B']);
+    // `Port` is a word French borrows unchanged.
+    const SAME_IN_FRENCH = new Set(['Port']);
 
     await provokeAiError();
     const english = visibleText();
@@ -295,16 +229,12 @@ describe('gn-settings-dialog language setting', () => {
     // Every pill the comment above names, proved present rather than assumed:
     // a mock trimmed back to `[]` would empty these regions again and quietly
     // narrow the comparison to nothing.
-    for (const pill of ['Configured', 'Not configured', '✗ Failed', 'Loaded', 'Model Loaded']) {
+    for (const pill of ['Configured', 'Not configured', '✗ Failed']) {
       expect(
         english.has(pill),
         `control: the "${pill}" pill is on screen and part of the comparison`
       ).to.be.true;
     }
-    expect(
-      [...english].some((text) => text.startsWith('Recommended:')),
-      'control: the recommended-model row is part of the comparison'
-    ).to.be.true;
 
     await choose(el, 'fr');
     await waitUntil(() => sectionTitles(el)[0] === 'Apparence');

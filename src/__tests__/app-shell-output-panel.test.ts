@@ -194,19 +194,19 @@ describe('app-shell output panel wiring', () => {
 describe('app-shell teardown without the event plugin internals', () => {
   it('disconnects without an unhandled rejection', async () => {
     // Every listen() here SUCCEEDS — the mock resolves the IPC call — so the
-    // shell holds real unlisten closures for the update, model-download,
-    // remote-operation and git-command listeners. Each of those reads
-    // __TAURI_EVENT_PLUGIN_INTERNALS__ before its IPC call, and that global
-    // does not exist outside a webview. A rejection from disconnectedCallback
-    // has no owner: the runner charges it to whichever test runs next.
+    // shell holds real unlisten closures for the update, remote-operation and
+    // git-command listeners. Each of those reads __TAURI_EVENT_PLUGIN_INTERNALS__
+    // before its IPC call, and that global does not exist outside a webview. A
+    // rejection from disconnectedCallback has no owner: the runner charges it to
+    // whichever test runs next.
     delete (globalThis as Record<string, unknown>).__TAURI_EVENT_PLUGIN_INTERNALS__;
     const el = createAppShell();
     document.body.appendChild(el);
     try {
       await el.updateComplete;
       await waitUntil(
-        () => (el as any).updateUnlisteners.length >= 5,
-        'the update and model-download listeners never attached',
+        () => (el as any).updateUnlisteners.length >= 4,
+        'the update listeners never attached',
       );
 
       const rejections = await collectUnhandledRejections(() => {
