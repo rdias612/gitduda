@@ -1837,6 +1837,7 @@ export class AppShell extends LitElement {
       this.dialogVersion++;
     });
 
+    this.activeRepository ??= repositoryStore.getState().getActiveRepository();
     this.unsubscribe = repositoryStore.subscribe((state) => {
       const newActiveRepo = state.getActiveRepository();
       const repoChanged = this.activeRepository?.repository.path !== newActiveRepo?.repository.path;

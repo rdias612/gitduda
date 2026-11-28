@@ -1078,13 +1078,7 @@ It connects the frontend drawer to the Tauri backend.
 - Streaming events must be cleaned up when switching branches
 "#;
 
-        let explanation = parse_ai_explanation(
-            raw,
-            "branch_compare",
-            "feat/ai",
-            "Ollama",
-            true,
-        );
+        let explanation = parse_ai_explanation(raw, "branch_compare", "feat/ai", "Ollama", true);
         assert_eq!(explanation.title, "Refactor branch comparison dialog");
         assert!(explanation
             .intent
