@@ -154,9 +154,7 @@ test.describe('File History - Commit List', () => {
 
   test('each commit should show a relative date', async ({ page }) => {
     const dates = page.locator('gn-file-history .commit-date');
-    await expect(dates.nth(0)).toContainText('Today');
-    await expect(dates.nth(1)).toContainText('Yesterday');
-    await expect(dates.nth(2)).toContainText('week');
+    await expect(dates).toHaveText(['today', 'yesterday', 'last week']);
   });
 
   test('each commit should have a View button', async ({ page }) => {

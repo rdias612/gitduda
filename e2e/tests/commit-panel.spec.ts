@@ -995,7 +995,7 @@ test.describe('Commit Panel - Trailers', () => {
     });
 
     await rightPanel.commitMessage.fill('feat: paired work');
-    await page.locator('gn-commit-panel .coauthor-btn').click();
+    await page.locator('gn-commit-panel button[aria-controls="coauthor-dropdown"]').click();
 
     const suggestion = page.locator('gn-commit-panel .coauthor-suggestion', {
       hasText: 'grace@example.com',
@@ -1025,7 +1025,8 @@ test.describe('Commit Panel - Trailers', () => {
     await setupOpenRepository(page, withStagedFiles(stagedFile));
 
     await rightPanel.commitMessage.fill('feat: manual co-author');
-    await page.locator('gn-commit-panel .coauthor-btn').click();
+    const coAuthorsButton = page.locator('gn-commit-panel button[aria-controls="coauthor-dropdown"]');
+    await coAuthorsButton.click();
 
     const input = page.locator('gn-commit-panel .coauthor-input');
     const add = page.locator('gn-commit-panel .coauthor-add-btn');
@@ -1050,8 +1051,8 @@ test.describe('Commit Panel - Trailers', () => {
     await expect(page.locator('gn-commit-panel .trailer-line')).toHaveCount(1);
 
     // Close the dropdown, which floats over the preview beneath it.
-    await page.locator('gn-commit-panel .coauthor-btn').click();
-    await expect(page.locator('gn-commit-panel .coauthor-dropdown')).toHaveCount(0);
+    await coAuthorsButton.click();
+    await expect(page.locator('gn-commit-panel #coauthor-dropdown')).toHaveCount(0);
 
     await page.locator('gn-commit-panel .trailer-remove').click();
     await expect(page.locator('gn-commit-panel .trailers-preview')).toHaveCount(0);
