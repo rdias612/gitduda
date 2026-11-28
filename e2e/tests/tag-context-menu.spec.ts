@@ -380,7 +380,7 @@ test.describe('Tag Context Menu - Event Propagation', () => {
 test.describe('Tag Context Menu - Last tag in a short window', () => {
   test.use({ viewport: { width: 1024, height: 600 } });
 
-  const tagName = 'v1.0.2';
+  const tagName = 'v1.0.3';
   const tags = ['v1.0.1', 'v1.0.2', tagName].map((name) => ({
     name,
     targetOid: 'abc123',
