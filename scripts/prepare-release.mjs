@@ -2,6 +2,8 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline/promises';
+import prompts from 'prompts';
+import semver from 'semver';
 
 const cwd = join(import.meta.dirname, '..');
 const files = ['package.json', 'package-lock.json', 'src-tauri/Cargo.toml',
@@ -18,9 +20,27 @@ async function ask(question) {
   }
 }
 
+const increments = ['patch', 'minor', 'major'];
+
+async function chooseIncrement() {
+  if (!process.stdin.isTTY || !process.stdout.isTTY) {
+    return ask('Incremento da versão (patch/minor/major)? ');
+  }
+  const { version } = JSON.parse(readFileSync(join(cwd, 'package.json'), 'utf8'));
+  const { bump } = await prompts({
+    type: 'select',
+    name: 'bump',
+    message: `Qual será a próxima versão após ${version}?`,
+    hint: 'Use ↑ e ↓ para escolher e Enter para confirmar.',
+    choices: increments.map((value) => ({ value, title: `${value} → ${semver.inc(version, value)}` })),
+  });
+  return bump;
+}
+
 async function prepare() {
-  const bump = process.argv[2] ?? await ask('Incremento da versão (patch/minor/major)? ');
-  if (!['patch', 'minor', 'major'].includes(bump) || process.argv.length > 3) {
+  const bump = process.argv[2] ?? await chooseIncrement();
+  if (bump === undefined) return;
+  if (!increments.includes(bump) || process.argv.length > 3) {
     throw new Error('Use npm run release:prepare -- patch, minor ou major.');
   }
 
