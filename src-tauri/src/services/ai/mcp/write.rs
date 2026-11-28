@@ -36,7 +36,7 @@ pub const CONSENT_REQUEST_EVENT: &str = "mcp-consent-request";
 pub const CONSENT_RESOLVED_EVENT: &str = "mcp-consent-resolved";
 pub const WRITE_APPLIED_EVENT: &str = "mcp-write-applied";
 
-pub const WRITE_TOOLS: [&str; 11] = [
+pub const WRITE_TOOLS: [&str; 16] = [
     "stage",
     "commit",
     "create_branch",
@@ -48,6 +48,11 @@ pub const WRITE_TOOLS: [&str; 11] = [
     "discard_changes",
     "apply_stash",
     "drop_stash",
+    "delete_branch",
+    "create_tag",
+    "delete_tag",
+    "reset",
+    "revert_commit",
 ];
 
 pub fn is_write_tool(name: &str) -> bool {
@@ -415,6 +420,27 @@ enum Action {
     },
     DropStash {
         index: usize,
+    },
+    DeleteBranch {
+        name: String,
+        force: bool,
+    },
+    CreateTag {
+        name: String,
+        target_oid: String,
+        target_ref: Option<String>,
+        message: Option<String>,
+    },
+    DeleteTag {
+        name: String,
+    },
+    Reset {
+        target_oid: String,
+        mode: String,
+    },
+    RevertCommit {
+        sha: String,
+        mainline: Option<u32>,
     },
 }
 
@@ -792,6 +818,186 @@ pub fn prepare(tool: &str, args: &Value, repo_path: &str) -> Result<PreparedWrit
             let details = vec![format!("Message: {message}")];
             (None, summary, details, Action::DropStash { index })
         }
+        "delete_branch" => {
+            let name = required(args, "name")?.to_string();
+            validate_branch_name(&name)?;
+            let branch = repo
+                .find_branch(&name, git2::BranchType::Local)
+                .map_err(|_| format!("No local branch named {name}"))?;
+            let force = args.get("force").and_then(Value::as_bool).unwrap_or(false);
+            // Same rule as the app's delete command: a preventDeletion branch
+            // rule holds even when force is asked for.
+            let rules = crate::commands::branch_rules::load_rules(Path::new(repo_path))
+                .map_err(|e| e.to_string())?;
+            if crate::commands::branch_rules::is_deletion_prevented(&rules, &name) {
+                return Err(format!(
+                    "Branch \"{name}\" is protected by a branch rule and cannot be deleted. \
+                     Remove the rule first."
+                ));
+            }
+            let mut details = Vec::new();
+            let merged = if force {
+                details.push("Branch has unmerged commits; they become unreachable".to_string());
+                true
+            } else {
+                // Mirrors `git branch -d`: an unborn HEAD is "not fully merged".
+                let head = repo.head().map_err(|_| {
+                    format!("Branch {name} is not fully merged. Use force to delete anyway.")
+                })?;
+                let head_oid = head.target().ok_or_else(|| {
+                    format!("Branch {name} is not fully merged. Use force to delete anyway.")
+                })?;
+                let branch_oid = branch.get().target().ok_or_else(|| {
+                    format!("Branch {name} is not fully merged. Use force to delete anyway.")
+                })?;
+                match crate::services::merge_detection::detect_merge_kind(
+                    &repo, branch_oid, head_oid,
+                ) {
+                    Ok(Some(_)) => true,
+                    Ok(None) => false,
+                    Err(e) => return Err(e.to_string()),
+                }
+            };
+            if !force && !merged {
+                return Err(format!(
+                    "Branch {name} is not fully merged. Use force to delete anyway."
+                ));
+            }
+            let summary = format!(
+                "{} branch {name}",
+                if force { "Force delete" } else { "Delete" }
+            );
+            (Some(name.clone()), summary, details, Action::DeleteBranch { name, force })
+        }
+        "create_tag" => {
+            let name = required(args, "name")?.to_string();
+            // Tag names follow the same ref-name rules as branch names.
+            if !git2::Branch::name_is_valid(&name).unwrap_or(false) {
+                return Err(format!("Invalid tag name: {name}"));
+            }
+            if repo
+                .find_reference(&format!("refs/tags/{name}"))
+                .is_ok()
+            {
+                return Err(format!("Tag already exists: {name}"));
+            }
+            let target = str_arg(args, "target").map(str::to_string);
+            let spec = target.clone().unwrap_or_else(|| "HEAD".to_string());
+            let commit = resolve_commit(&repo, Some(&spec))?;
+            let target_oid = commit.id().to_string();
+            let message = str_arg(args, "message").map(str::to_string);
+            let kind = if message.is_some() {
+                "annotated"
+            } else {
+                "lightweight"
+            };
+            let summary = format!("Create {kind} tag {name} on {spec} @ {target_oid}");
+            let details = vec![format!("Points at commit {target_oid}")];
+            (
+                None,
+                summary,
+                details,
+                Action::CreateTag {
+                    name,
+                    target_oid,
+                    target_ref: target,
+                    message,
+                },
+            )
+        }
+        "delete_tag" => {
+            let name = required(args, "name")?.to_string();
+            repo.find_reference(&format!("refs/tags/{name}"))
+                .map_err(|_| format!("No tag named {name}"))?;
+            let summary = format!("Delete tag {name} (this cannot be undone)");
+            (None, summary, Vec::new(), Action::DeleteTag { name })
+        }
+        "reset" => {
+            let target_ref = required(args, "target_ref")?.to_string();
+            // Same refusal as the app's reset: an in-progress merge, rebase,
+            // cherry-pick or revert would be silently destroyed.
+            crate::commands::reflog::ensure_resettable(&repo).map_err(|e| e.to_string())?;
+            let commit = resolve_commit(&repo, Some(&target_ref))?;
+            let mode = required(args, "mode")?.to_string();
+            let summary = match mode.as_str() {
+                "soft" => format!("Reset HEAD to {target_ref} @ {}", commit.id()),
+                "mixed" => format!("Reset HEAD and index to {target_ref} @ {}", commit.id()),
+                "hard" => format!(
+                    "Reset HEAD, index and working tree to {target_ref} @ {} (uncommitted work is lost)",
+                    commit.id()
+                ),
+                other => {
+                    return Err(format!("Invalid reset mode: {other}. Use 'soft', 'mixed', or 'hard'"))
+                }
+            };
+            let details = vec![format!("Mode: {mode}")];
+            (
+                current.clone(),
+                summary,
+                details,
+                Action::Reset {
+                    target_oid: commit.id().to_string(),
+                    mode,
+                },
+            )
+        }
+        "revert_commit" => {
+            if repo.state() != git2::RepositoryState::Clean {
+                return Err("Another operation is in progress".to_string());
+            }
+            // Revert applies its result to the index: staged changes would be
+            // silently folded into the revert commit.
+            let head_tree = repo
+                .head()
+                .map_err(|_| "No commits to revert".to_string())?
+                .peel_to_tree()
+                .map_err(|e| e.to_string())?;
+            let mut index = repo.index().map_err(|e| e.to_string())?;
+            let index_tree_id = index.write_tree().map_err(|e| e.to_string())?;
+            if index_tree_id != head_tree.id() {
+                return Err(
+                    "The index has staged changes. Commit or unstage them before reverting."
+                        .to_string(),
+                );
+            }
+            let sha = required(args, "sha")?.to_string();
+            let oid = git2::Oid::from_str(&sha)
+                .map_err(|_| format!("Invalid commit SHA: {sha}"))?;
+            let commit = repo
+                .find_commit(oid)
+                .map_err(|_| format!("Commit not found: {sha}"))?;
+            if commit.parent_count() == 0 {
+                return Err("Cannot revert a root commit".to_string());
+            }
+            let mut mainline = args.get("mainline").and_then(Value::as_u64).map(|v| v as u32);
+            if commit.parent_count() > 1 {
+                match mainline {
+                    Some(m) if m >= 1 && m <= commit.parent_count() as u32 => {}
+                    Some(m) => {
+                        return Err(format!(
+                            "Mainline {m} is out of range: commit {sha} has {} parents.",
+                            commit.parent_count()
+                        ))
+                    }
+                    None => {
+                        return Err(format!(
+                            "Commit {sha} is a merge; pass mainline (1 or 2) to choose which parent to revert relative to."
+                        ))
+                    }
+                }
+            } else {
+                mainline = None;
+            }
+            let summary = commit.summary().ok().flatten().unwrap_or("").to_string();
+            let summary = format!("Revert \"{summary}\" ({sha})");
+            let details = vec![format!("Creates a new commit undoing {sha}")];
+            (
+                current.clone(),
+                summary,
+                details,
+                Action::RevertCommit { sha, mainline },
+            )
+        }
         other => return Err(format!("Unknown write tool: {other}")),
     };
     Ok(PreparedWrite {
@@ -1030,6 +1236,174 @@ pub fn execute(prepared: &PreparedWrite) -> Result<Value, String> {
             repo.stash_drop(*index).map_err(err)?;
             Ok(json!({ "dropped": index }))
         }
+        Action::DeleteBranch { name, force } => {
+            let mut branch = repo
+                .find_branch(name, git2::BranchType::Local)
+                .map_err(err)?;
+            // The force flag is re-checked in execute: prepare refuses an
+            // unmerged branch without force, and consent cannot upgrade it.
+            if !*force {
+                let head = repo.head().ok();
+                let merged = head
+                    .as_ref()
+                    .and_then(|h| h.target())
+                    .and_then(|head_oid| branch.get().target().map(|b| (b, head_oid)))
+                    .and_then(|(branch_oid, head_oid)| {
+                        crate::services::merge_detection::detect_merge_kind(
+                            &repo, branch_oid, head_oid,
+                        )
+                        .ok()
+                        .flatten()
+                    })
+                    .is_some();
+                if head.is_none() || !merged {
+                    return Err(format!(
+                        "Branch {name} is not fully merged. Use force to delete anyway."
+                    ));
+                }
+            }
+            branch.delete().map_err(err)?;
+            Ok(json!({ "deleted": name, "forced": force }))
+        }
+        Action::CreateTag {
+            name,
+            target_oid,
+            target_ref: _,
+            message,
+        } => {
+            // Re-resolve the target: prepare captured the oid for the preview,
+            // and execute must point the tag at the commit that exists now.
+            let oid = git2::Oid::from_str(target_oid)
+                .map_err(|_| format!("Invalid target: {target_oid}"))?;
+            let commit = repo.find_commit(oid).map_err(err)?;
+            match message {
+                Some(msg) => {
+                    let sig = repo.signature().map_err(err)?;
+                    let tag_oid = repo
+                        .tag(name, commit.as_object(), &sig, msg, false)
+                        .map_err(err)?;
+                    Ok(json!({ "tag": name, "annotated": true, "oid": tag_oid.to_string(), "target": target_oid }))
+                }
+                None => {
+                    let oid = repo
+                        .tag_lightweight(name, commit.as_object(), false)
+                        .map_err(err)?;
+                    Ok(json!({ "tag": name, "annotated": false, "oid": oid.to_string(), "target": target_oid }))
+                }
+            }
+        }
+        Action::DeleteTag { name } => {
+            repo.tag_delete(name).map_err(err)?;
+            Ok(json!({ "deleted": name }))
+        }
+        Action::Reset { target_oid, mode } => {
+            let reset_type = match mode.as_str() {
+                "soft" => git2::ResetType::Soft,
+                "mixed" => git2::ResetType::Mixed,
+                "hard" => git2::ResetType::Hard,
+                other => {
+                    return Err(format!("Invalid reset mode: {other}. Use 'soft', 'mixed', or 'hard'"))
+                }
+            };
+            let oid = git2::Oid::from_str(target_oid)
+                .map_err(|_| format!("Invalid target: {target_oid}"))?;
+            let commit = repo.find_commit(oid).map_err(err)?;
+            repo.reset(commit.as_object(), reset_type, None).map_err(err)?;
+            Ok(json!({ "reset": target_oid, "mode": mode }))
+        }
+        Action::RevertCommit { sha, mainline } => {
+            // Defensive re-checks of the state prepare validated.
+            if repo.state() != git2::RepositoryState::Clean {
+                return Err("Another operation is in progress".to_string());
+            }
+            let head_tree = repo
+                .head()
+                .map_err(|_| "No commits to revert".to_string())?
+                .peel_to_tree()
+                .map_err(err)?;
+            let mut index = repo.index().map_err(err)?;
+            let index_tree_id = index.write_tree().map_err(err)?;
+            if index_tree_id != head_tree.id() {
+                return Err(
+                    "The index has staged changes. Commit or unstage them before reverting."
+                        .to_string(),
+                );
+            }
+            let oid = git2::Oid::from_str(sha)
+                .map_err(|_| format!("Invalid commit SHA: {sha}"))?;
+            let commit = repo.find_commit(oid).map_err(err)?;
+
+            let mut opts = git2::RevertOptions::new();
+            if commit.parent_count() > 1 {
+                // Merge commits need the caller to pick a mainline parent.
+                let m = mainline.ok_or_else(|| {
+                    format!("Commit {sha} is a merge; pass mainline (1 or 2).")
+                })?;
+                opts.mainline(m);
+            }
+            let mut checkout = git2::build::CheckoutBuilder::new();
+            checkout
+                .allow_conflicts(true)
+                .conflict_style_merge(true);
+            opts.checkout_builder(checkout);
+
+            repo.revert(&commit, Some(&mut opts)).map_err(err)?;
+
+            let mut index = repo.index().map_err(err)?;
+            if index.has_conflicts() {
+                // One path occupies up to three conflict stages; a
+                // delete/modify conflict has no `our` or no `their` entry, so
+                // all three have to be tried — the same naming the merge
+                // command uses.
+                let mut files: Vec<String> = Vec::new();
+                for conflict in index.conflicts().map_err(err)? {
+                    let conflict = conflict.map_err(err)?;
+                    if let Some(entry) = conflict.our.or(conflict.their).or(conflict.ancestor) {
+                        let p = String::from_utf8_lossy(&entry.path).into_owned();
+                        if !files.contains(&p) {
+                            files.push(p);
+                        }
+                    }
+                }
+                return Err(format!(
+                    "Revert created conflicts in {}. Resolve them in Gitduda.",
+                    files.join(", ")
+                ));
+            }
+
+            let head = repo
+                .head()
+                .map_err(err)?
+                .peel_to_commit()
+                .map_err(err)?;
+            let tree_oid = index.write_tree().map_err(err)?;
+            // A revert that changes nothing is empty; stop like git does.
+            if tree_oid == head.tree_id() {
+                return Err(format!(
+                    "Reverting {sha} would produce no changes (it is already reverted)"
+                ));
+            }
+            let tree = repo.find_tree(tree_oid).map_err(err)?;
+            let sig = repo.signature().map_err(err)?;
+            let summary = commit.summary().ok().flatten().unwrap_or("").to_string();
+            let revert_message = if commit.parent_count() > 1 {
+                let m = mainline.unwrap_or(1);
+                let parent_oid = commit
+                    .parent((m - 1) as usize)
+                    .map(|p| p.id().to_string())
+                    .unwrap_or_default();
+                format!(
+                    "Revert \"{summary}\"\n\nThis reverts commit {sha}, reversing\nchanges made to {parent_oid}."
+                )
+            } else {
+                format!("Revert \"{summary}\"\n\nThis reverts commit {sha}.")
+            };
+            let new_oid = repo
+                .commit(Some("HEAD"), &sig, &sig, &revert_message, &tree, &[&head])
+                .map_err(err)?;
+            repo.cleanup_state().map_err(err)?;
+            Ok(json!({ "commit": new_oid.to_string(), "reverted": sha }))
+        }
     }
 }
 
@@ -1112,6 +1486,36 @@ pub fn write_tool_list() -> Vec<McpTool> {
             "Delete a stash entry permanently.",
             json!({ "repo_path": repo_prop(), "index": { "type": "integer", "description": "Stash index (default 0)" } }),
             vec!["repo_path"],
+        ),
+        tool(
+            "delete_branch",
+            "Delete a local branch. Without force, refuses a branch with unmerged commits.",
+            json!({ "repo_path": repo_prop(), "name": { "type": "string" }, "force": { "type": "boolean", "description": "Delete even if the branch has unmerged commits (default false)" } }),
+            vec!["repo_path", "name"],
+        ),
+        tool(
+            "create_tag",
+            "Create a tag pointing at a target ref — a branch open in Gitduda, HEAD, a commit SHA or another tag. With a message the tag is annotated, otherwise lightweight.",
+            json!({ "repo_path": repo_prop(), "name": { "type": "string" }, "target": { "type": "string", "description": "Ref to tag (commit SHA, branch, tag; default HEAD)" }, "message": { "type": "string", "description": "Annotated tag message; omit for a lightweight tag" } }),
+            vec!["repo_path", "name"],
+        ),
+        tool(
+            "delete_tag",
+            "Delete a local tag permanently.",
+            json!({ "repo_path": repo_prop(), "name": { "type": "string" } }),
+            vec!["repo_path", "name"],
+        ),
+        tool(
+            "reset",
+            "Reset the current branch to a ref (soft keeps changes staged, mixed unstages them, hard also rewrites the working tree).",
+            json!({ "repo_path": repo_prop(), "target_ref": { "type": "string", "description": "Ref to reset to (commit SHA, branch, tag)" }, "mode": { "type": "string", "enum": ["soft", "mixed", "hard"] } }),
+            vec!["repo_path", "target_ref", "mode"],
+        ),
+        tool(
+            "revert_commit",
+            "Create a new commit that undoes a previous commit. Merge commits need a mainline parent.",
+            json!({ "repo_path": repo_prop(), "sha": { "type": "string" }, "mainline": { "type": "integer", "description": "1-based parent to revert relative to, required for merge commits" } }),
+            vec!["repo_path", "sha"],
         ),
     ]
 }
@@ -1581,6 +1985,209 @@ mod tests {
                 "{bad}"
             );
         }
+    }
+
+    #[test]
+    fn branch_tag_reset_and_revert_execute() {
+        let t = TestRepo::with_initial_commit();
+        let root = t.head_oid();
+
+        // delete_branch: refuses an unmerged branch without force
+        t.create_branch("feature");
+        t.checkout_branch("feature");
+        t.create_commit("Feature work", &[("feature.txt", "f\n")]);
+        t.checkout_branch("main");
+        let err = prepare(
+            "delete_branch",
+            &json!({ "name": "feature" }),
+            &t.path_str(),
+        )
+        .unwrap_err();
+        assert!(err.contains("not fully merged"));
+
+        // ... and force deletes it, naming the unmerged commits in the preview
+        let d = prepare(
+            "delete_branch",
+            &json!({ "name": "feature", "force": true }),
+            &t.path_str(),
+        )
+        .unwrap();
+        assert_eq!(d.branch.as_deref(), Some("feature"));
+        assert!(d
+            .details
+            .iter()
+            .any(|x| x.contains("unmerged")));
+        execute(&d).unwrap();
+        assert!(t
+            .repo()
+            .find_branch("feature", git2::BranchType::Local)
+            .is_err());
+
+        // A branch at HEAD's tip deletes without force (`git branch -d`)
+        t.create_branch("merged");
+        t.checkout_branch("merged");
+        t.checkout_branch("main");
+        let d2 = prepare(
+            "delete_branch",
+            &json!({ "name": "merged" }),
+            &t.path_str(),
+        )
+        .unwrap();
+        execute(&d2).unwrap();
+        assert!(t
+            .repo()
+            .find_branch("merged", git2::BranchType::Local)
+            .is_err());
+
+        // A preventDeletion branch rule holds even with force
+        let rules_path =
+            crate::utils::app_paths::repo_dir(&t.path.join(".git")).join("branch_rules.json");
+        std::fs::create_dir_all(rules_path.parent().unwrap()).unwrap();
+        std::fs::write(
+            &rules_path,
+            r#"[{ "pattern": "protected/*", "preventDeletion": true, "preventForcePush": false, "requirePullRequest": false, "preventDirectPush": false }]"#,
+        )
+        .unwrap();
+        t.create_branch("protected/main");
+        assert!(
+            prepare(
+                "delete_branch",
+                &json!({ "name": "protected/main", "force": true }),
+                &t.path_str()
+            )
+            .unwrap_err()
+            .contains("branch rule")
+        );
+        std::fs::remove_file(&rules_path).unwrap();
+
+        // create_tag: annotated from a branch target, lightweight from HEAD
+        let at = prepare(
+            "create_tag",
+            &json!({ "name": "v1.1", "target": "main", "message": "release notes" }),
+            &t.path_str(),
+        )
+        .unwrap();
+        assert!(at.summary.contains("annotated tag v1.1 on main"));
+        execute(&at).unwrap();
+        {
+            let repo = t.repo();
+            let ref_oid = repo.refname_to_id("refs/tags/v1.1").unwrap();
+            let tag = repo.find_tag(ref_oid).unwrap();
+            assert_eq!(
+                tag.message().ok().flatten().unwrap_or(""),
+                "release notes"
+            );
+        }
+        let lw = prepare("create_tag", &json!({ "name": "v2.0" }), &t.path_str()).unwrap();
+        assert!(lw.summary.contains("lightweight tag v2.0 on HEAD"));
+        execute(&lw).unwrap();
+        assert!(
+            prepare("create_tag", &json!({ "name": "v1.1" }), &t.path_str())
+                .unwrap_err()
+                .contains("already exists")
+        );
+        assert!(
+            prepare("create_tag", &json!({ "name": "-bad" }), &t.path_str())
+                .unwrap_err()
+                .contains("Invalid tag name")
+        );
+
+        // delete_tag
+        let dt = prepare("delete_tag", &json!({ "name": "v1.1" }), &t.path_str()).unwrap();
+        execute(&dt).unwrap();
+        assert!(t.repo().refname_to_id("refs/tags/v1.1").is_err());
+        assert!(
+            prepare("delete_tag", &json!({ "name": "nope" }), &t.path_str())
+                .unwrap_err()
+                .contains("No tag")
+        );
+
+        // reset: mixed moves HEAD back and keeps the files; hard restores the
+        // tracked working tree (untracked files survive, like git reset --hard)
+        let first = t.head_oid();
+        t.create_commit("Second", &[("b.txt", "b\n")]);
+        std::fs::write(t.path.join("README.md"), "hard test").unwrap();
+        let r = prepare(
+            "reset",
+            &json!({ "target_ref": first.to_string(), "mode": "mixed" }),
+            &t.path_str(),
+        )
+        .unwrap();
+        assert_eq!(r.branch.as_deref(), Some("main"));
+        execute(&r).unwrap();
+        assert_eq!(t.head_oid(), first);
+        assert!(t.path.join("b.txt").exists());
+        let rh = prepare(
+            "reset",
+            &json!({ "target_ref": first.to_string(), "mode": "hard" }),
+            &t.path_str(),
+        )
+        .unwrap();
+        execute(&rh).unwrap();
+        assert_eq!(
+            std::fs::read_to_string(t.path.join("README.md")).unwrap(),
+            "# Test Repo"
+        );
+        assert!(t.path.join("b.txt").exists());
+        assert!(
+            prepare(
+                "reset",
+                &json!({ "target_ref": "HEAD", "mode": "softish" }),
+                &t.path_str()
+            )
+            .unwrap_err()
+            .contains("Invalid reset mode")
+        );
+
+        // revert_commit: creates a new commit undoing the change
+        let second = t.create_commit("Add feature file", &[("c.txt", "c\n")]);
+        let rev = prepare(
+            "revert_commit",
+            &json!({ "sha": second.to_string() }),
+            &t.path_str(),
+        )
+        .unwrap();
+        assert_eq!(rev.branch.as_deref(), Some("main"));
+        execute(&rev).unwrap();
+        assert!(!t.path.join("c.txt").exists());
+        {
+            let repo = t.repo();
+            let head = repo
+                .head()
+                .unwrap()
+                .peel_to_commit()
+                .unwrap();
+            assert!(head
+                .message()
+                .unwrap_or("")
+                .starts_with("Revert \"Add feature file\""));
+        }
+
+        // A root commit cannot be reverted
+        assert!(
+            prepare(
+                "revert_commit",
+                &json!({ "sha": root.to_string() }),
+                &t.path_str()
+            )
+            .unwrap_err()
+            .contains("root commit")
+        );
+    }
+
+    #[test]
+    fn revert_refuses_staged_changes() {
+        let t = TestRepo::with_initial_commit();
+        let second = t.create_commit("Second", &[("b.txt", "b\n")]);
+        t.create_file("d.txt", "d\n");
+        t.stage_file("d.txt");
+        let err = prepare(
+            "revert_commit",
+            &json!({ "sha": second.to_string() }),
+            &t.path_str(),
+        )
+        .unwrap_err();
+        assert!(err.contains("staged changes"));
     }
 
     #[test]

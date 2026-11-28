@@ -25,6 +25,9 @@
 //!   `git credential-manager --version` and `git config --get
 //!   credential.helper`.
 //! - `merge.rs` — `preview_rebase`.
+//! - `tools.rs` (services/ai/mcp) — the MCP server's `get_worktrees` tool,
+//!   `git worktree list --porcelain`, parsed like the worktree command's own
+//!   listing.
 //!
 //! Every one of those but `merge.rs` is a pure READ that parses its own stdout
 //! rather than showing it and changes nothing. Most could not reach the panel
