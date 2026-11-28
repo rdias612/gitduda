@@ -2284,7 +2284,7 @@ dependencies = [
 
 [[package]]
 name = "gitduda"
-version = "1.0.3"
+version = "1.0.2"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -6863,7 +6863,7 @@ checksum = "8e28f89b80c87b8fb0cf04ab448d5dd0dd0ade2f8891bae878de66a75a28600e"
 
 [[package]]
 name = "typeid"
-version = "1.0.3"
+version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bc7d623258602320d5c55d1bc22793b57daff0ec7efc270ea7d55ce1d5f5471c"
 
