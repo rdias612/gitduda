@@ -24,10 +24,10 @@ describe('agent-task.service', () => {
   });
 
   it('references the prompt variable instead of embedding the prompt', () => {
-    expect(agentCommandLine(claude, 'posix')).to.equal('claude "$GITNADO_TASK_PROMPT"');
-    expect(agentCommandLine(claude, 'cmd')).to.equal('claude "%GITNADO_TASK_PROMPT%"');
-    expect(agentCommandLine(claude, 'powershell')).to.equal('claude $env:GITNADO_TASK_PROMPT');
-    expect(agentCommandLine(gemini, 'posix')).to.equal('gemini -i "$GITNADO_TASK_PROMPT"');
+    expect(agentCommandLine(claude, 'posix')).to.equal('claude "$GITDUDA_TASK_PROMPT"');
+    expect(agentCommandLine(claude, 'cmd')).to.equal('claude "%GITDUDA_TASK_PROMPT%"');
+    expect(agentCommandLine(claude, 'powershell')).to.equal('claude $env:GITDUDA_TASK_PROMPT');
+    expect(agentCommandLine(gemini, 'posix')).to.equal('gemini -i "$GITDUDA_TASK_PROMPT"');
   });
 
   it('puts the issue at the top of the prompt', () => {

@@ -54,7 +54,7 @@ export function stdioSnippet(port: number, token: string, program: string, args:
         gitduda: {
           command: program,
           args,
-          env: { GITNADO_MCP_TOKEN: token, GITNADO_MCP_URL: mcpUrl(port) },
+          env: { GITDUDA_MCP_TOKEN: token, GITDUDA_MCP_URL: mcpUrl(port) },
         },
       },
     },

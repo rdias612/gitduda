@@ -5,12 +5,12 @@
  * that starts an agent CLI in the embedded terminal.
  *
  * The task text never goes into a command line. It is handed to the shell in
- * the GITNADO_TASK_PROMPT environment variable and the command only names the
+ * the GITDUDA_TASK_PROMPT environment variable and the command only names the
  * variable, so no prompt — quotes, `$(...)`, `;` — can be interpreted by the
  * shell, on any platform.
  */
 
-export const TASK_PROMPT_ENV = 'GITNADO_TASK_PROMPT';
+export const TASK_PROMPT_ENV = 'GITDUDA_TASK_PROMPT';
 
 export interface AgentCli {
   id: string;

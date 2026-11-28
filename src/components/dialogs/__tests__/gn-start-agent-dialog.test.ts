@@ -132,9 +132,9 @@ describe('gn-start-agent-dialog', () => {
     });
     const spawn = calls('pty_spawn')[0].args as { options: { cwd: string; env: Record<string, string> } };
     expect(spawn.options.cwd).to.equal('/home/u/code/app.worktrees/proj-7-fix-login-rm-rf-whoami');
-    expect(spawn.options.env.GITNADO_TASK_PROMPT).to.equal('Issue: PROJ-7\n\nFix "login"; rm -rf $(whoami)');
+    expect(spawn.options.env.GITDUDA_TASK_PROMPT).to.equal('Issue: PROJ-7\n\nFix "login"; rm -rf $(whoami)');
     // The prompt is never typed into the shell, only the variable name.
-    expect(calls('pty_write')[0].args).to.deep.equal({ id: 1, data: 'claude "$GITNADO_TASK_PROMPT"\r' });
+    expect(calls('pty_write')[0].args).to.deep.equal({ id: 1, data: 'claude "$GITDUDA_TASK_PROMPT"\r' });
 
     expect(events[0].detail).to.deep.equal({ repositoryPath: REPO });
     expect(dialogs.isOpen('terminalPanel')).to.be.true;
@@ -152,7 +152,7 @@ describe('gn-start-agent-dialog', () => {
     await type(el, '.task-input', 'Task');
     $(el, '.start-btn').click();
     await waitUntil(() => calls('pty_write').length > 0);
-    expect((calls('pty_write')[0].args as { data: string }).data).to.equal('gemini -i "%GITNADO_TASK_PROMPT%"\r');
+    expect((calls('pty_write')[0].args as { data: string }).data).to.equal('gemini -i "%GITDUDA_TASK_PROMPT%"\r');
   });
 
   it('keeps the dialog open with the reason when the worktree cannot be created', async () => {

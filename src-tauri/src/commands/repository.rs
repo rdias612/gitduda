@@ -219,8 +219,8 @@ fn build_clone_command(
         // `x-token-auth` where it does not.
         let (username, password) =
             crate::services::credentials_service::token_credential_for(url, None, token_value);
-        cmd.env("GITNADO_CLONE_USERNAME", username);
-        cmd.env("GITNADO_CLONE_TOKEN", password);
+        cmd.env("GITDUDA_CLONE_USERNAME", username);
+        cmd.env("GITDUDA_CLONE_TOKEN", password);
         // Two entries: the empty helper resets the list, so the token the
         // caller gave us wins outright the way in-URL credentials did. Without
         // the reset, a system helper holding a stale credential for the same
@@ -236,7 +236,7 @@ fn build_clone_command(
         // is as private as the password beside it.
         cmd.env(
             "GIT_CONFIG_VALUE_1",
-            "!f() { echo \"username=$GITNADO_CLONE_USERNAME\"; echo \"password=$GITNADO_CLONE_TOKEN\"; }; f",
+            "!f() { echo \"username=$GITDUDA_CLONE_USERNAME\"; echo \"password=$GITDUDA_CLONE_TOKEN\"; }; f",
         );
     }
 
@@ -1944,7 +1944,7 @@ mod tests {
         );
 
         assert_eq!(
-            env_of(&cmd, "GITNADO_CLONE_TOKEN"),
+            env_of(&cmd, "GITDUDA_CLONE_TOKEN"),
             Some("ghp_s3cret".to_string())
         );
         assert_eq!(env_of(&cmd, "GIT_CONFIG_COUNT"), Some("2".to_string()));
@@ -1961,17 +1961,17 @@ mod tests {
         );
         let helper = env_of(&cmd, "GIT_CONFIG_VALUE_1").expect("helper must be configured");
         assert!(
-            helper.contains("$GITNADO_CLONE_TOKEN"),
+            helper.contains("$GITDUDA_CLONE_TOKEN"),
             "helper must read the token from the environment: {}",
             helper
         );
         assert!(
-            helper.contains("username=$GITNADO_CLONE_USERNAME"),
+            helper.contains("username=$GITDUDA_CLONE_USERNAME"),
             "helper must read the username from the environment: {}",
             helper
         );
         assert_eq!(
-            env_of(&cmd, "GITNADO_CLONE_USERNAME"),
+            env_of(&cmd, "GITDUDA_CLONE_USERNAME"),
             Some("git".to_string()),
             "a plain token authenticates as `git`"
         );
@@ -1995,11 +1995,11 @@ mod tests {
         );
 
         assert_eq!(
-            env_of(&cmd, "GITNADO_CLONE_USERNAME"),
+            env_of(&cmd, "GITDUDA_CLONE_USERNAME"),
             Some("alice".to_string())
         );
         assert_eq!(
-            env_of(&cmd, "GITNADO_CLONE_TOKEN"),
+            env_of(&cmd, "GITDUDA_CLONE_TOKEN"),
             Some("app-pass".to_string())
         );
         let args = args_of(&cmd);
@@ -2027,11 +2027,11 @@ mod tests {
         );
 
         assert_eq!(
-            env_of(&cmd, "GITNADO_CLONE_USERNAME"),
+            env_of(&cmd, "GITDUDA_CLONE_USERNAME"),
             Some("x-token-auth".to_string())
         );
         assert_eq!(
-            env_of(&cmd, "GITNADO_CLONE_TOKEN"),
+            env_of(&cmd, "GITDUDA_CLONE_TOKEN"),
             Some("oauth-tok".to_string())
         );
     }
@@ -2059,7 +2059,7 @@ mod tests {
             args
         );
         assert_eq!(
-            env_of(&cmd, "GITNADO_CLONE_TOKEN"),
+            env_of(&cmd, "GITDUDA_CLONE_TOKEN"),
             Some("to/ken@we:ird".to_string())
         );
     }
@@ -2086,8 +2086,8 @@ mod tests {
         // nothing to do with credentials. The guard's subject is the
         // credential.helper override, and that must still be absent.
         for key in [
-            "GITNADO_CLONE_TOKEN",
-            "GITNADO_CLONE_USERNAME",
+            "GITDUDA_CLONE_TOKEN",
+            "GITDUDA_CLONE_USERNAME",
             "GIT_CONFIG_COUNT",
             "GIT_CONFIG_KEY_0",
             "GIT_CONFIG_VALUE_0",
@@ -2115,8 +2115,8 @@ mod tests {
             false,
             Some("ghp_s3cret"),
         );
-        assert_eq!(env_of(&ssh, "GITNADO_CLONE_TOKEN"), None);
-        assert_eq!(env_of(&ssh, "GITNADO_CLONE_USERNAME"), None);
+        assert_eq!(env_of(&ssh, "GITDUDA_CLONE_TOKEN"), None);
+        assert_eq!(env_of(&ssh, "GITDUDA_CLONE_USERNAME"), None);
         assert_eq!(env_of(&ssh, "GIT_CONFIG_COUNT"), None);
         assert!(args_of(&ssh).contains(&"ssh://git@host/o/r.git".to_string()));
     }

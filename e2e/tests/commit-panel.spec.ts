@@ -21,7 +21,7 @@ type CommitPanelElement = HTMLElement & {
 
 type WindowWithCommitPanelGlobals = Window & {
   __REFRESH_RECEIVED__?: boolean;
-  __GITNADO_STORES__?: {
+  __GITDUDA_STORES__?: {
     settingsStore: {
       getState: () => { setOfflineMode: (offline: boolean) => void };
     };
@@ -784,7 +784,7 @@ test.describe('Commit Panel - UI Outcome Verification', () => {
     await expect(page.locator('gn-commit-panel .generate-btn')).toHaveAttribute('title', 'Generate commit message using AI');
 
     await page.evaluate(() => {
-      (window as unknown as WindowWithCommitPanelGlobals).__GITNADO_STORES__?.settingsStore.getState().setOfflineMode(true);
+      (window as unknown as WindowWithCommitPanelGlobals).__GITDUDA_STORES__?.settingsStore.getState().setOfflineMode(true);
     });
 
     await startCommandCaptureWithMocks(page, {
@@ -823,7 +823,7 @@ test.describe('Commit Panel - UI Outcome Verification', () => {
     });
 
     await page.evaluate(() => {
-      (window as unknown as WindowWithCommitPanelGlobals).__GITNADO_STORES__?.settingsStore.getState().setOfflineMode(true);
+      (window as unknown as WindowWithCommitPanelGlobals).__GITDUDA_STORES__?.settingsStore.getState().setOfflineMode(true);
     });
 
     await page.locator('gn-commit-panel').evaluate(async (el: CommitPanelElement) => {
@@ -868,11 +868,11 @@ test.describe('Commit Panel - UI Outcome Verification', () => {
     await page.evaluate(() => {
       (
         window as unknown as {
-          __GITNADO_STORES__: {
+          __GITDUDA_STORES__: {
             settingsStore: { getState(): { setOfflineMode(on: boolean): void } };
           };
         }
-      ).__GITNADO_STORES__.settingsStore.getState().setOfflineMode(true);
+      ).__GITDUDA_STORES__.settingsStore.getState().setOfflineMode(true);
     });
 
     await page.locator('gn-commit-panel').evaluate(

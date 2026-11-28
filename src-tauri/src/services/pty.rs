@@ -553,10 +553,10 @@ mod tests {
         let (sink, rx) = sink();
         let mut o = opts(
             dir.path(),
-            &["/bin/sh", "-c", "printf '[%s]' \"$GITNADO_TASK_PROMPT\""],
+            &["/bin/sh", "-c", "printf '[%s]' \"$GITDUDA_TASK_PROMPT\""],
         );
         let tricky = "fix it; rm -rf / $(whoami) \"quoted\" 'single'";
-        o.env = Some([("GITNADO_TASK_PROMPT".to_string(), tricky.to_string())].into());
+        o.env = Some([("GITDUDA_TASK_PROMPT".to_string(), tricky.to_string())].into());
         let info = registry.spawn(o, sink).unwrap();
         let (out, _) = drain(&rx, info.id);
         assert!(out.contains(&format!("[{tricky}]")), "output: {out:?}");

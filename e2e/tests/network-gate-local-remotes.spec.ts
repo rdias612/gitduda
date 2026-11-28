@@ -22,7 +22,7 @@ import {
 const LOCAL_REMOTE = '/mnt/usb/repo.git';
 
 interface SettingsStoreWindow {
-  __GITNADO_STORES__?: {
+  __GITDUDA_STORES__?: {
     settingsStore?: {
       getState: () => {
         setOfflineMode: (on: boolean) => void;
@@ -35,7 +35,7 @@ interface SettingsStoreWindow {
 async function settingsState(page: Page): Promise<void> {
   await page.waitForFunction(
     () =>
-      typeof (window as unknown as SettingsStoreWindow).__GITNADO_STORES__?.settingsStore !==
+      typeof (window as unknown as SettingsStoreWindow).__GITDUDA_STORES__?.settingsStore !==
       'undefined',
   );
 }
@@ -45,7 +45,7 @@ async function setOffline(page: Page, on: boolean): Promise<void> {
   await settingsState(page);
   await page.evaluate((enabled) => {
     (window as unknown as SettingsStoreWindow)
-      .__GITNADO_STORES__!.settingsStore!.getState()
+      .__GITDUDA_STORES__!.settingsStore!.getState()
       .setOfflineMode(enabled);
   }, on);
 }
@@ -54,7 +54,7 @@ async function setAllowlist(page: Page, allowlist: string[]): Promise<void> {
   await settingsState(page);
   await page.evaluate((list) => {
     (window as unknown as SettingsStoreWindow)
-      .__GITNADO_STORES__!.settingsStore!.getState()
+      .__GITDUDA_STORES__!.settingsStore!.getState()
       .setRemoteAllowlist(list);
   }, allowlist);
 }

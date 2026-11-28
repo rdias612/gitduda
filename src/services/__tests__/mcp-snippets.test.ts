@@ -41,7 +41,7 @@ describe('mcp-snippets', () => {
     expect(stdio.mcpServers.gitduda).to.deep.equal({
       command: '/Applications/Gitduda.app/Contents/MacOS/gitduda',
       args: ['--mcp-stdio'],
-      env: { GITNADO_MCP_TOKEN: 'gnc_abc123', GITNADO_MCP_URL: 'http://127.0.0.1:3001/mcp' },
+      env: { GITDUDA_MCP_TOKEN: 'gnc_abc123', GITDUDA_MCP_URL: 'http://127.0.0.1:3001/mcp' },
     });
   });
 

@@ -1980,7 +1980,7 @@ mod tests {
             Some("credential.https://push-host.test.helper")
         );
         assert_eq!(
-            envs.get("GITNADO_GIT_TOKEN").map(String::as_str),
+            envs.get("GITDUDA_GIT_TOKEN").map(String::as_str),
             Some("ghp_secret")
         );
     }

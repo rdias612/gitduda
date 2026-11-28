@@ -6,8 +6,8 @@
 //! no output. The bridge only ever talks to a loopback address.
 //!
 //! Configuration comes from the environment so client config files can set it:
-//! - `GITNADO_MCP_TOKEN` (required): a client token from Settings > MCP Server
-//! - `GITNADO_MCP_URL` (optional): defaults to `http://127.0.0.1:3001/mcp`
+//! - `GITDUDA_MCP_TOKEN` (required): a client token from Settings > MCP Server
+//! - `GITDUDA_MCP_URL` (optional): defaults to `http://127.0.0.1:3001/mcp`
 
 use std::io::{BufRead, Write};
 
@@ -18,16 +18,16 @@ pub const DEFAULT_URL: &str = "http://127.0.0.1:3001/mcp";
 /// Accept only loopback HTTP URLs: the bridge must never send the token, or
 /// repository contents, anywhere but this machine.
 pub fn validate_local_url(url: &str) -> Result<(), String> {
-    let parsed = url::Url::parse(url).map_err(|e| format!("Invalid GITNADO_MCP_URL: {e}"))?;
+    let parsed = url::Url::parse(url).map_err(|e| format!("Invalid GITDUDA_MCP_URL: {e}"))?;
     if parsed.scheme() != "http" {
-        return Err("GITNADO_MCP_URL must be an http:// loopback address".to_string());
+        return Err("GITDUDA_MCP_URL must be an http:// loopback address".to_string());
     }
     match parsed.host() {
         Some(url::Host::Domain("localhost")) => Ok(()),
         Some(url::Host::Ipv4(ip)) if ip.is_loopback() => Ok(()),
         Some(url::Host::Ipv6(ip)) if ip.is_loopback() => Ok(()),
         _ => Err(
-            "GITNADO_MCP_URL must point at this machine (127.0.0.1, ::1 or localhost)".to_string(),
+            "GITDUDA_MCP_URL must point at this machine (127.0.0.1, ::1 or localhost)".to_string(),
         ),
     }
 }
@@ -103,14 +103,14 @@ pub async fn bridge<R: BufRead, W: Write>(
 
 /// Entry point for `gitduda --mcp-stdio`. Returns the process exit code.
 pub fn run_from_env() -> i32 {
-    let token = match std::env::var("GITNADO_MCP_TOKEN") {
+    let token = match std::env::var("GITDUDA_MCP_TOKEN") {
         Ok(t) if !t.trim().is_empty() => t,
         _ => {
-            eprintln!("gitduda --mcp-stdio: set GITNADO_MCP_TOKEN to a client token from Gitduda (Settings > MCP Server)");
+            eprintln!("gitduda --mcp-stdio: set GITDUDA_MCP_TOKEN to a client token from Gitduda (Settings > MCP Server)");
             return 2;
         }
     };
-    let url = std::env::var("GITNADO_MCP_URL").unwrap_or_else(|_| DEFAULT_URL.to_string());
+    let url = std::env::var("GITDUDA_MCP_URL").unwrap_or_else(|_| DEFAULT_URL.to_string());
     let runtime = match tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()

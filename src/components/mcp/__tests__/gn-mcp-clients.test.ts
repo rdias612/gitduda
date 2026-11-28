@@ -94,7 +94,7 @@ describe('gn-mcp-clients', () => {
     (el.shadowRoot!.querySelector('.tab[data-kind="stdio"]') as HTMLElement).click();
     await el.updateComplete;
     expect($(el, '.snippet')!.textContent).to.contain('/opt/gitduda');
-    expect($(el, '.snippet')!.textContent).to.contain('GITNADO_MCP_TOKEN');
+    expect($(el, '.snippet')!.textContent).to.contain('GITDUDA_MCP_TOKEN');
 
     expect(el.shadowRoot!.querySelectorAll('.client')).to.have.length(1);
     expect(toasts('success')[0]).to.contain("won't be shown again");

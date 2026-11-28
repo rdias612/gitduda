@@ -15,7 +15,7 @@ import { startCommandCaptureWithMocks, findCommand } from '../fixtures/test-help
  */
 
 interface SettingsStoreWindow {
-  __GITNADO_STORES__?: {
+  __GITDUDA_STORES__?: {
     settingsStore?: {
       getState: () => { setOfflineMode: (on: boolean) => void };
     };
@@ -25,12 +25,12 @@ interface SettingsStoreWindow {
 async function setOffline(page: Page, on: boolean): Promise<void> {
   await page.waitForFunction(
     () =>
-      typeof (window as unknown as SettingsStoreWindow).__GITNADO_STORES__?.settingsStore !==
+      typeof (window as unknown as SettingsStoreWindow).__GITDUDA_STORES__?.settingsStore !==
       'undefined',
   );
   await page.evaluate((enabled) => {
     (window as unknown as SettingsStoreWindow)
-      .__GITNADO_STORES__!.settingsStore!.getState()
+      .__GITDUDA_STORES__!.settingsStore!.getState()
       .setOfflineMode(enabled);
   }, on);
 }

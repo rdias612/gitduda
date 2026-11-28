@@ -21,7 +21,7 @@ import {
 async function addRepo(page: Page, path: string, name: string, activate = true): Promise<void> {
   await page.evaluate(
     ({ path, name, activate }) => {
-      const stores = (window as unknown as Record<string, unknown>).__GITNADO_STORES__ as {
+      const stores = (window as unknown as Record<string, unknown>).__GITDUDA_STORES__ as {
         repositoryStore: {
           getState: () => {
             addRepository: (repo: unknown, options: { activate: boolean }) => void;

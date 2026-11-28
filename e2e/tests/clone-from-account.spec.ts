@@ -782,7 +782,7 @@ test.describe('Clone Dialog - from a connected account', () => {
     const setAllowlist = async (entries: string[]): Promise<void> => {
       await page.evaluate((list) => {
         const stores = (window as unknown as Record<string, unknown>)
-          .__GITNADO_STORES__ as {
+          .__GITDUDA_STORES__ as {
           settingsStore: { setState: (state: Record<string, unknown>) => void };
         };
         stores.settingsStore.setState({ remoteAllowlist: list });
@@ -949,7 +949,7 @@ test.describe('Clone Dialog - from a connected account', () => {
     });
     await injectCommandMock(page, { get_keyring_token: 'gh-e2e-tok' });
     await page.evaluate(() => {
-      const stores = (window as unknown as Record<string, unknown>).__GITNADO_STORES__ as {
+      const stores = (window as unknown as Record<string, unknown>).__GITDUDA_STORES__ as {
         settingsStore: { setState: (state: Record<string, unknown>) => void };
       };
       stores.settingsStore.setState({ offlineMode: true });
@@ -966,7 +966,7 @@ test.describe('Clone Dialog - from a connected account', () => {
     expect(await findCommand(page, 'list_github_repositories')).toHaveLength(0);
 
     await page.evaluate(() => {
-      const stores = (window as unknown as Record<string, unknown>).__GITNADO_STORES__ as {
+      const stores = (window as unknown as Record<string, unknown>).__GITDUDA_STORES__ as {
         settingsStore: { setState: (state: Record<string, unknown>) => void };
       };
       stores.settingsStore.setState({ offlineMode: false });

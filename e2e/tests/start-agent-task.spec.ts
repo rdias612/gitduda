@@ -56,10 +56,10 @@ test.describe('Start agent on a task', () => {
     });
     const [spawn] = await findCommand(page, 'pty_spawn');
     expect((spawn.args as { options: { env: Record<string, string> } }).options.env).toEqual({
-      GITNADO_TASK_PROMPT: 'Fix flaky login test',
+      GITDUDA_TASK_PROMPT: 'Fix flaky login test',
     });
     await waitForCommand(page, 'pty_write');
-    expect((await findCommand(page, 'pty_write'))[0].args).toEqual({ id: 7, data: 'claude "$GITNADO_TASK_PROMPT"\r' });
+    expect((await findCommand(page, 'pty_write'))[0].args).toEqual({ id: 7, data: 'claude "$GITDUDA_TASK_PROMPT"\r' });
 
     // The terminal pane is open on the agent's tab, with no stray extra shell.
     await expect(page.locator('gn-terminal-panel .tab')).toHaveCount(1);

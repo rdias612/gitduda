@@ -96,8 +96,8 @@ test.describe('External MCP servers', () => {
   test('offline mode refuses to contact the server', async ({ page }) => {
     await startCommandCaptureWithMocks(page, { ...base, list_external_mcp_servers: [jira] });
     await page.evaluate(() => {
-      const stores = (window as unknown as { __GITNADO_STORES__: { settingsStore: { setState: (s: unknown) => void } } })
-        .__GITNADO_STORES__;
+      const stores = (window as unknown as { __GITDUDA_STORES__: { settingsStore: { setState: (s: unknown) => void } } })
+        .__GITDUDA_STORES__;
       stores.settingsStore.setState({ offlineMode: true });
     });
     await openSettings(page);

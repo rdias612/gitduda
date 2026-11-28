@@ -20,7 +20,7 @@ const palette = 'gn-command-palette[open]';
 async function addRepo(page: Page, path: string, name: string): Promise<void> {
   await page.evaluate(
     ({ path, name }) => {
-      const stores = (window as unknown as Record<string, unknown>).__GITNADO_STORES__ as {
+      const stores = (window as unknown as Record<string, unknown>).__GITDUDA_STORES__ as {
         repositoryStore: {
           getState: () => { addRepository: (repo: unknown) => void };
         };
