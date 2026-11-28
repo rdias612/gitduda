@@ -22,6 +22,11 @@ import {
   type CoAuthor,
   type Trailer,
 } from '../../utils/commit-trailers.ts';
+import { localized, msg } from '@lit/localize';
+import '../../services/issue-trackers/index.ts';
+import { listOpenIssues, formatIssueReference, searchIssues, invalidateIssueTrackerCache,
+  type IssueListState, type IssueReferenceRelation, type TrackedIssue } from '../../services/issue-tracker.service.ts';
+import { appendIssueReference, detectIssueTrigger, stripIssueTrigger } from '../../utils/issue-reference.ts';
 import './gn-ai-staging-modal.ts';
 import type { AiStagingMode } from './gn-ai-staging-modal.ts';
 
@@ -34,6 +39,7 @@ const DEFAULT_CONVENTIONAL_TYPES = [
  * Commit panel component
  * Allows users to write commit messages and create commits
  */
+@localized()
 @customElement('gn-commit-panel')
 export class GnCommitPanel extends LitElement {
   static styles = [
@@ -228,6 +234,7 @@ export class GnCommitPanel extends LitElement {
       }
 
       .options-row {
+        position: relative;
         display: flex;
         gap: var(--spacing-sm);
         align-items: center;
@@ -719,6 +726,18 @@ export class GnCommitPanel extends LitElement {
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
       }
 
+      .issue-popover {
+        top: auto;
+        bottom: calc(100% + 4px);
+        width: min(100%, 320px);
+        box-sizing: border-box;
+        overflow: hidden;
+      }
+      .issue-header { display: flex; align-items: center; gap: var(--spacing-xs); }
+      .issue-repo { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .issue-relation[aria-pressed=true], .issue-item.active { background: var(--color-bg-hover); color: var(--color-text-primary); }
+      .issue-results { max-height: 145px; overflow-y: auto; }
+
       .coauthor-dropdown-header {
         padding: var(--spacing-xs) var(--spacing-sm);
         border-bottom: 1px solid var(--color-border);
@@ -975,6 +994,12 @@ export class GnCommitPanel extends LitElement {
   @state() private commitHistory: string[] = [];
   @state() private showHistory: boolean = false;
 
+  @state() private issueMode: 'summary' | 'description' | 'button' | null = null;
+  @state() private issueState: IssueListState | null = null;
+  @state() private issueQuery = '';
+  @state() private issueRelation: IssueReferenceRelation = 'refs';
+  @state() private issueIndex = 0;
+  private issueRequest = 0;
   @query('.summary-input') private summaryInput!: HTMLTextAreaElement;
 
   private readonly HISTORY_STORAGE_KEY = 'gitduda-commit-history';
@@ -990,6 +1015,8 @@ export class GnCommitPanel extends LitElement {
   // {{author}} template placeholder reflects the new identity.
   private boundHandleRepositoryRefresh = (e: Event): void => {
     const detail = (e as CustomEvent<{ repoPath?: string; source?: string }>).detail;
+    invalidateIssueTrackerCache(detail?.repoPath ?? this.repositoryPath);
+    if (this.issueMode && (!detail?.repoPath || detail.repoPath === this.repositoryPath)) void this.loadIssues();
     if (detail?.source === 'sidebar-panel') return;
     if (detail?.repoPath && detail.repoPath !== this.repositoryPath) return;
     void this.loadAuthorName();
@@ -1045,6 +1072,7 @@ export class GnCommitPanel extends LitElement {
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.closeIssuePicker();
     document.removeEventListener('click', this._onDocumentClick);
     window.removeEventListener('trigger-amend', this.boundHandleTriggerAmend);
     window.removeEventListener('ai-settings-changed', this.boundHandleAiSettingsChanged);
@@ -1057,6 +1085,7 @@ export class GnCommitPanel extends LitElement {
 
   willUpdate(changed: PropertyValues): void {
     if (changed.has('repositoryPath')) {
+      this.closeIssuePicker();
       const oldPath = changed.get('repositoryPath') as string | undefined;
 
       // Save draft for the previous repo
@@ -1164,6 +1193,8 @@ export class GnCommitPanel extends LitElement {
   }
 
   private _onDocumentClick(e: MouseEvent): void {
+    if (this.issueMode && !e.composedPath().some(el => el instanceof Element &&
+      (el.matches('.issue-picker-wrapper') || el.matches(`.${this.issueMode}-input`)))) this.closeIssuePicker();
     if (this.showHistory) {
       const path = e.composedPath();
       const isInside = path.some(
@@ -1711,6 +1742,7 @@ export class GnCommitPanel extends LitElement {
   private handleSummaryInput(e: Event): void {
     const target = e.target as HTMLTextAreaElement;
     this.summary = target.value;
+    this.updateIssueTrigger(target, 'summary');
     this.updateMessageOriginFromInput();
     this.error = null;
     this.success = null;
@@ -1719,6 +1751,7 @@ export class GnCommitPanel extends LitElement {
   private handleDescriptionInput(e: Event): void {
     const target = e.target as HTMLTextAreaElement;
     this.description = target.value;
+    this.updateIssueTrigger(target, 'description');
     this.updateMessageOriginFromInput();
   }
 
@@ -1810,6 +1843,7 @@ export class GnCommitPanel extends LitElement {
   }
 
   private handleKeyDown(e: KeyboardEvent): void {
+    if (this.handleIssueKey(e)) return;
     // Cmd/Ctrl + Enter to commit
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && this.canCommit) {
       e.preventDefault();
@@ -2005,6 +2039,7 @@ export class GnCommitPanel extends LitElement {
             this.scopeChosen = conventionalBeforeAmend.scopeChosen;
           }
           this.success = `Created commit ${result.data?.shortId}`;
+          this.closeIssuePicker();
           this.summary = '';
           this.description = '';
           this.amend = false;
@@ -2180,6 +2215,114 @@ export class GnCommitPanel extends LitElement {
       this.hasCustomMessage = true;
       this.isAutoGeneratedMessage = false;
     }
+  }
+
+  private closeIssuePicker() {
+    this.issueRequest++;
+    this.issueMode = null;
+    this.issueState = null;
+  }
+
+  private async loadIssues() {
+    const request = ++this.issueRequest;
+    this.issueState = null;
+    const state = await listOpenIssues(this.repositoryPath);
+    if (request === this.issueRequest) this.issueState = state;
+  }
+
+  private openIssues(mode: NonNullable<typeof this.issueMode>, query = '') {
+    this.issueIndex = 0;
+    this.issueQuery = query;
+    if (this.issueMode === mode) return;
+    this.issueMode = mode;
+    this.issueRelation = 'refs';
+    void this.loadIssues();
+    if (mode === 'button') void this.updateComplete.then(() => this.renderRoot.querySelector<HTMLInputElement>('.issue-filter')?.focus());
+  }
+
+  private updateIssueTrigger(input: HTMLTextAreaElement, field: 'summary' | 'description') {
+    const trigger = detectIssueTrigger(input.value, input.selectionStart);
+    if (trigger && this.repositoryPath) this.openIssues(field, trigger.query);
+    else if (this.issueMode) this.closeIssuePicker();
+  }
+
+  private get visibleIssues() {
+    return this.issueState?.status === 'ready' ? searchIssues(this.issueState.issues, this.issueQuery) : [];
+  }
+
+  private chooseIssue(issue: TrackedIssue) {
+    if (this.issueState?.status !== 'ready' || !this.issueMode) return;
+    const reference = formatIssueReference(this.issueState.target, issue, this.issueRelation);
+    if (!reference) return;
+    const field = this.issueMode;
+    if (field !== 'button') {
+      const input = this.renderRoot.querySelector<HTMLTextAreaElement>(`.${field}-input`)!;
+      const trigger = detectIssueTrigger(this[field], input.selectionStart);
+      if (trigger && trigger.query === this.issueQuery) this[field] = stripIssueTrigger(this[field], trigger);
+    }
+    this.description = appendIssueReference(this.description, reference);
+    this.updateMessageOriginFromInput();
+    this.closeIssuePicker();
+    this.renderRoot.querySelector<HTMLTextAreaElement>(field === 'summary' ? '.summary-input' : '.description-input')?.focus();
+  }
+
+  private handleIssueKey(e: KeyboardEvent) {
+    if (!this.issueMode || e.isComposing || e.ctrlKey || e.metaKey) return false;
+    const issues = this.visibleIssues;
+    if (e.key === 'Escape') {
+      if (this.issueMode === 'button') this.renderRoot.querySelector<HTMLButtonElement>('.issue-btn')?.focus();
+      this.closeIssuePicker();
+    } else if (e.key === 'Enter' && issues[this.issueIndex]) {
+      this.chooseIssue(issues[this.issueIndex]);
+    } else if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && issues.length) {
+      this.issueIndex = (this.issueIndex + (e.key === 'ArrowDown' ? 1 : -1) + issues.length) % issues.length;
+      void this.updateComplete.then(() => this.renderRoot.querySelector('.issue-item.active')?.scrollIntoView({ block: 'nearest' }));
+    } else return false;
+    e.preventDefault();
+    e.stopPropagation();
+    return true;
+  }
+
+  private issueStatus() {
+    switch (this.issueState?.status) {
+      case undefined: return msg('Loading open issues…');
+      case 'offline': return msg('Issue suggestions are unavailable offline.');
+      case 'blocked': return msg('Issue access is blocked by network settings.');
+      case 'unauthenticated': return msg('Connect an account to view issues.');
+      case 'no-provider': return msg('No supported issue tracker for this repository.');
+      case 'error': return html`${msg('Unable to load issues.')} ${this.issueState.message}`;
+      case 'ready': return msg('No matching open issues.');
+    }
+  }
+
+  private renderIssuePicker() {
+    const issues = this.visibleIssues;
+    const target = this.issueState?.status === 'ready' ? this.issueState.target : null;
+    return html`<div class="issue-picker-wrapper">
+      <button class="coauthor-btn issue-btn" aria-expanded=${Boolean(this.issueMode)}
+        aria-controls="issue-popover" ?disabled=${!this.repositoryPath}
+        @click=${() => this.issueMode ? this.closeIssuePicker() : this.openIssues('button')}>${msg('Link issue')}</button>
+      ${this.issueMode ? html`<div id="issue-popover" class="coauthor-dropdown issue-popover"
+        @keydown=${(e: KeyboardEvent) => { if (e.key === 'Escape') this.handleIssueKey(e); }}>
+        <div class="coauthor-dropdown-header issue-header">
+          <span class="issue-repo" title=${target?.providerName ?? ''}>${target?.repoLabel ?? msg('Open issues')}</span>
+          ${(['refs', 'closes'] as const).map(relation => html`<button class="coauthor-btn issue-relation"
+            aria-pressed=${this.issueRelation === relation} @click=${() => { this.issueRelation = relation; }}>
+            ${relation === 'refs' ? msg('Refs') : msg('Closes')}</button>`)}
+        </div>
+        ${this.issueMode === 'button' ? html`<div class="coauthor-entry">
+          <input class="coauthor-input issue-filter" aria-label=${msg('Filter issues')} placeholder=${msg('Filter issues')}
+            .value=${this.issueQuery} @input=${(e: Event) => {
+              this.issueQuery = (e.target as HTMLInputElement).value;
+              this.issueIndex = 0;
+            }} @keydown=${this.handleIssueKey}>
+        </div>` : nothing}
+        <div class="issue-results">${issues.map((issue, index) => html`
+          <button class="coauthor-suggestion issue-item ${index === this.issueIndex ? 'active' : ''}"
+            title=${issue.title} @click=${() => this.chooseIssue(issue)}>${issue.key} ${issue.title}</button>`)}</div>
+        ${issues.length ? nothing : html`<div class="coauthor-empty issue-status" role="status">${this.issueStatus()}</div>`}
+      </div>` : nothing}
+    </div>`;
   }
 
   render() {
@@ -2472,6 +2615,7 @@ export class GnCommitPanel extends LitElement {
           </button>
           ${this.showCoAuthors ? this.renderCoAuthorDropdown() : nothing}
         </div>
+        ${this.renderIssuePicker()}
       </div>
 
       ${identityMissing ? html`

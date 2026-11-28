@@ -876,6 +876,42 @@
   <source>Confirm Sync</source>
   <target>Confirmer la synchronisation</target>
 </trans-unit>
+<trans-unit id="sd19f2ecbe12faf4f">
+  <source>Loading open issues…</source>
+  <target>Chargement des tickets ouverts…</target></trans-unit>
+<trans-unit id="s5f5634273570b7d4">
+  <source>Issue suggestions are unavailable offline.</source>
+  <target>Les suggestions de tickets sont indisponibles hors ligne.</target></trans-unit>
+<trans-unit id="s2729e70c04e3e544">
+  <source>Issue access is blocked by network settings.</source>
+  <target>Les paramètres réseau bloquent l’accès aux tickets.</target></trans-unit>
+<trans-unit id="scf1a4277b60d20b3">
+  <source>Connect an account to view issues.</source>
+  <target>Connectez un compte pour afficher les tickets.</target></trans-unit>
+<trans-unit id="sf6e14af87fb38d8e">
+  <source>No supported issue tracker for this repository.</source>
+  <target>Aucun gestionnaire de tickets compatible avec ce dépôt.</target></trans-unit>
+<trans-unit id="see8c99a7f4e8d69f">
+  <source>Unable to load issues.</source>
+  <target>Impossible de charger les tickets.</target></trans-unit>
+<trans-unit id="sb426f44217d82a2d">
+  <source>No matching open issues.</source>
+  <target>Aucun ticket ouvert correspondant.</target></trans-unit>
+<trans-unit id="sb78812e1fbad45a2">
+  <source>Link issue</source>
+  <target>Lier un ticket</target></trans-unit>
+<trans-unit id="sf75cd93ecd65c983">
+  <source>Open issues</source>
+  <target>Tickets ouverts</target></trans-unit>
+<trans-unit id="s741e5d2bbe77f063">
+  <source>Refs</source>
+  <target>Référence</target></trans-unit>
+<trans-unit id="s6dbbeb646b23abf0">
+  <source>Closes</source>
+  <target>Ferme</target></trans-unit>
+<trans-unit id="s008cf36269a306d9">
+  <source>Filter issues</source>
+  <target>Filtrer les tickets</target></trans-unit>
 </body>
 </file>
 </xliff>
