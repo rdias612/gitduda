@@ -59,7 +59,7 @@ Gitduda started as an active fork of [Gitnado](https://github.com/hegsie/gitnado
 | **Core Git & History** | Interactive commit graph, branches, tags, remotes, stashes, amend, interactive rebase, cherry-pick, visual reflog undo/redo, worktrees, submodules, and Git LFS |
 | **Diff, Merge & Terminal** | Hunk-level staging/unstaging, Shiki syntax highlighting, 4-mode image diff viewer (*side-by-side*, *onion-skin*, *swipe*, *difference*), 3-way merge conflict editor, and integrated `@xterm/xterm` terminal |
 | **AI & Semantic Search** | 6 configurable providers (**Ollama**, **LM Studio**, **OpenAI**, **Anthropic**, **GitHub Models**, **Google Gemini**) for commit messages, 3-way conflict suggestions, and changelogs; on-device Candle + `sqlite-vec` semantic search |
-| **MCP Server** | Built-in Model Context Protocol server (**Settings → MCP Server**) secured with `Authorization: Bearer <token>`, consent-gated write tools (off by default), and `--mcp-stdio` support |
+| **MCP Server** | Built-in Model Context Protocol server (**Settings → MCP Server**) secured with `Authorization: Bearer <token>`, consent-gated write tools (off by default), and `--mcp-stdio` support — full tool catalog in [docs/mcp-server.md](docs/mcp-server.md) |
 | **Profiles & Forges** | Unified work/personal identities, GPG signing, SSH key management, chunked OS keyring storage, and **GitHub / GitLab / Azure DevOps / Bitbucket** integrations with URL-based profile auto-switching |
 | **Localization** | Runtime language switching via `@lit/localize` (`en` and `fr` today, incremental rollout) |
 
@@ -67,7 +67,7 @@ Gitduda started as an active fork of [Gitnado](https://github.com/hegsie/gitnado
 <summary><strong>Quick-connect your AI coding assistant via MCP (Claude Code, Cursor, VS Code)</strong></summary>
 
 1. Open **Settings → MCP Server** and enable the server.
-2. Copy the generated Bearer token (write tools — `stage`, `commit`, `create_branch`, `create_worktree`, `stash`, `checkout` — are **off by default** and require per-call consent or branch policy approval).
+2. Copy the generated Bearer token (the write tools — staging and commits, branches, tags, stashes, worktrees, file edits, reset and revert — are **off by default** and require per-call consent or branch policy approval; see [docs/mcp-server.md](docs/mcp-server.md) for the full catalog and examples).
 3. Paste the client snippet generated in Settings:
 
 ```bash
