@@ -36,13 +36,18 @@ pub const CONSENT_REQUEST_EVENT: &str = "mcp-consent-request";
 pub const CONSENT_RESOLVED_EVENT: &str = "mcp-consent-resolved";
 pub const WRITE_APPLIED_EVENT: &str = "mcp-write-applied";
 
-pub const WRITE_TOOLS: [&str; 6] = [
+pub const WRITE_TOOLS: [&str; 11] = [
     "stage",
     "commit",
     "create_branch",
     "create_worktree",
     "stash",
     "checkout",
+    "unstage",
+    "write_file_content",
+    "discard_changes",
+    "apply_stash",
+    "drop_stash",
 ];
 
 pub fn is_write_tool(name: &str) -> bool {
@@ -397,6 +402,20 @@ enum Action {
         branch: String,
         start: Option<String>,
     },
+    Unstage(Vec<String>),
+    WriteFile {
+        file_path: String,
+        content: String,
+        stage_after: bool,
+    },
+    Discard(Vec<String>),
+    ApplyStash {
+        index: usize,
+        drop_after: bool,
+    },
+    DropStash {
+        index: usize,
+    },
 }
 
 fn str_arg<'a>(args: &'a Value, key: &str) -> Option<&'a str> {
@@ -465,9 +484,50 @@ fn staged_files(repo: &git2::Repository) -> Result<Vec<String>, String> {
         .collect())
 }
 
+/// Extract a non-empty list of relative path strings from `args[key]`.
+fn paths_arg(args: &Value, key: &str) -> Result<Vec<String>, String> {
+    let list: Vec<String> = args
+        .get(key)
+        .and_then(Value::as_array)
+        .map(|a| {
+            a.iter()
+                .filter_map(Value::as_str)
+                .map(str::to_string)
+                .collect()
+        })
+        .unwrap_or_default();
+    if list.is_empty() {
+        Err(format!("Missing required argument: {key} (a non-empty list)"))
+    } else {
+        Ok(list)
+    }
+}
+
+/// Extract an optional non-negative integer from `args[key]`.
+fn usize_arg(args: &Value, key: &str, default: usize) -> usize {
+    args.get(key)
+        .and_then(Value::as_u64)
+        .map(|v| v as usize)
+        .unwrap_or(default)
+}
+
+/// The message of the stash at `index`, or an error naming the hole.
+fn stash_message(repo: &mut git2::Repository, index: usize) -> Result<String, String> {
+    let mut found = None;
+    repo.stash_foreach(|i, message, _| {
+        if i == index {
+            found = Some(message.to_string());
+            return false;
+        }
+        true
+    })
+    .map_err(|e| e.to_string())?;
+    found.ok_or_else(|| format!("No stash at index {index}"))
+}
+
 /// Validate a write tool call and describe it, without changing anything.
 pub fn prepare(tool: &str, args: &Value, repo_path: &str) -> Result<PreparedWrite, String> {
-    let repo = git2::Repository::open(repo_path)
+    let mut repo = git2::Repository::open(repo_path)
         .map_err(|_| format!("Not a valid git repository: {repo_path}"))?;
     if repo.is_bare() {
         return Err("Write tools need a working tree".to_string());
@@ -608,6 +668,130 @@ pub fn prepare(tool: &str, args: &Value, repo_path: &str) -> Result<PreparedWrit
                 },
             )
         }
+        "unstage" => {
+            let paths = paths_arg(args, "paths")?;
+            for p in &paths {
+                validate_rel_path(p)?;
+            }
+            let summary = format!(
+                "Unstage {} file{}",
+                paths.len(),
+                if paths.len() == 1 { "" } else { "s" }
+            );
+            (
+                current.clone(),
+                summary,
+                paths.clone(),
+                Action::Unstage(paths),
+            )
+        }
+        "write_file_content" => {
+            let file_path = required(args, "file_path")?.to_string();
+            validate_rel_path(&file_path)?;
+            let content = args
+                .get("content")
+                .and_then(Value::as_str)
+                .ok_or("Missing required argument: content")?
+                .to_string();
+            let stage_after = args
+                .get("stage_after")
+                .and_then(Value::as_bool)
+                .unwrap_or(false);
+            let summary = format!("Write {} bytes to {file_path}", content.len());
+            let mut details = vec![file_path.clone()];
+            if stage_after {
+                details.push("Stage the file after writing".to_string());
+            }
+            (
+                current.clone(),
+                summary,
+                details,
+                Action::WriteFile {
+                    file_path,
+                    content,
+                    stage_after,
+                },
+            )
+        }
+        "discard_changes" => {
+            let paths = paths_arg(args, "paths")?;
+            for p in &paths {
+                validate_rel_path(p)?;
+            }
+            // Classify up front so the consent prompt is concrete, and check
+            // nested repositories before anything is described as doable —
+            // the same all-or-nothing shape the discard command uses.
+            let head_tree = repo.head().ok().and_then(|h| h.peel_to_tree().ok());
+            let index = repo.index().map_err(|e| e.to_string())?;
+            let mut details = Vec::new();
+            for p in &paths {
+                let path_obj = Path::new(p);
+                let in_head = head_tree
+                    .as_ref()
+                    .map(|t| t.get_path(path_obj).is_ok())
+                    .unwrap_or(false);
+                let in_index = index.get_path(path_obj, 0).is_some();
+                if in_index {
+                    details.push(format!("Restore from the index: {p}"));
+                } else if !in_head {
+                    details.push(format!("Delete untracked: {p}"));
+                    let full = crate::commands::path_utils::validate_path_within_repo(
+                        Path::new(repo_path),
+                        p,
+                    )
+                    .map_err(|e| e.to_string())?;
+                    let is_dir = std::fs::symlink_metadata(&full)
+                        .map(|m| m.file_type().is_dir())
+                        .unwrap_or(false);
+                    if is_dir && crate::utils::contains_nested_repo(&full) {
+                        return Err(format!(
+                            "'{}' contains a git repository — discarding it would destroy its \
+                             history. Nothing was discarded.",
+                            full.display()
+                        ));
+                    }
+                } else {
+                    details.push(format!("No working-tree change to discard: {p}"));
+                }
+            }
+            let summary = format!(
+                "Discard changes to {} file{} (uncommitted work is lost)",
+                paths.len(),
+                if paths.len() == 1 { "" } else { "s" }
+            );
+            (
+                current.clone(),
+                summary,
+                details,
+                Action::Discard(paths),
+            )
+        }
+        "apply_stash" => {
+            let index = usize_arg(args, "index", 0);
+            let drop_after = args
+                .get("drop_after")
+                .and_then(Value::as_bool)
+                .unwrap_or(false);
+            let message = stash_message(&mut repo, index)?;
+            let summary = format!(
+                "Apply stash #{index}{}",
+                if drop_after { " and drop it" } else { "" }
+            );
+            let details = vec![format!("Message: {message}")];
+            (
+                current.clone(),
+                summary,
+                details,
+                Action::ApplyStash { index, drop_after },
+            )
+        }
+        "drop_stash" => {
+            let index = usize_arg(args, "index", 0);
+            let message = stash_message(&mut repo, index)?;
+            let summary = format!("Drop stash #{index} (the stashed changes are lost)");
+            let details = vec![format!("Message: {message}")];
+            (None, summary, details, Action::DropStash { index })
+        }
         other => return Err(format!("Unknown write tool: {other}")),
     };
     Ok(PreparedWrite {
@@ -715,6 +899,137 @@ pub fn execute(prepared: &PreparedWrite) -> Result<Value, String> {
             }
             Ok(json!({ "worktree": path.to_string_lossy(), "branch": branch }))
         }
+        Action::Unstage(paths) => {
+            // Mirrors the unstage command: a path tracked in HEAD resets the
+            // index entry to HEAD (`git reset -- <path>`); a path newly added
+            // is dropped from the index. On an unborn HEAD there is no HEAD
+            // version, so every path is dropped.
+            let head_commit = repo.head().ok().and_then(|h| h.peel_to_commit().ok());
+            let mut index = repo.index().map_err(err)?;
+            for p in paths {
+                let path_obj = Path::new(p);
+                match &head_commit {
+                    Some(commit) => {
+                        let head_tree = commit.tree().map_err(err)?;
+                        if head_tree.get_path(path_obj).is_ok() {
+                            let literal =
+                                crate::commands::path_utils::literal_git_pathspec(p);
+                            repo.reset_default(
+                                Some(commit.as_object()),
+                                [Path::new(&literal)],
+                            )
+                            .map_err(err)?;
+                            index = repo.index().map_err(err)?;
+                        } else {
+                            index.remove_path(path_obj).map_err(err)?;
+                            index.write().map_err(err)?;
+                            index = repo.index().map_err(err)?;
+                        }
+                    }
+                    None => {
+                        index.remove_path(path_obj).map_err(err)?;
+                        index.write().map_err(err)?;
+                        index = repo.index().map_err(err)?;
+                    }
+                }
+            }
+            index.write().map_err(err)?;
+            Ok(json!({ "unstaged": paths }))
+        }
+        Action::WriteFile {
+            file_path,
+            content,
+            stage_after,
+        } => {
+            let full = crate::commands::path_utils::validate_path_within_repo(
+                Path::new(&prepared.repo_path),
+                file_path,
+            )
+            .map_err(|e| e.to_string())?;
+            if let Some(parent) = full.parent() {
+                std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+            }
+            std::fs::write(&full, content)
+                .map_err(|e| format!("Cannot write '{file_path}': {}", e))?;
+            if *stage_after {
+                let mut index = repo.index().map_err(err)?;
+                index.add_path(Path::new(file_path)).map_err(err)?;
+                index.write().map_err(err)?;
+            }
+            Ok(json!({ "file": file_path, "bytes": content.len(), "staged": stage_after }))
+        }
+        Action::Discard(paths) => {
+            // Mirrors the discard command: tracked files are restored from the
+            // INDEX (`git checkout -- <path>` semantics — never from HEAD, or a
+            // staged version would be silently destroyed); untracked files are
+            // deleted. The nested-repository guard ran in prepare, so nothing
+            // reaches this point that would delete a repo's history.
+            let head_tree = repo.head().ok().and_then(|h| h.peel_to_tree().ok());
+            let index = repo.index().map_err(err)?;
+            let mut index_paths: Vec<&str> = Vec::new();
+            let mut untracked_paths: Vec<PathBuf> = Vec::new();
+            for p in paths {
+                let full = crate::commands::path_utils::validate_path_within_repo(
+                    Path::new(&prepared.repo_path),
+                    p,
+                )
+                .map_err(|e| e.to_string())?;
+                let path_obj = Path::new(p);
+                let in_head = head_tree
+                    .as_ref()
+                    .map(|t| t.get_path(path_obj).is_ok())
+                    .unwrap_or(false);
+                if index.get_path(path_obj, 0).is_some() {
+                    index_paths.push(p.as_str());
+                } else if !in_head {
+                    untracked_paths.push(full);
+                }
+            }
+
+            if !index_paths.is_empty() {
+                let mut opts = git2::build::CheckoutBuilder::new();
+                opts.force();
+                opts.remove_untracked(false);
+                // Paths are PATHSPECs to the builder: disable matching so a
+                // filename with glob metacharacters only restores itself.
+                opts.disable_pathspec_match(true);
+                for p in &index_paths {
+                    opts.path(p);
+                }
+                let mut fresh_index = repo.index().map_err(err)?;
+                repo.checkout_index(Some(&mut fresh_index), Some(&mut opts))
+                    .map_err(err)?;
+            }
+
+            for full in untracked_paths {
+                // symlink_metadata, not is_dir(): the symlink itself must go,
+                // never its target.
+                if let Ok(meta) = std::fs::symlink_metadata(&full) {
+                    if meta.file_type().is_dir() {
+                        std::fs::remove_dir_all(&full).map_err(|e| e.to_string())?;
+                    } else {
+                        std::fs::remove_file(&full).map_err(|e| e.to_string())?;
+                    }
+                }
+            }
+            Ok(json!({ "discarded": paths }))
+        }
+        Action::ApplyStash { index, drop_after } => {
+            repo.stash_apply(*index, None).map_err(err)?;
+            if repo.index().map_err(err)?.has_conflicts() {
+                return Err(format!(
+                    "Stash #{index} applied with conflicts. Resolve them in Gitduda before continuing."
+                ));
+            }
+            if *drop_after {
+                repo.stash_drop(*index).map_err(err)?;
+            }
+            Ok(json!({ "applied": index, "dropped": drop_after }))
+        }
+        Action::DropStash { index } => {
+            repo.stash_drop(*index).map_err(err)?;
+            Ok(json!({ "dropped": index }))
+        }
     }
 }
 
@@ -767,6 +1082,36 @@ pub fn write_tool_list() -> Vec<McpTool> {
             "Switch to an existing local branch. Refuses to overwrite local changes.",
             json!({ "repo_path": repo_prop(), "branch": { "type": "string" } }),
             vec!["repo_path", "branch"],
+        ),
+        tool(
+            "unstage",
+            "Unstage files from the index (paths relative to the repository root).",
+            json!({ "repo_path": repo_prop(), "paths": { "type": "array", "items": { "type": "string" } } }),
+            vec!["repo_path", "paths"],
+        ),
+        tool(
+            "write_file_content",
+            "Write content to a file in the working tree (creates or overwrites it).",
+            json!({ "repo_path": repo_prop(), "file_path": { "type": "string", "description": "Path relative to the repository root" }, "content": { "type": "string" }, "stage_after": { "type": "boolean", "description": "Stage the file after writing (default false)" } }),
+            vec!["repo_path", "file_path", "content"],
+        ),
+        tool(
+            "discard_changes",
+            "Discard working-tree changes: tracked files are restored from the index, untracked files are deleted. Uncommitted work is lost.",
+            json!({ "repo_path": repo_prop(), "paths": { "type": "array", "items": { "type": "string" } } }),
+            vec!["repo_path", "paths"],
+        ),
+        tool(
+            "apply_stash",
+            "Apply a stash to the working tree (index 0 is the most recent).",
+            json!({ "repo_path": repo_prop(), "index": { "type": "integer", "description": "Stash index (default 0)" }, "drop_after": { "type": "boolean", "description": "Drop the stash after applying (default false)" } }),
+            vec!["repo_path"],
+        ),
+        tool(
+            "drop_stash",
+            "Delete a stash entry permanently.",
+            json!({ "repo_path": repo_prop(), "index": { "type": "integer", "description": "Stash index (default 0)" } }),
+            vec!["repo_path"],
         ),
     ]
 }
@@ -1091,6 +1436,151 @@ mod tests {
             .unwrap_err()
             .contains("branch"));
         assert!(prepare("nope", &json!({}), &t.path_str()).is_err());
+    }
+
+    #[test]
+    fn unstage_write_discard_and_stash_execute() {
+        let t = TestRepo::with_initial_commit();
+
+        // write_file_content creates the file (and its parents) and stages it
+        let w = prepare(
+            "write_file_content",
+            &json!({ "file_path": "src/app.rs", "content": "fn main() {}\n", "stage_after": true }),
+            &t.path_str(),
+        )
+        .unwrap();
+        execute(&w).unwrap();
+        assert_eq!(
+            std::fs::read_to_string(t.path.join("src/app.rs")).unwrap(),
+            "fn main() {}\n"
+        );
+        {
+            let repo = t.repo();
+            assert!(repo
+                .index()
+                .unwrap()
+                .get_path(Path::new("src/app.rs"), 0)
+                .is_some());
+        }
+
+        // unstage: a newly added path leaves the index, the file survives on disk
+        let u = prepare(
+            "unstage",
+            &json!({ "paths": ["src/app.rs"] }),
+            &t.path_str(),
+        )
+        .unwrap();
+        assert_eq!(u.branch.as_deref(), Some("main"));
+        execute(&u).unwrap();
+        {
+            let repo = t.repo();
+            assert!(repo
+                .index()
+                .unwrap()
+                .get_path(Path::new("src/app.rs"), 0)
+                .is_none());
+        }
+        assert!(t.path.join("src/app.rs").exists());
+
+        // unstage: a tracked path resets the index entry to HEAD's version
+        std::fs::write(t.path.join("README.md"), "staged edit").unwrap();
+        t.stage_file("README.md");
+        let u2 = prepare(
+            "unstage",
+            &json!({ "paths": ["README.md"] }),
+            &t.path_str(),
+        )
+        .unwrap();
+        execute(&u2).unwrap();
+        {
+            let repo = t.repo();
+            let mut opts = git2::StatusOptions::new();
+            opts.include_untracked(false);
+            let statuses = repo.statuses(Some(&mut opts)).unwrap();
+            let entry = statuses
+                .iter()
+                .find(|e| e.path().ok() == Some("README.md"))
+                .expect("README.md still modified");
+            assert!(!entry.status().contains(git2::Status::INDEX_MODIFIED));
+        }
+
+        // discard_changes: tracked restored from the index, untracked deleted
+        std::fs::write(t.path.join("README.md"), "unstaged edit").unwrap();
+        t.create_file("untracked.txt", "tmp\n");
+        let d = prepare(
+            "discard_changes",
+            &json!({ "paths": ["README.md", "untracked.txt"] }),
+            &t.path_str(),
+        )
+        .unwrap();
+        assert!(d.summary.contains("Discard changes to 2 files"));
+        assert!(d.details.iter().any(|x| x.contains("Restore")));
+        assert!(d.details.iter().any(|x| x.contains("Delete untracked")));
+        execute(&d).unwrap();
+        assert_eq!(
+            std::fs::read_to_string(t.path.join("README.md")).unwrap(),
+            "# Test Repo"
+        );
+        assert!(!t.path.join("untracked.txt").exists());
+
+        // discard refuses a nested repository before anything happens
+        let nested = t.path.join("nested");
+        std::fs::create_dir_all(&nested).unwrap();
+        git2::Repository::init(&nested).unwrap();
+        let err = prepare(
+            "discard_changes",
+            &json!({ "paths": ["nested"] }),
+            &t.path_str(),
+        )
+        .unwrap_err();
+        assert!(err.contains("git repository"));
+
+        // stash round trip: apply with drop_after, then drop_stash
+        std::fs::write(t.path.join("README.md"), "to stash").unwrap();
+        let st = prepare("stash", &json!({ "message": "wip for test" }), &t.path_str()).unwrap();
+        execute(&st).unwrap();
+
+        // The stash applies cleanly onto the now-clean working tree; a dirty
+        // tree would merge-conflict, the same way `git stash apply` does.
+        let a = prepare("apply_stash", &json!({ "drop_after": true }), &t.path_str()).unwrap();
+        assert_eq!(a.branch.as_deref(), Some("main"));
+        execute(&a).unwrap();
+        assert_eq!(
+            std::fs::read_to_string(t.path.join("README.md")).unwrap(),
+            "to stash"
+        );
+        assert!(
+            prepare("apply_stash", &json!({ "index": 9 }), &t.path_str())
+                .unwrap_err()
+                .contains("No stash at index")
+        );
+
+        std::fs::write(t.path.join("README.md"), "another").unwrap();
+        let st2 = prepare("stash", &json!({}), &t.path_str()).unwrap();
+        execute(&st2).unwrap();
+        let ds = prepare("drop_stash", &json!({ "index": 0 }), &t.path_str()).unwrap();
+        execute(&ds).unwrap();
+        assert!(
+            prepare("drop_stash", &json!({ "index": 0 }), &t.path_str())
+                .unwrap_err()
+                .contains("No stash")
+        );
+    }
+
+    #[test]
+    fn write_file_content_rejects_traversal() {
+        let t = TestRepo::with_initial_commit();
+        for bad in ["../x.txt", "/etc/hosts", ".git/config"] {
+            assert!(
+                prepare(
+                    "write_file_content",
+                    &json!({ "file_path": bad, "content": "x" }),
+                    &t.path_str()
+                )
+                .is_err(),
+                "{bad}"
+            );
+        }
     }
 
     #[test]
