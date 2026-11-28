@@ -7,6 +7,10 @@ on:
         description: 'Create the vX.Y.Z tag and draft release from the version in tauri.conf.json'
         type: boolean
         default: false
+      build_macos:
+        description: 'Build macOS (Apple Silicon) bundle'
+        type: boolean
+        default: false
 
 # Separate manual test builds and release builds so each can supersede only
 # runs of the same kind on the same ref.
@@ -68,19 +72,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - platform: macos-latest
-            target: aarch64-apple-darwin
-            name: macOS-ARM64
-            bundles: dmg
-          - platform: ubuntu-22.04
-            target: x86_64-unknown-linux-gnu
-            name: Linux-x64
-            bundles: deb,appimage,rpm
-          - platform: windows-latest
-            target: x86_64-pc-windows-msvc
-            name: Windows-x64
-            bundles: msi,nsis
+        include: ${{ fromJSON(inputs.build_macos && '[{"platform":"macos-latest","target":"aarch64-apple-darwin","name":"macOS-ARM64","bundles":"dmg"},{"platform":"ubuntu-22.04","target":"x86_64-unknown-linux-gnu","name":"Linux-x64","bundles":"deb,appimage,rpm"},{"platform":"windows-latest","target":"x86_64-pc-windows-msvc","name":"Windows-x64","bundles":"msi,nsis"}]' || '[{"platform":"ubuntu-22.04","target":"x86_64-unknown-linux-gnu","name":"Linux-x64","bundles":"deb,appimage,rpm"},{"platform":"windows-latest","target":"x86_64-pc-windows-msvc","name":"Windows-x64","bundles":"msi,nsis"}]') }}
 
     runs-on: ${{ matrix.platform }}
     env:
@@ -136,27 +128,49 @@ jobs:
 
       # tauri-action creates the draft for the version in tauri.conf.json.
       # The manual trigger keeps publishing that draft from rebuilding its assets.
+      - name: Configure optional signing environment
+        id: signing
+        if: inputs.release
+        shell: bash
+        env:
+          _TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          _TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          _APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          _APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          _APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          _APPLE_ID: ${{ secrets.APPLE_ID }}
+          _APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          _APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          for var in TAURI_SIGNING_PRIVATE_KEY TAURI_SIGNING_PRIVATE_KEY_PASSWORD APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_SIGNING_IDENTITY APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID; do
+            src="_$var"
+            val="${!src}"
+            if [ -n "$val" ]; then
+              {
+                echo "${var}<<EOF_SIGNING_SECRET"
+                printf '%s\n' "$val"
+                echo "EOF_SIGNING_SECRET"
+              } >> "$GITHUB_ENV"
+            fi
+          done
+          if [ -n "$_APPLE_CERTIFICATE" ]; then
+            echo "macos_sign=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "macos_sign=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Build Tauri app (Release)
         if: inputs.release
         uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-          # macOS signing and notarization
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         with:
           tagName: v__VERSION__
           releaseName: 'Gitduda v__VERSION__'
           releaseBody: 'See the assets below to download and install this version.'
           releaseDraft: true
           prerelease: false
-          args: --target ${{ matrix.target }}
+          args: --target ${{ matrix.target }}${{ runner.os == 'macOS' && steps.signing.outputs.macos_sign != 'true' && ' --no-sign' || '' }}
 
       - name: Build MSIX package (Microsoft Store)
         id: build-msix

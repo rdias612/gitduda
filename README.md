@@ -8,7 +8,7 @@
 [![CI](https://github.com/rdias612/gitduda/actions/workflows/ci.yml/badge.svg)](https://github.com/rdias612/gitduda/actions/workflows/ci.yml)
 [![GitHub release](https://img.shields.io/github/v/release/rdias612/gitduda)](https://github.com/rdias612/gitduda/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey)](https://github.com/rdias612/gitduda/releases)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux-lightgrey)](https://github.com/rdias612/gitduda/releases)
 
 [Website](https://gitduda.dev.br) · [Releases](https://github.com/rdias612/gitduda/releases) · [Why Gitduda](#why-gitduda) · [At a Glance](#at-a-glance) · [Installation](#installation) · [Build & Dev](#build--development)
 
@@ -109,7 +109,7 @@ claude mcp add --transport http gitduda http://127.0.0.1:<port>/mcp \
 
 | Platform | Minimum OS / Arch | Installers ([Releases](https://github.com/rdias612/gitduda/releases)) | Package Manager |
 | :--- | :--- | :--- | :--- |
-| **macOS** | macOS 11+ (Apple Silicon only) | `.dmg` | `brew install --cask rdias612/gitduda/gitduda` |
+| **macOS** | — | Not currently supported | — |
 | **Windows** | Windows 10+ (x64) | `.msi`, `.exe` | `winget install rdias612.Gitduda` |
 | **Linux** | x64 with GTK 3.24+ | `.deb`, `.AppImage`, `.rpm` | Download from Releases |
 
@@ -119,10 +119,8 @@ winget install rdias612.Gitduda
 scoop install https://raw.githubusercontent.com/rdias612/gitduda/main/packaging/scoop/gitduda.json
 ```
 
-```bash
-# macOS (Homebrew — Apple Silicon)
-brew install --cask rdias612/gitduda/gitduda
-```
+> [!NOTE]
+> **macOS (Apple) Support:** Prebuilt macOS (Apple) builds are not currently supported.
 
 > [!NOTE]
 > **Linux Keyring Requirement:** Credentials are stored via `keyutils` backed by the freedesktop Secret Service API. An unlocked provider (such as **GNOME Keyring** or **KWallet**) must be running, or saving credentials will fail.
@@ -143,7 +141,7 @@ Gitduda is built with **Tauri 2.0**, **Rust (`1.95+`)**, **Lit 3**, **TypeScript
 
 - **Node.js 20+**, **Rust 1.95+**, and **Git 2.20+**
 - **Windows**: [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) (*Desktop development with C++*) plus NASM and LLVM — [`run-dev.ps1`](run-dev.ps1) locates them automatically
-- **macOS**: Xcode Command Line Tools (`xcode-select --install`)
+- **macOS** *(source builds only; prebuilt releases are not currently supported)*: Xcode Command Line Tools (`xcode-select --install`)
 - **Linux (Debian/Ubuntu)**: `libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libssl-dev libgtk-3-dev libglib2.0-dev libdbus-1-dev`
 
 ### Running & Testing Locally
