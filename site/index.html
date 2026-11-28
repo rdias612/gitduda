@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Gitduda is a lightweight Git client for Windows, macOS, and Linux, with a Rust core, a virtualized commit graph, local semantic search, and MCP integration." data-pt-attribute="content" data-pt="Gitduda é um cliente Git leve para Windows, macOS e Linux, com núcleo em Rust, grafo virtualizado, busca semântica local e integração MCP.">
+  <meta name="description" content="Gitduda is a lightweight Git client for Windows and Linux, with a Rust core, a virtualized commit graph, local semantic search, and MCP integration." data-pt-attribute="content" data-pt="Gitduda é um cliente Git leve para Windows e Linux, com núcleo em Rust, grafo virtualizado, busca semântica local e integração MCP.">
   <meta name="theme-color" content="#f5f5f1">
   <link rel="icon" type="image/png" sizes="64x64" href="assets/favicon-64.png">
   <link rel="apple-touch-icon" href="assets/icon-256.png">
@@ -11,7 +11,7 @@
   <meta property="og:type" content="website">
   <meta property="og:locale" content="en_US" data-pt-attribute="content" data-pt="pt_BR">
   <meta property="og:title" content="Gitduda — Lightweight Git client with a Rust core" data-pt-attribute="content" data-pt="Gitduda — Cliente Git leve, com núcleo em Rust">
-  <meta property="og:description" content="Open-source Git client for Windows, macOS, and Linux, with a virtualized commit graph, local semantic search, and MCP." data-pt-attribute="content" data-pt="Cliente Git de código aberto para Windows, macOS e Linux, com grafo virtualizado, busca semântica local e MCP.">
+  <meta property="og:description" content="Open-source Git client for Windows and Linux, with a virtualized commit graph, local semantic search, and MCP." data-pt-attribute="content" data-pt="Cliente Git de código aberto para Windows e Linux, com grafo virtualizado, busca semântica local e MCP.">
   <meta property="og:url" content="https://gitduda.dev.br/">
   <meta property="og:image" content="https://gitduda.dev.br/assets/main-window.webp">
   <meta name="twitter:card" content="summary_large_image">
@@ -207,7 +207,7 @@
         <h1 id="title"><span data-pt="Git leve.">Lean Git.</span> <span class="title-second" data-pt="Fluxo completo.">Full workflow.</span></h1>
         <p class="hero-lede"><span data-pt="Com núcleo em">Built around a</span> <strong>Rust</strong><span data-pt=", o Gitduda foi pensado para poupar memória enquanto você explora históricos grandes, revisa diffs e prepara o próximo commit."> core, Gitduda is designed to use memory efficiently as you explore large histories, review diffs, and prepare your next commit.</span></p>
         <a class="button" href="#download" data-pt="Ver opções de instalação">See install options</a>
-        <p class="platforms" data-pt="Windows, macOS e Linux · Código aberto sob licença MIT">Windows, macOS, and Linux · Open source under the MIT license</p>
+        <p class="platforms" data-pt="Windows e Linux · Código aberto sob licença MIT">Windows and Linux · Open source under the MIT license</p>
       </div>
       <figure class="render-panel">
         <p class="render-heading eyebrow" data-pt="Renderização virtualizada">Virtualized rendering</p>
@@ -345,16 +345,6 @@
               <p class="copy-status" role="status"></p>
             </div>
           </details>
-          <details data-os="macos">
-            <summary>macOS</summary>
-            <div class="package-body">
-              <p data-pt="macOS 11 ou superior, Apple Silicon">macOS 11 or later, Apple Silicon</p>
-              <ul class="download-assets"><li><a class="release-link" href="https://github.com/rdias612/gitduda/releases" data-pt="Consultar releases no GitHub">View releases on GitHub</a></li></ul>
-              <p>Via Homebrew</p>
-              <div class="command"><code>brew install --cask rdias612/gitduda/gitduda</code><button type="button" data-pt="Copiar" hidden>Copy</button></div>
-              <p class="copy-status" role="status"></p>
-            </div>
-          </details>
           <details data-os="linux">
             <summary>Linux</summary>
             <div class="package-body">
@@ -480,7 +470,7 @@
     const packages = document.querySelectorAll('#pacotes details');
     const platform = navigator.userAgentData?.platform || navigator.platform;
     const mobile = navigator.userAgentData?.mobile || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-    const platformNames = { windows: /Win/i, macos: /Mac/i, linux: /Linux|X11/i };
+    const platformNames = { windows: /Win/i, linux: /Linux|X11/i };
     if (!mobile) {
       const current = Object.keys(platformNames).find((name) => platformNames[name].test(platform));
       if (current) packages.forEach((item) => { item.open = item.dataset.os === current; });
@@ -511,7 +501,6 @@
     // Asset names follow the release workflow (see docs/packaging.md).
     const groups = {
       windows: [[/_x64_en-US\.msi$/, 'MSI installer', 'Instalador MSI'], [/_x64-setup\.exe$/, 'EXE installer', 'Instalador EXE']],
-      macos: [[/_aarch64\.dmg$/, 'DMG image', 'Imagem DMG']],
       linux: [[/_amd64\.deb$/, 'Debian / Ubuntu (.deb)'], [/_amd64\.AppImage$/, 'AppImage'], [/\.x86_64\.rpm$/, 'Fedora / RHEL (.rpm)']],
     };
 
