@@ -24,6 +24,7 @@ let mockInvoke: MockInvoke = () => Promise.resolve(null);
 
 // ── Imports (after Tauri mock) ─────────────────────────────────────────────
 import { expect } from '@open-wc/testing';
+import { answerTagDeleteDialog } from '../test-utils/tag-delete-dialog.ts';
 import type { AppShell } from '../app-shell.ts';
 import type { OpenRepository } from '../stores/index.ts';
 import type { Repository } from '../types/git.types.ts';
@@ -89,7 +90,7 @@ function setupDefaultMocks(): void {
   mockInvoke = async (command: string) => {
     switch (command) {
       // Tauri confirm() resolves via plugin:dialog|message; truthy = confirmed.
-      // The destructive ref handlers (delete branch/tag) gate on this, matching
+      // The destructive branch handlers gate on this, matching
       // their sidebar counterparts.
       case 'plugin:dialog|message':
         return 'Ok';
@@ -665,23 +666,23 @@ describe('app-shell ref context menu handlers (integration)', () => {
   });
 
   describe('handleRefDeleteTag', () => {
-    it('does not delete when the confirm is declined', async () => {
-      declineConfirms();
+    async function deleteTag(...answers: boolean[]): Promise<void> {
       const el = createAppShell();
       setRefContextMenu(el, 'v1.0.0', 'tag');
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (el as any).handleRefDeleteTag();
+      const operation = (el as any).handleRefDeleteTag() as Promise<void>;
+      for (const answer of answers) await answerTagDeleteDialog(answer);
+      await operation;
+    }
 
+    it('does not delete when the confirm is declined', async () => {
+      await deleteTag(false);
       expect(findCommands('delete_tag')).to.have.length(0);
     });
 
     it('calls delete_tag with the correct args', async () => {
-      const el = createAppShell();
-      setRefContextMenu(el, 'v1.0.0', 'tag');
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (el as any).handleRefDeleteTag();
+      await deleteTag(true);
 
       const calls = findCommands('delete_tag');
       expect(calls.length).to.equal(1);
@@ -692,11 +693,7 @@ describe('app-shell ref context menu handlers (integration)', () => {
     });
 
     it('calls open_repository after successful delete', async () => {
-      const el = createAppShell();
-      setRefContextMenu(el, 'v1.0.0', 'tag');
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (el as any).handleRefDeleteTag();
+      await deleteTag(true);
 
       expect(findCommands('open_repository').length).to.be.greaterThan(0);
     });
@@ -716,11 +713,7 @@ describe('app-shell ref context menu handlers (integration)', () => {
         return previous(command, args);
       };
 
-      const el = createAppShell();
-      setRefContextMenu(el, 'v1.0.0', 'tag');
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (el as any).handleRefDeleteTag();
+      await deleteTag(true, true);
 
       const calls = findCommands('delete_remote_tag');
       expect(calls.length, 'the graph ref menu offers the remote delete too').to.equal(1);
@@ -855,7 +848,9 @@ describe('app-shell ref context menu handlers (integration)', () => {
         const el = createAppShell();
         setRefContextMenu(el, ref, refType);
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await (el as any)[name]();
+        const operation = (el as any)[name]() as Promise<void>;
+        if (refType === 'tag') await answerTagDeleteDialog(true);
+        await operation;
 
         const openRepoCalls = findCommands('open_repository');
         expect(openRepoCalls.length, `${name} should call open_repository`).to.be.greaterThan(0);

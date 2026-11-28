@@ -21,6 +21,7 @@ call site is here, and nothing else in `src/` has one.
   status text) plus the language picker's own error toast.
 - `src/components/dialogs/gn-sync-refs-dialog.ts` — branch and tag sync
   previews, risk warnings, and confirmation controls.
+- `src/components/dialogs/gn-tag-delete-dialog.ts` — local and remote tag deletion confirmations.
 - `src/components/sidebar/gn-commit-panel.ts` — issue search and commit references.
 - `src/components/toolbar/gn-toolbar.ts` — the workspace and repository
   switcher, tab actions, toolbar shortcuts and their accessible labels.

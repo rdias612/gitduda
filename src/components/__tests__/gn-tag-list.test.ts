@@ -23,6 +23,7 @@ let mockInvoke: MockInvoke = () => Promise.resolve(null);
 
 // ── Imports (after Tauri mock) ─────────────────────────────────────────────
 import { expect, fixture, html } from '@open-wc/testing';
+import { answerTagDeleteDialog } from '../../test-utils/tag-delete-dialog.ts';
 import type { GnTagList } from '../sidebar/gn-tag-list.ts';
 import '../sidebar/gn-tag-list.ts';
 
@@ -358,6 +359,7 @@ describe('gn-tag-list', () => {
         (item) => item.textContent?.trim() === 'Delete'
       ) as HTMLElement;
       deleteBtn.click();
+      await answerTagDeleteDialog(true);
 
       await new Promise((r) => setTimeout(r, 100));
       await el.updateComplete;
@@ -448,6 +450,7 @@ describe('gn-tag-list', () => {
         (item) => item.textContent?.trim() === 'Delete'
       ) as HTMLElement;
       deleteBtn.click();
+      await answerTagDeleteDialog(true);
 
       await new Promise((r) => setTimeout(r, 100));
       await el.updateComplete;

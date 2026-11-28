@@ -27,6 +27,7 @@ let cbId = 0;
 };
 
 import { expect } from '@open-wc/testing';
+import { answerTagDeleteDialog } from '../test-utils/tag-delete-dialog.ts';
 import type { AppShell } from '../app-shell.ts';
 import '../app-shell.ts';
 import { dialogs } from '../stores/dialog.store.ts';
@@ -894,7 +895,12 @@ describe('app-shell destructive guards', () => {
         const el = shellOnRepo();
         (el as any).refContextMenu = { visible: true, x: 0, y: 0, fullName: '', ...menu };
 
-        await (el as any)[handler]();
+        const operation = (el as any)[handler]() as Promise<void>;
+        if (handler === 'handleRefDeleteTag') {
+          expect(isRefOpRunning('/repo/one'), 'locked while the modal is open').to.equal(true);
+          await answerTagDeleteDialog(true);
+        }
+        await operation;
 
         expect(
           isRefOpRunning('/repo/one'),

@@ -1076,6 +1076,38 @@
   <source><x id="0" equiv-text="${action}"/> — this repository has no remote configured</source>
   <target><x id="0" equiv-text="${action}"/> — aucun dépôt distant configuré</target>
 </trans-unit>
+<trans-unit id="s844bd4f5cd8fa2ff">
+  <source>Delete Tag on Remote</source>
+  <target>Supprimer le tag du dépôt distant</target>
+</trans-unit>
+<trans-unit id="sce323f8b7498bfb5">
+  <source>Delete Local Tag</source>
+  <target>Supprimer le tag local</target>
+</trans-unit>
+<trans-unit id="s1f3d89ed2c0aafd0">
+  <source>Tag "<x id="0" equiv-text="${tagName}"/>" was deleted locally. Delete it from "<x id="1" equiv-text="${remote}"/>" too?</source>
+  <target>Le tag « <x id="0" equiv-text="${tagName}"/> » a été supprimé localement. Le supprimer aussi du dépôt distant « <x id="1" equiv-text="${remote}"/> » ?</target>
+</trans-unit>
+<trans-unit id="s6dffece1eb8c77dd">
+  <source>Delete tag "<x id="0" equiv-text="${tagName}"/>" from this repository?</source>
+  <target>Supprimer le tag « <x id="0" equiv-text="${tagName}"/> » de ce dépôt ?</target>
+</trans-unit>
+<trans-unit id="s9988385e7a8cd596">
+  <source>If you keep the tag on the remote, a future fetch can restore it locally.</source>
+  <target>Si vous conservez le tag sur le dépôt distant, une récupération ultérieure pourra le restaurer localement.</target>
+</trans-unit>
+<trans-unit id="s69a1bae929839599">
+  <source>Keep on Remote</source>
+  <target>Conserver sur le dépôt distant</target>
+</trans-unit>
+<trans-unit id="s830e4333dca91fc3">
+  <source>Delete on Remote</source>
+  <target>Supprimer du dépôt distant</target>
+</trans-unit>
+<trans-unit id="sa9edbb4627441e76">
+  <source>Delete Locally</source>
+  <target>Supprimer localement</target>
+</trans-unit>
 </body>
 </file>
 </xliff>

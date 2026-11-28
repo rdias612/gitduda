@@ -9,20 +9,13 @@
  * follow-up here means the two surfaces cannot drift apart again.
  */
 
+import { showTagDeleteDialog } from '../components/dialogs/gn-tag-delete-dialog.ts';
 import * as gitService from '../services/git.service.ts';
-import { showConfirm } from '../services/dialog.service.ts';
 import { showToast } from '../services/notification.service.ts';
 import { pushTagKey, tryAcquirePush, releasePush, warnRepositoryBusy } from './ref-lock.ts';
 
-/** The local-delete confirm. Honest about what it does and does not remove. */
 export function confirmDeleteTag(tagName: string): Promise<boolean> {
-  return showConfirm(
-    'Delete Tag',
-    `Are you sure you want to delete tag "${tagName}"?\n\n` +
-      'This removes it from this repository only and cannot be undone. If the ' +
-      'tag was pushed, it stays on the remote and the next fetch restores it.',
-    'warning'
-  );
+  return showTagDeleteDialog(tagName);
 }
 
 /**
@@ -74,12 +67,7 @@ export async function offerRemoteTagDelete(repoPath: string, tagName: string): P
   }
 
   try {
-    const confirmed = await showConfirm(
-      'Delete Tag on Remote',
-      `Also delete tag "${tagName}" on "${remote}"?\n\n` +
-        'Leaving it there means the next fetch copies it back into this repository.',
-      'warning'
-    );
+    const confirmed = await showTagDeleteDialog(tagName, remote);
     if (!confirmed) return;
 
     const result = await gitService.deleteRemoteTag({ path: repoPath, name: tagName, remote });

@@ -22,6 +22,7 @@ import { expect, fixture, html } from '@open-wc/testing';
 import type { GnTagList } from '../gn-tag-list.ts';
 import '../gn-tag-list.ts';
 import { uiStore } from '../../../stores/ui.store.ts';
+import { answerTagDeleteDialog } from '../../../test-utils/tag-delete-dialog.ts';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 const REPO_PATH = '/test/repo';
@@ -41,29 +42,16 @@ function defaultMockInvoke(command: string): Promise<unknown> {
 
 type MockRemote = { name: string; url: string; pushUrl: string | null };
 
-/**
- * A mock for the tag-delete flow, which now asks TWO questions: the local
- * confirm, then the remote follow-up. Records every dialog's message so the
- * copy and the dialog count are assertable, and answers them in order.
- */
 function deleteFlowMock(options: {
   remotes?: MockRemote[];
-  answers?: string[];
   deleteRemoteTag?: () => Promise<unknown>;
   getRemotes?: () => Promise<unknown>;
   getPushRemote?: () => Promise<unknown>;
 }) {
-  const dialogMessages: string[] = [];
   const invokes: Array<{ command: string; args?: unknown }> = [];
-  const answers = options.answers ?? [];
-  let dialogIndex = 0;
 
   const mock: MockInvoke = (command: string, args?: unknown) => {
     invokes.push({ command, args });
-    if (command === 'plugin:dialog|message') {
-      dialogMessages.push(String((args as { message?: string } | undefined)?.message ?? ''));
-      return Promise.resolve(answers[dialogIndex++] ?? 'Cancel');
-    }
     if (command === 'get_remotes') {
       return options.getRemotes ? options.getRemotes() : Promise.resolve(options.remotes ?? []);
     }
@@ -77,16 +65,20 @@ function deleteFlowMock(options: {
     return defaultMockInvoke(command);
   };
 
-  return { mock, dialogMessages, invokes };
+  return { mock, invokes };
 }
 
 /** Run handleDeleteTag against a tag the context menu is open on. */
-async function runDeleteTag(el: GnTagList, tagName: string): Promise<void> {
+async function runDeleteTag(el: GnTagList, tagName: string, ...answers: boolean[]): Promise<string[]> {
   const tag = makeTag(tagName);
   (el as unknown as { contextMenu: { visible: boolean; x: number; y: number; tag: typeof tag | null } }).contextMenu = {
     visible: true, x: 0, y: 0, tag,
   };
-  await (el as unknown as { handleDeleteTag: () => Promise<void> }).handleDeleteTag();
+  const operation = (el as unknown as { handleDeleteTag: () => Promise<void> }).handleDeleteTag();
+  const messages: string[] = [];
+  for (const answer of answers) messages.push(await answerTagDeleteDialog(answer));
+  await operation;
+  return messages;
 }
 
 async function createComponent(): Promise<GnTagList> {
@@ -159,12 +151,7 @@ describe('gn-tag-list feedback', () => {
       return defaultMockInvoke(command);
     };
 
-    const tag = makeTag('v3.0.0');
-    (el as unknown as { contextMenu: { visible: boolean; x: number; y: number; tag: typeof tag | null } }).contextMenu = {
-      visible: true, x: 0, y: 0, tag,
-    };
-
-    await (el as unknown as { handleDeleteTag: () => Promise<void> }).handleDeleteTag();
+    await runDeleteTag(el, 'v3.0.0', true);
 
     const successToast = uiStore.getState().toasts.find((t) => t.type === 'success');
     expect(successToast, 'the delete is acknowledged').to.not.be.undefined;
@@ -179,25 +166,24 @@ describe('gn-tag-list feedback', () => {
 
   const ORIGIN: MockRemote[] = [{ name: 'origin', url: 'https://example.test/r.git', pushUrl: null }];
 
-  it('the delete confirm says the tag survives on the remote', async () => {
+  it('cancelling the local modal leaves both copies untouched', async () => {
     const el = await createComponent();
-    const flow = deleteFlowMock({ remotes: ORIGIN, answers: ['Cancel'] });
+    const flow = deleteFlowMock({ remotes: ORIGIN });
     mockInvoke = flow.mock;
 
-    await runDeleteTag(el, 'v3.0.0');
+    const [localMessage] = await runDeleteTag(el, 'v3.0.0', false);
 
-    expect(flow.dialogMessages[0], 'the local confirm names the remote copy').to.match(
-      /stays on the remote/
-    );
-    expect(flow.dialogMessages[0]).to.match(/next fetch/);
+    expect(localMessage).to.equal('Delete tag "v3.0.0" from this repository?');
+    expect(flow.invokes.some(({ command }) => command === 'delete_tag' || command === 'delete_remote_tag'))
+      .to.be.false;
   });
 
   it('confirming the follow-up deletes the tag on the remote', async () => {
     const el = await createComponent();
-    const flow = deleteFlowMock({ remotes: ORIGIN, answers: ['Ok', 'Ok'] });
+    const flow = deleteFlowMock({ remotes: ORIGIN });
     mockInvoke = flow.mock;
 
-    await runDeleteTag(el, 'v3.0.0');
+    await runDeleteTag(el, 'v3.0.0', true, true);
 
     const remoteDelete = flow.invokes.filter((i) => i.command === 'delete_remote_tag');
     expect(remoteDelete.length, 'the remote copy is deleted too').to.equal(1);
@@ -216,12 +202,12 @@ describe('gn-tag-list feedback', () => {
 
   it('declining the follow-up leaves the remote tag alone', async () => {
     const el = await createComponent();
-    const flow = deleteFlowMock({ remotes: ORIGIN, answers: ['Ok', 'Cancel'] });
+    const flow = deleteFlowMock({ remotes: ORIGIN });
     mockInvoke = flow.mock;
 
-    await runDeleteTag(el, 'v3.0.0');
+    const [, remoteMessage] = await runDeleteTag(el, 'v3.0.0', true, false);
 
-    expect(flow.dialogMessages.length, 'the follow-up was offered').to.equal(2);
+    expect(remoteMessage).to.contain('a future fetch can restore it locally');
     expect(flow.invokes.filter((i) => i.command === 'delete_remote_tag')).to.have.length(0);
     // The local delete is not conditional on the follow-up's answer.
     expect(flow.invokes.filter((i) => i.command === 'delete_tag')).to.have.length(1);
@@ -229,29 +215,13 @@ describe('gn-tag-list feedback', () => {
 
   it('a repo with no remotes is not asked about one', async () => {
     const el = await createComponent();
-    const flow = deleteFlowMock({ remotes: [], answers: ['Ok'] });
+    const flow = deleteFlowMock({ remotes: [] });
     mockInvoke = flow.mock;
 
-    await runDeleteTag(el, 'v3.0.0');
+    await runDeleteTag(el, 'v3.0.0', true);
 
-    expect(flow.dialogMessages[0]).to.match(/stays on the remote/);
-    expect(flow.dialogMessages.length, 'nothing to ask about').to.equal(1);
+    expect(document.querySelector('gn-tag-delete-dialog')).to.be.null;
     expect(flow.invokes.filter((i) => i.command === 'delete_remote_tag')).to.have.length(0);
-  });
-
-  it('the local confirm does not promise a follow-up it may never show', async () => {
-    // The follow-up is offered only when the repo HAS a remote, so the confirm
-    // must not state unconditionally that one is coming — the no-remotes case
-    // above ends after a single dialog.
-    const el = await createComponent();
-    const flow = deleteFlowMock({ remotes: [], answers: ['Ok'] });
-    mockInvoke = flow.mock;
-
-    await runDeleteTag(el, 'v3.0.0');
-
-    expect(flow.dialogMessages[0], 'no unconditional promise of a next question').to.not.match(
-      /asked about deleting it there next/
-    );
   });
 
   it('an unreadable remote list warns instead of silently skipping the follow-up', async () => {
@@ -260,13 +230,12 @@ describe('gn-tag-list feedback', () => {
     // the remote copy survives and the next fetch restores it.
     const el = await createComponent();
     const flow = deleteFlowMock({
-      answers: ['Ok'],
       getRemotes: () =>
         Promise.reject({ code: 'COMMAND_ERROR', message: 'could not read remote config' }),
     });
     mockInvoke = flow.mock;
 
-    await runDeleteTag(el, 'v3.0.0');
+    await runDeleteTag(el, 'v3.0.0', true);
 
     const warning = uiStore.getState().toasts.find((t) => t.type === 'warning');
     expect(warning, 'the user is told the remote copy may survive').to.not.be.undefined;
@@ -284,18 +253,17 @@ describe('gn-tag-list feedback', () => {
     const el = await createComponent();
     const flow = deleteFlowMock({
       remotes: ORIGIN,
-      answers: ['Ok', 'Ok'],
       getPushRemote: () =>
         Promise.reject({ code: 'REMOTE_NOT_FOUND', message: 'Remote not found: gone' }),
     });
     mockInvoke = flow.mock;
 
-    await runDeleteTag(el, 'v4.0.0');
+    const [, remoteMessage] = await runDeleteTag(el, 'v4.0.0', true, true);
 
     const remoteDeletes = flow.invokes.filter((i) => i.command === 'delete_remote_tag');
     expect(remoteDeletes, 'the remote copy is still deletable').to.have.length(1);
     expect((remoteDeletes[0].args as { remote: string }).remote).to.equal('origin');
-    expect(flow.dialogMessages[1], 'and the confirm names where it goes').to.contain('origin');
+    expect(remoteMessage, 'and the confirm names where it goes').to.contain('origin');
     expect(uiStore.getState().toasts.find((t) => t.type === 'warning'), 'no dead end').to.be
       .undefined;
   });
@@ -311,13 +279,12 @@ describe('gn-tag-list feedback', () => {
         { name: 'upstream', url: 'https://example.test/u.git', pushUrl: null },
         { name: 'fork', url: 'https://example.test/f.git', pushUrl: null },
       ],
-      answers: ['Ok', 'Ok'],
       getPushRemote: () =>
         Promise.reject({ code: 'REMOTE_NOT_FOUND', message: 'Remote not found: origin' }),
     });
     mockInvoke = flow.mock;
 
-    await runDeleteTag(el, 'v5.0.0');
+    await runDeleteTag(el, 'v5.0.0', true, true);
 
     const remoteDeletes = flow.invokes.filter((i) => i.command === 'delete_remote_tag');
     expect(remoteDeletes).to.have.length(1);
@@ -328,13 +295,12 @@ describe('gn-tag-list feedback', () => {
     const el = await createComponent();
     const flow = deleteFlowMock({
       remotes: ORIGIN,
-      answers: ['Ok', 'Ok'],
       deleteRemoteTag: () =>
         Promise.reject({ code: 'OPERATION_FAILED', message: 'remote ref does not exist' }),
     });
     mockInvoke = flow.mock;
 
-    await runDeleteTag(el, 'v3.0.0');
+    await runDeleteTag(el, 'v3.0.0', true, true);
 
     const errorToast = uiStore.getState().toasts.find((t) => t.type === 'error');
     expect(errorToast, 'the failure is not swallowed').to.not.be.undefined;

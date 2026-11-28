@@ -5,12 +5,19 @@ import {
   startCommandCaptureWithMocks,
   startCommandCapture,
   findCommand,
-  getCapturedCommands,
   waitForCommand,
   injectCommandError,
   injectCommandMock,
   autoConfirmDialogs,
 } from '../fixtures/test-helpers';
+
+function tagDeleteDialog(page: Page) {
+  return page.locator('gn-tag-delete-dialog');
+}
+
+async function confirmLocalTagDelete(page: Page): Promise<void> {
+  await tagDeleteDialog(page).getByRole('button', { name: 'Delete Locally' }).click();
+}
 
 test.describe('Tag List Context Menu', () => {
   let leftPanel: LeftPanelPage;
@@ -163,12 +170,13 @@ test.describe('Tag List Context Menu', () => {
     const deleteOption = page.locator('.context-menu-item, .menu-item', { hasText: /delete/i });
     await expect(deleteOption).toBeVisible();
     await deleteOption.click();
+    await confirmLocalTagDelete(page);
+    await waitForCommand(page, 'delete_tag');
 
     const deleteCommands = await findCommand(page, 'delete_tag');
     expect(deleteCommands.length).toBeGreaterThan(0);
 
-    const tagCount = await leftPanel.getTagCount();
-    expect(tagCount).toBe(2);
+    await expect(leftPanel.tagItems).toHaveCount(2);
   });
 
   test('should close context menu after clicking Push', async ({ page }) => {
@@ -257,6 +265,8 @@ test.describe('Tag List Context Menu', () => {
     const deleteOption = page.locator('.context-menu-item, .menu-item', { hasText: /delete/i });
     await expect(deleteOption).toBeVisible();
     await deleteOption.click();
+    await confirmLocalTagDelete(page);
+    await waitForCommand(page, 'delete_tag');
 
     const deleteCommands = await findCommand(page, 'delete_tag');
     expect(deleteCommands.length).toBeGreaterThan(0);
@@ -326,6 +336,8 @@ test.describe('Tag Context Menu - Event Propagation', () => {
     const deleteOption = page.locator('.context-menu-item, .menu-item', { hasText: /delete/i });
     await expect(deleteOption).toBeVisible();
     await deleteOption.click();
+    await confirmLocalTagDelete(page);
+    await waitForCommand(page, 'delete_tag');
 
     // Verify the delete_tag command was invoked
     const deleteCommands = await findCommand(page, 'delete_tag');
@@ -351,6 +363,8 @@ test.describe('Tag Context Menu - Event Propagation', () => {
     const deleteOption = page.locator('.context-menu-item, .menu-item', { hasText: /delete/i });
     await expect(deleteOption).toBeVisible();
     await deleteOption.click();
+    await confirmLocalTagDelete(page);
+    await tagDeleteDialog(page).getByRole('button', { name: 'Delete on Remote' }).click();
 
     await waitForCommand(page, 'delete_remote_tag');
     const remoteDeletes = await findCommand(page, 'delete_remote_tag');
@@ -379,7 +393,6 @@ test.describe('Tag Context Menu - Last tag in a short window', () => {
     url: `https://github.com/test/${name}.git`,
     pushUrl: null,
   }));
-  const dialogCommand = 'plugin:dialog|message';
 
   async function openLastTagMenu(page: Page) {
     const leftPanel = new LeftPanelPage(page);
@@ -401,28 +414,14 @@ test.describe('Tag Context Menu - Last tag in a short window', () => {
   }
 
   const outcomes = [
-    { name: 'declines remote deletion', remoteReply: 'Cancel' },
-    { name: 'confirms remote deletion', remoteReply: 'Ok' },
-    { name: 'reports a remote deletion error', remoteReply: 'Ok', remoteError: 'Tag is protected' },
+    { name: 'declines remote deletion', keepRemote: true },
+    { name: 'confirms remote deletion', keepRemote: false },
+    { name: 'reports a remote deletion error', keepRemote: false, remoteError: 'Tag is protected' },
   ];
 
-  for (const { name, remoteReply, remoteError } of outcomes) {
+  for (const { name, keepRemote, remoteError } of outcomes) {
     test(`deletes the local tag and ${name}`, async ({ page }) => {
       await setupOpenRepository(page, { tags, remotes });
-      await page.evaluate(({ dialogCommand, remoteReply }) => {
-        const tauri = (window as unknown as {
-          __TAURI_INTERNALS__: { invoke: (command: string, args?: unknown) => Promise<unknown> };
-        }).__TAURI_INTERNALS__;
-        const invoke = tauri.invoke;
-        tauri.invoke = async (command, args) => {
-          if (command === dialogCommand) {
-            const { title } = args as { title?: string };
-            if (title === 'Delete Tag') return 'Ok';
-            if (title === 'Delete Tag on Remote') return remoteReply;
-          }
-          return invoke(command, args);
-        };
-      }, { dialogCommand, remoteReply });
       await startCommandCapture(page);
       await injectCommandMock(page, { get_push_remote: 'upstream' });
       if (remoteError) await injectCommandError(page, 'delete_remote_tag', remoteError);
@@ -431,31 +430,31 @@ test.describe('Tag Context Menu - Last tag in a short window', () => {
       await expect(deleteItem).toBeInViewport({ ratio: 1 });
       await deleteItem.click();
       await expect(menu).toBeHidden();
+      const dialog = tagDeleteDialog(page);
+      const localModal = dialog.getByRole('dialog', { name: 'Delete Local Tag' });
+      const remoteModal = dialog.getByRole('dialog', { name: 'Delete Tag on Remote' });
+      await expect(localModal).toBeVisible();
+      await expect(dialog.getByText(`Delete tag "${tagName}" from this repository?`)).toBeVisible();
+      await expect(dialog.getByRole('button', { name: 'Cancel' })).toBeFocused();
+      expect(await findCommand(page, 'delete_tag')).toHaveLength(0);
+
+      await confirmLocalTagDelete(page);
+      await expect(remoteModal).toBeVisible();
+      await expect(localModal).toBeHidden();
       await expect(leftPanel.getTag(tagName)).toHaveCount(0);
-      await expect.poll(async () => (await findCommand(page, dialogCommand)).length).toBe(2);
-
-      const deletionCommands = (await getCapturedCommands(page)).filter(({ command }) =>
-        [dialogCommand, 'delete_tag'].includes(command)
-      );
-      expect(deletionCommands).toEqual([
-        {
-          command: dialogCommand,
-          args: expect.objectContaining({
-            title: 'Delete Tag',
-            message: expect.stringContaining(`delete tag "${tagName}"`),
-          }),
-        },
+      await expect(dialog.getByText(`Tag "${tagName}" was deleted locally. Delete it from "upstream" too?`))
+        .toBeVisible();
+      await expect(dialog.getByRole('button', { name: 'Keep on Remote' })).toBeFocused();
+      expect(await findCommand(page, 'delete_tag')).toEqual([
         { command: 'delete_tag', args: expect.objectContaining({ name: tagName }) },
-        {
-          command: dialogCommand,
-          args: expect.objectContaining({
-            title: 'Delete Tag on Remote',
-            message: expect.stringContaining(`"${tagName}" on "upstream"`),
-          }),
-        },
       ]);
+      expect(await findCommand(page, 'delete_remote_tag')).toHaveLength(0);
 
-      if (remoteReply === 'Cancel') {
+      await dialog.getByRole('button', { name: keepRemote ? 'Keep on Remote' : 'Delete on Remote' }).click();
+      await expect(dialog).toHaveCount(0);
+      expect(await findCommand(page, 'plugin:dialog|message')).toHaveLength(0);
+
+      if (keepRemote) {
         await leftPanel.tagItems.last().click({ button: 'right' });
         await expect(deleteItem).toBeEnabled();
         expect(await findCommand(page, 'delete_remote_tag')).toHaveLength(0);
@@ -476,17 +475,16 @@ test.describe('Tag Context Menu - Last tag in a short window', () => {
 
   test('stops after local deletion when there are no remotes', async ({ page }) => {
     await setupOpenRepository(page, { tags, remotes: [] });
-    await startCommandCaptureWithMocks(page, { [dialogCommand]: 'Ok' });
+    await startCommandCapture(page);
 
     const { leftPanel, deleteItem } = await openLastTagMenu(page);
     await deleteItem.click();
+    await confirmLocalTagDelete(page);
     await expect(leftPanel.getTag(tagName)).toHaveCount(0);
     await leftPanel.tagItems.last().click({ button: 'right' });
     await expect(deleteItem).toBeEnabled();
 
-    expect(await findCommand(page, dialogCommand)).toEqual([
-      { command: dialogCommand, args: expect.objectContaining({ title: 'Delete Tag' }) },
-    ]);
+    await expect(tagDeleteDialog(page)).toHaveCount(0);
     expect(await findCommand(page, 'delete_remote_tag')).toHaveLength(0);
   });
 
@@ -495,7 +493,7 @@ test.describe('Tag Context Menu - Last tag in a short window', () => {
       tags,
       remotes: Array.from({ length: 40 }, (_, i) => ({ ...remotes[0], name: `remote-${i}` })),
     });
-    await startCommandCaptureWithMocks(page, { [dialogCommand]: 'Cancel' });
+    await startCommandCapture(page);
 
     const { menu, deleteItem } = await openLastTagMenu(page);
     await page.setViewportSize({ width: 1024, height: 480 });
@@ -509,9 +507,31 @@ test.describe('Tag Context Menu - Last tag in a short window', () => {
     await page.mouse.wheel(0, 2000);
     await expect(deleteItem).toBeInViewport({ ratio: 1 });
     await deleteItem.click();
-    await waitForCommand(page, dialogCommand);
+    const dialog = tagDeleteDialog(page);
+    await expect(dialog.getByRole('dialog', { name: 'Delete Local Tag' })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(dialog).toHaveCount(0);
     expect(await findCommand(page, 'delete_tag')).toHaveLength(0);
     expect(await findCommand(page, 'delete_remote_tag')).toHaveLength(0);
+  });
+
+  test.describe('Brazilian Portuguese', () => {
+    test.use({ locale: 'pt-BR' });
+
+    test('shows the tag and remote in the translated confirmation', async ({ page }) => {
+      await setupOpenRepository(page, { tags, remotes });
+      const { deleteItem } = await openLastTagMenu(page);
+      await deleteItem.click();
+
+      const dialog = tagDeleteDialog(page);
+      await expect(dialog.getByRole('dialog', { name: 'Excluir tag local' })).toBeVisible();
+      await dialog.getByRole('button', { name: 'Excluir localmente' }).click();
+      await expect(dialog.getByRole('dialog', { name: 'Excluir tag no remoto' })).toBeVisible();
+      await expect(dialog.getByText(`A tag "${tagName}" foi excluída localmente. Deseja excluí-la também de "origin"?`))
+        .toBeVisible();
+      await dialog.getByRole('button', { name: 'Manter no remoto' }).click();
+      await expect(dialog).toHaveCount(0);
+    });
   });
 });
 
@@ -562,11 +582,6 @@ test.describe('Tag Context Menu - Error Handling', () => {
   });
 
   test('should show error toast when delete_tag fails', async ({ page }) => {
-    await injectCommandMock(page, {
-      'plugin:dialog|confirm': true,
-      'plugin:dialog|ask': true,
-    });
-
     await injectCommandError(page, 'delete_tag', 'Delete failed: tag is protected');
 
     await leftPanel.expandTags();
@@ -576,6 +591,7 @@ test.describe('Tag Context Menu - Error Handling', () => {
     const deleteOption = page.locator('.context-menu-item, .menu-item', { hasText: /delete/i });
     await expect(deleteOption).toBeVisible();
     await deleteOption.click();
+    await confirmLocalTagDelete(page);
 
     // The component calls showToast which adds to the UI store, rendered by gn-toast-container
     const toast = page.locator('gn-toast-container .toast');
@@ -736,11 +752,6 @@ test.describe('Tag Context Menu - UI Outcome Verification', () => {
       ],
     });
 
-    // Set up dialog confirmation mocks and inject a specific delete error
-    await injectCommandMock(page, {
-      'plugin:dialog|confirm': true,
-      'plugin:dialog|ask': true,
-    });
     await injectCommandError(page, 'delete_tag', 'Tag is protected and cannot be deleted');
 
     await leftPanel.expandTags();
@@ -751,6 +762,7 @@ test.describe('Tag Context Menu - UI Outcome Verification', () => {
     const deleteOption = page.locator('.context-menu-item, .menu-item', { hasText: /delete/i });
     await expect(deleteOption).toBeVisible();
     await deleteOption.click();
+    await confirmLocalTagDelete(page);
 
     // Verify the error toast appears
     const toast = page.locator('gn-toast-container .toast');

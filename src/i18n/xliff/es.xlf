@@ -1076,6 +1076,38 @@
   <source><x id="0" equiv-text="${action}"/> — this repository has no remote configured</source>
   <target><x id="0" equiv-text="${action}"/>: este repositorio no tiene ningún remoto configurado</target>
 </trans-unit>
+<trans-unit id="s844bd4f5cd8fa2ff">
+  <source>Delete Tag on Remote</source>
+  <target>Eliminar etiqueta del remoto</target>
+</trans-unit>
+<trans-unit id="sce323f8b7498bfb5">
+  <source>Delete Local Tag</source>
+  <target>Eliminar etiqueta local</target>
+</trans-unit>
+<trans-unit id="s1f3d89ed2c0aafd0">
+  <source>Tag "<x id="0" equiv-text="${tagName}"/>" was deleted locally. Delete it from "<x id="1" equiv-text="${remote}"/>" too?</source>
+  <target>La etiqueta "<x id="0" equiv-text="${tagName}"/>" se eliminó localmente. ¿También quieres eliminarla de "<x id="1" equiv-text="${remote}"/>"?</target>
+</trans-unit>
+<trans-unit id="s6dffece1eb8c77dd">
+  <source>Delete tag "<x id="0" equiv-text="${tagName}"/>" from this repository?</source>
+  <target>¿Eliminar la etiqueta "<x id="0" equiv-text="${tagName}"/>" de este repositorio?</target>
+</trans-unit>
+<trans-unit id="s9988385e7a8cd596">
+  <source>If you keep the tag on the remote, a future fetch can restore it locally.</source>
+  <target>Si conservas la etiqueta en el remoto, un fetch posterior puede restaurarla localmente.</target>
+</trans-unit>
+<trans-unit id="s69a1bae929839599">
+  <source>Keep on Remote</source>
+  <target>Conservar en el remoto</target>
+</trans-unit>
+<trans-unit id="s830e4333dca91fc3">
+  <source>Delete on Remote</source>
+  <target>Eliminar del remoto</target>
+</trans-unit>
+<trans-unit id="sa9edbb4627441e76">
+  <source>Delete Locally</source>
+  <target>Eliminar localmente</target>
+</trans-unit>
 </body>
 </file>
 </xliff>
