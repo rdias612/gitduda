@@ -26,9 +26,13 @@ env:
 
 jobs:
   test-e2e:
-    name: E2E Tests
+    name: E2E Tests (shard ${{ matrix.shard }})
     if: inputs.release
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
 
     steps:
       - name: Checkout repository
@@ -54,13 +58,13 @@ jobs:
           npx playwright install --with-deps chromium
 
       - name: Run E2E tests
-        run: npm run test:e2e
+        run: npm run test:e2e -- --shard=${{ matrix.shard }}/${{ strategy.job-total }}
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v7
         if: ${{ !cancelled() }}
         with:
-          name: playwright-report
+          name: playwright-report-${{ matrix.shard }}
           path: e2e/playwright-report/
           overwrite: true
           retention-days: 14
