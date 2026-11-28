@@ -1,24 +1,16 @@
-import { test, expect, type Locator } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { setupOpenRepository } from '../fixtures/tauri-mock';
 import { LeftPanelPage } from '../pages/panels.page';
 import {
   startCommandCaptureWithMocks,
   startCommandCapture,
   findCommand,
+  getCapturedCommands,
   waitForCommand,
   injectCommandError,
   injectCommandMock,
   autoConfirmDialogs,
 } from '../fixtures/test-helpers';
-
-/**
- * Click a context menu item via JavaScript to avoid viewport boundary issues.
- * The tag list context menu uses position:fixed and may extend beyond the viewport
- * when tags are near the bottom of the sidebar.
- */
-async function clickMenuItem(locator: Locator): Promise<void> {
-  await locator.evaluate((el) => (el as HTMLElement).click());
-}
 
 test.describe('Tag List Context Menu', () => {
   let leftPanel: LeftPanelPage;
@@ -27,7 +19,6 @@ test.describe('Tag List Context Menu', () => {
     leftPanel = new LeftPanelPage(page);
 
     // Use tags all within v1.x so they fall into a single group (no group headers)
-    // This keeps the tag list compact and avoids context menus going off-viewport
     await setupOpenRepository(page, {
       tags: [
         {
@@ -129,7 +120,7 @@ test.describe('Tag List Context Menu', () => {
 
     const checkoutOption = page.locator('.context-menu-item, .menu-item', { hasText: /checkout/i });
     await expect(checkoutOption).toBeVisible();
-    await clickMenuItem(checkoutOption);
+    await checkoutOption.click();
 
     const contextMenu = page.locator('.context-menu, .tag-context-menu');
     await expect(contextMenu).not.toBeVisible();
@@ -143,7 +134,7 @@ test.describe('Tag List Context Menu', () => {
 
     const checkoutOption = page.locator('.context-menu-item, .menu-item', { hasText: /checkout/i });
     await expect(checkoutOption).toBeVisible();
-    await clickMenuItem(checkoutOption);
+    await checkoutOption.click();
 
     const checkoutCommands = await findCommand(page, 'checkout_with_autostash');
     expect(checkoutCommands.length).toBeGreaterThan(0);
@@ -157,7 +148,7 @@ test.describe('Tag List Context Menu', () => {
 
     const deleteOption = page.locator('.context-menu-item, .menu-item', { hasText: /delete/i });
     await expect(deleteOption).toBeVisible();
-    await clickMenuItem(deleteOption);
+    await deleteOption.click();
 
     const contextMenu = page.locator('.context-menu, .tag-context-menu');
     await expect(contextMenu).not.toBeVisible();
@@ -171,7 +162,7 @@ test.describe('Tag List Context Menu', () => {
 
     const deleteOption = page.locator('.context-menu-item, .menu-item', { hasText: /delete/i });
     await expect(deleteOption).toBeVisible();
-    await clickMenuItem(deleteOption);
+    await deleteOption.click();
 
     const deleteCommands = await findCommand(page, 'delete_tag');
     expect(deleteCommands.length).toBeGreaterThan(0);
@@ -188,7 +179,7 @@ test.describe('Tag List Context Menu', () => {
 
     const pushOption = page.locator('.context-menu-item, .menu-item', { hasText: /push/i });
     await expect(pushOption).toBeVisible();
-    await clickMenuItem(pushOption);
+    await pushOption.click();
 
     const contextMenu = page.locator('.context-menu, .tag-context-menu');
     await expect(contextMenu).not.toBeVisible();
@@ -202,7 +193,7 @@ test.describe('Tag List Context Menu', () => {
 
     const pushOption = page.locator('.context-menu-item, .menu-item', { hasText: /push/i });
     await expect(pushOption).toBeVisible();
-    await clickMenuItem(pushOption);
+    await pushOption.click();
 
     await waitForCommand(page, 'push_tag');
     const pushCommands = await findCommand(page, 'push_tag');
@@ -265,7 +256,7 @@ test.describe('Tag List Context Menu', () => {
 
     const deleteOption = page.locator('.context-menu-item, .menu-item', { hasText: /delete/i });
     await expect(deleteOption).toBeVisible();
-    await clickMenuItem(deleteOption);
+    await deleteOption.click();
 
     const deleteCommands = await findCommand(page, 'delete_tag');
     expect(deleteCommands.length).toBeGreaterThan(0);
@@ -314,7 +305,7 @@ test.describe('Tag Context Menu - Event Propagation', () => {
 
     const checkoutOption = page.locator('.context-menu-item, .menu-item', { hasText: /checkout/i });
     await expect(checkoutOption).toBeVisible();
-    await clickMenuItem(checkoutOption);
+    await checkoutOption.click();
 
     const eventReceived = await eventPromise;
     expect(eventReceived).toBe(true);
@@ -334,7 +325,7 @@ test.describe('Tag Context Menu - Event Propagation', () => {
 
     const deleteOption = page.locator('.context-menu-item, .menu-item', { hasText: /delete/i });
     await expect(deleteOption).toBeVisible();
-    await clickMenuItem(deleteOption);
+    await deleteOption.click();
 
     // Verify the delete_tag command was invoked
     const deleteCommands = await findCommand(page, 'delete_tag');
@@ -359,7 +350,7 @@ test.describe('Tag Context Menu - Event Propagation', () => {
 
     const deleteOption = page.locator('.context-menu-item, .menu-item', { hasText: /delete/i });
     await expect(deleteOption).toBeVisible();
-    await clickMenuItem(deleteOption);
+    await deleteOption.click();
 
     await waitForCommand(page, 'delete_remote_tag');
     const remoteDeletes = await findCommand(page, 'delete_remote_tag');
@@ -369,6 +360,158 @@ test.describe('Tag Context Menu - Event Propagation', () => {
     expect(args?.remote).toBe('origin');
 
     await expect(page.locator('.toast', { hasText: 'Deleted tag v1.0.0 on origin' })).toBeVisible();
+  });
+});
+
+test.describe('Tag Context Menu - Last tag in a short window', () => {
+  test.use({ viewport: { width: 1024, height: 600 } });
+
+  const tagName = 'v1.0.3';
+  const tags = ['v1.0.1', 'v1.0.2', tagName].map((name) => ({
+    name,
+    targetOid: 'abc123',
+    message: null,
+    tagger: null,
+    isAnnotated: false,
+  }));
+  const remotes = ['origin', 'upstream'].map((name) => ({
+    name,
+    url: `https://github.com/test/${name}.git`,
+    pushUrl: null,
+  }));
+  const dialogCommand = 'plugin:dialog|message';
+
+  async function openLastTagMenu(page: Page) {
+    const leftPanel = new LeftPanelPage(page);
+    await leftPanel.expandTags();
+    const tag = leftPanel.tagItems.last();
+    await expect(tag).toContainText(tagName);
+    await tag.scrollIntoViewIfNeeded();
+    const tagBounds = (await tag.boundingBox())!;
+    await tag.click({ button: 'right' });
+
+    const menu = leftPanel.tagList.getByRole('menu', { name: 'Tag actions' });
+    await expect(menu).toBeInViewport({ ratio: 1 });
+    const menuBounds = (await menu.boundingBox())!;
+    expect(menuBounds.y + menuBounds.height).toBeLessThanOrEqual(
+      Math.ceil(tagBounds.y + tagBounds.height / 2)
+    );
+
+    return { leftPanel, menu, deleteItem: menu.getByRole('menuitem', { name: 'Delete' }) };
+  }
+
+  const outcomes = [
+    { name: 'declines remote deletion', remoteReply: 'Cancel' },
+    { name: 'confirms remote deletion', remoteReply: 'Ok' },
+    { name: 'reports a remote deletion error', remoteReply: 'Ok', remoteError: 'Tag is protected' },
+  ];
+
+  for (const { name, remoteReply, remoteError } of outcomes) {
+    test(`deletes the local tag and ${name}`, async ({ page }) => {
+      await setupOpenRepository(page, { tags, remotes });
+      await page.evaluate(({ dialogCommand, remoteReply }) => {
+        const tauri = (window as unknown as {
+          __TAURI_INTERNALS__: { invoke: (command: string, args?: unknown) => Promise<unknown> };
+        }).__TAURI_INTERNALS__;
+        const invoke = tauri.invoke;
+        tauri.invoke = async (command, args) => {
+          if (command === dialogCommand) {
+            const { title } = args as { title?: string };
+            if (title === 'Delete Tag') return 'Ok';
+            if (title === 'Delete Tag on Remote') return remoteReply;
+          }
+          return invoke(command, args);
+        };
+      }, { dialogCommand, remoteReply });
+      await startCommandCapture(page);
+      await injectCommandMock(page, { get_push_remote: 'upstream' });
+      if (remoteError) await injectCommandError(page, 'delete_remote_tag', remoteError);
+
+      const { leftPanel, menu, deleteItem } = await openLastTagMenu(page);
+      await expect(deleteItem).toBeInViewport({ ratio: 1 });
+      await deleteItem.click();
+      await expect(menu).toBeHidden();
+      await expect(leftPanel.getTag(tagName)).toHaveCount(0);
+      await expect.poll(async () => (await findCommand(page, dialogCommand)).length).toBe(2);
+
+      const deletionCommands = (await getCapturedCommands(page)).filter(({ command }) =>
+        [dialogCommand, 'delete_tag'].includes(command)
+      );
+      expect(deletionCommands).toEqual([
+        {
+          command: dialogCommand,
+          args: expect.objectContaining({
+            title: 'Delete Tag',
+            message: expect.stringContaining(`delete tag "${tagName}"`),
+          }),
+        },
+        { command: 'delete_tag', args: expect.objectContaining({ name: tagName }) },
+        {
+          command: dialogCommand,
+          args: expect.objectContaining({
+            title: 'Delete Tag on Remote',
+            message: expect.stringContaining(`"${tagName}" on "upstream"`),
+          }),
+        },
+      ]);
+
+      if (remoteReply === 'Cancel') {
+        await leftPanel.tagItems.last().click({ button: 'right' });
+        await expect(deleteItem).toBeEnabled();
+        expect(await findCommand(page, 'delete_remote_tag')).toHaveLength(0);
+      } else {
+        const feedback = remoteError
+          ? `Failed to delete tag ${tagName} on upstream: ${remoteError}`
+          : `Deleted tag ${tagName} on upstream`;
+        await expect(page.locator('gn-toast-container .toast', { hasText: feedback })).toBeVisible();
+        expect(await findCommand(page, 'delete_remote_tag')).toEqual([
+          {
+            command: 'delete_remote_tag',
+            args: expect.objectContaining({ name: tagName, remote: 'upstream' }),
+          },
+        ]);
+      }
+    });
+  }
+
+  test('stops after local deletion when there are no remotes', async ({ page }) => {
+    await setupOpenRepository(page, { tags, remotes: [] });
+    await startCommandCaptureWithMocks(page, { [dialogCommand]: 'Ok' });
+
+    const { leftPanel, deleteItem } = await openLastTagMenu(page);
+    await deleteItem.click();
+    await expect(leftPanel.getTag(tagName)).toHaveCount(0);
+    await leftPanel.tagItems.last().click({ button: 'right' });
+    await expect(deleteItem).toBeEnabled();
+
+    expect(await findCommand(page, dialogCommand)).toEqual([
+      { command: dialogCommand, args: expect.objectContaining({ title: 'Delete Tag' }) },
+    ]);
+    expect(await findCommand(page, 'delete_remote_tag')).toHaveLength(0);
+  });
+
+  test('scrolls to Delete when the expanded menu is taller than the window', async ({ page }) => {
+    await setupOpenRepository(page, {
+      tags,
+      remotes: Array.from({ length: 40 }, (_, i) => ({ ...remotes[0], name: `remote-${i}` })),
+    });
+    await startCommandCaptureWithMocks(page, { [dialogCommand]: 'Cancel' });
+
+    const { menu, deleteItem } = await openLastTagMenu(page);
+    await page.setViewportSize({ width: 1024, height: 480 });
+    await expect(menu).toBeInViewport({ ratio: 1 });
+    await menu.getByRole('menuitem', { name: 'Push to Remote' }).click();
+    await expect(menu.getByRole('menuitem', { name: 'remote-39' })).toBeAttached();
+    await expect(menu).toBeInViewport({ ratio: 1 });
+    await expect(deleteItem).not.toBeInViewport();
+
+    await menu.hover();
+    await page.mouse.wheel(0, 2000);
+    await expect(deleteItem).toBeInViewport({ ratio: 1 });
+    await deleteItem.click();
+    await waitForCommand(page, dialogCommand);
+    expect(await findCommand(page, 'delete_tag')).toHaveLength(0);
+    expect(await findCommand(page, 'delete_remote_tag')).toHaveLength(0);
   });
 });
 
@@ -408,7 +551,7 @@ test.describe('Tag Context Menu - Error Handling', () => {
 
     const pushOption = page.locator('.context-menu-item, .menu-item', { hasText: /push/i });
     await expect(pushOption).toBeVisible();
-    await clickMenuItem(pushOption);
+    await pushOption.click();
 
     // Push-tag failures now route through the suggestion service, like every
     // other push surface: the server's own words are shown (or a recovery
@@ -432,7 +575,7 @@ test.describe('Tag Context Menu - Error Handling', () => {
 
     const deleteOption = page.locator('.context-menu-item, .menu-item', { hasText: /delete/i });
     await expect(deleteOption).toBeVisible();
-    await clickMenuItem(deleteOption);
+    await deleteOption.click();
 
     // The component calls showToast which adds to the UI store, rendered by gn-toast-container
     const toast = page.locator('gn-toast-container .toast');
@@ -450,7 +593,7 @@ test.describe('Tag Context Menu - Error Handling', () => {
 
     const pushOption = page.locator('.context-menu-item, .menu-item', { hasText: /push/i });
     await expect(pushOption).toBeVisible();
-    await clickMenuItem(pushOption);
+    await pushOption.click();
 
     const tagCount = await leftPanel.getTagCount();
     expect(tagCount).toBe(2);
@@ -471,7 +614,7 @@ test.describe('Tag Context Menu - Error Handling', () => {
 
     const pushOption = page.locator('.context-menu-item, .menu-item', { hasText: /push/i });
     await expect(pushOption).toBeVisible();
-    await clickMenuItem(pushOption);
+    await pushOption.click();
 
     const eventReceived = await eventPromise;
     expect(eventReceived).toBe(true);
@@ -486,7 +629,7 @@ test.describe('Tag Context Menu - Error Handling', () => {
 
     const pushOption = page.locator('.context-menu-item, .menu-item', { hasText: /push/i });
     await expect(pushOption).toBeVisible();
-    await clickMenuItem(pushOption);
+    await pushOption.click();
 
     await waitForCommand(page, 'push_tag');
     const pushCommands = await findCommand(page, 'push_tag');
@@ -527,7 +670,7 @@ test.describe('Tag Context Menu - UI Outcome Verification', () => {
 
     const checkoutOption = page.locator('.context-menu-item, .menu-item', { hasText: /checkout/i });
     await expect(checkoutOption).toBeVisible();
-    await clickMenuItem(checkoutOption);
+    await checkoutOption.click();
 
     // Verify the checkout_with_autostash command was invoked
     const checkoutCommands = await findCommand(page, 'checkout_with_autostash');
@@ -565,7 +708,7 @@ test.describe('Tag Context Menu - UI Outcome Verification', () => {
 
     const pushOption = page.locator('.context-menu-item, .menu-item', { hasText: /push/i });
     await expect(pushOption).toBeVisible();
-    await clickMenuItem(pushOption);
+    await pushOption.click();
 
     // An auth failure matches a suggestion, so the user gets the actionable
     // wording plus an Open Settings button instead of the raw string.
@@ -607,7 +750,7 @@ test.describe('Tag Context Menu - UI Outcome Verification', () => {
 
     const deleteOption = page.locator('.context-menu-item, .menu-item', { hasText: /delete/i });
     await expect(deleteOption).toBeVisible();
-    await clickMenuItem(deleteOption);
+    await deleteOption.click();
 
     // Verify the error toast appears
     const toast = page.locator('gn-toast-container .toast');
@@ -655,11 +798,11 @@ test.describe('Tag Context Menu - Push destination', () => {
 
     const pushOption = page.locator('.context-menu-item', { hasText: /Push to Remote/ });
     await expect(pushOption).toBeVisible();
-    await clickMenuItem(pushOption);
+    await pushOption.click();
 
     const upstreamChoice = page.locator('.push-remote-item', { hasText: /^\s*upstream\s*$/ });
     await expect(upstreamChoice).toBeVisible();
-    await clickMenuItem(upstreamChoice);
+    await upstreamChoice.click();
 
     await waitForCommand(page, 'push_tag');
     const pushCommands = await findCommand(page, 'push_tag');
@@ -685,8 +828,8 @@ test.describe('Tag Context Menu - Push destination', () => {
     const tag = leftPanel.getTag('v1.0.0');
     await tag.click({ button: 'right' });
 
-    await clickMenuItem(page.locator('.context-menu-item', { hasText: /Push to Remote/ }));
-    await clickMenuItem(page.locator('.push-remote-item', { hasText: /^\s*upstream\s*$/ }));
+    await page.locator('.context-menu-item', { hasText: /Push to Remote/ }).click();
+    await page.locator('.push-remote-item', { hasText: /^\s*upstream\s*$/ }).click();
 
     const forceAction = page.locator('gn-toast-container .toast button', {
       hasText: /Force Push Tag/,

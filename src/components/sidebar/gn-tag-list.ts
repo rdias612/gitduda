@@ -122,7 +122,13 @@ export class GnTagList extends LitElement {
       .context-menu {
         position: fixed;
         z-index: var(--z-dropdown, 100);
-        min-width: 140px;
+        box-sizing: border-box;
+        width: max-content;
+        min-width: min(140px, 100vw);
+        max-width: 100vw;
+        max-height: 100vh;
+        overflow-y: auto;
+        overscroll-behavior: contain;
         background: var(--color-bg-secondary);
         border: 1px solid var(--color-border);
         border-radius: var(--radius-md);
@@ -432,6 +438,7 @@ export class GnTagList extends LitElement {
     // creating a tag completes inside the shared conflict dialog) — same
     // subscription as the sibling branch/stash/gitflow lists.
     window.addEventListener('repository-refresh', this.handleRepositoryRefresh);
+    window.addEventListener('resize', this.positionContextMenu);
     await this.loadTags();
     document.addEventListener('click', this.handleDocumentClick);
     document.addEventListener('keydown', this.handleKeydown);
@@ -442,6 +449,7 @@ export class GnTagList extends LitElement {
     this.unsubscribeRefOps?.();
     this.unsubscribeRefOps = undefined;
     window.removeEventListener('repository-refresh', this.handleRepositoryRefresh);
+    window.removeEventListener('resize', this.positionContextMenu);
     document.removeEventListener('click', this.handleDocumentClick);
     document.removeEventListener('keydown', this.handleKeydown);
   }
@@ -516,6 +524,15 @@ export class GnTagList extends LitElement {
       // label the new repo's menu.
       this.remotes = null;
       await this.loadTags();
+      return;
+    }
+
+    if (
+      changedProperties.has('contextMenu') ||
+      changedProperties.has('remotes') ||
+      changedProperties.has('pushRemotesExpanded')
+    ) {
+      this.positionContextMenu();
     }
   }
 
@@ -673,6 +690,7 @@ export class GnTagList extends LitElement {
     e.preventDefault();
     e.stopPropagation();
 
+    this.renderRoot.querySelector('.context-menu')?.scrollTo(0, 0);
     this.contextMenu = {
       visible: true,
       x: e.clientX,
@@ -685,6 +703,20 @@ export class GnTagList extends LitElement {
     // a Push click landing before it resolves awaits it.
     this.remotesLoad = this.loadRemotes();
   }
+
+  private positionContextMenu = (): void => {
+    if (!this.contextMenu.visible) return;
+    const menu = this.renderRoot.querySelector<HTMLElement>('.context-menu');
+    if (!menu) return;
+
+    const { x, y } = this.contextMenu;
+    const { width, height } = menu.getBoundingClientRect();
+    const maxLeft = Math.max(0, window.innerWidth - width);
+    const maxTop = Math.max(0, window.innerHeight - height);
+    const opensAbove = y > maxTop && y >= height;
+    menu.style.left = `${Math.min(x, maxLeft)}px`;
+    menu.style.top = `${Math.min(opensAbove ? y - height : y, maxTop)}px`;
+  };
 
   /**
    * Load the bound repo's remotes so the Push item can name its destination.
@@ -1074,7 +1106,6 @@ export class GnTagList extends LitElement {
         class="context-menu"
         role="menu"
         aria-label="Tag actions"
-        style="left: ${this.contextMenu.x}px; top: ${this.contextMenu.y}px;"
         @click=${(e: Event) => e.stopPropagation()}
         @keydown=${(e: KeyboardEvent) => this.handleContextMenuKeydown(e)}
       >
