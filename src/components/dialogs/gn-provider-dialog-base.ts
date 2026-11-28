@@ -15,6 +15,8 @@
  * - Common empty states (`renderNoRepo`) and formatting utilities
  */
 
+import { updateWhenLocaleChanges } from '@lit/localize';
+import { getAppLocale } from '../../i18n/index.ts';
 import { LitElement, html, css, nothing, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import * as gitService from '../../services/git.service.ts';
@@ -372,6 +374,11 @@ export abstract class GnProviderDialogBase<
   TConnectionStatus extends { connected?: boolean },
   TTab extends string,
 > extends LitElement {
+  constructor() {
+    super();
+    updateWhenLocaleChanges(this);
+  }
+
   @property({ type: Boolean, reflect: true }) open = false;
   @property({ type: String }) repositoryPath = '';
   @property({ type: Boolean }) backButton = false;
@@ -1601,11 +1608,11 @@ export abstract class GnProviderDialogBase<
     const diff = now.getTime() - date.getTime();
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
 
-    if (days === 0) return 'today';
-    if (days === 1) return 'yesterday';
-    if (days < 7) return `${days} days ago`;
-    if (days < 30) return `${Math.floor(days / 7)} weeks ago`;
-    return date.toLocaleDateString();
+    const locale = getAppLocale();
+    const relative = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
+    if (days < 7) return relative.format(-days, 'day');
+    if (days < 30) return relative.format(-Math.floor(days / 7), 'week');
+    return date.toLocaleDateString(locale);
   }
 
   protected getInitials(name: string): string {

@@ -5,6 +5,7 @@
  * and the avatar cache (LRU + failure retry + fetch opt-out).
  */
 import { expect } from '@open-wc/testing';
+import { setAppLocale } from '../../i18n/index.ts';
 import { CanvasRenderer, sortRefsForDisplay } from '../canvas-renderer.ts';
 import type { RefInfo } from '../../types/git.types.ts';
 
@@ -384,14 +385,24 @@ describe('CanvasRenderer optional columns', () => {
     renderer.destroy();
   });
 
-  it('formats and caches absolute dates', () => {
+  it('refreshes cached absolute dates when the locale changes', async () => {
     const renderer = makeRenderer();
     const internals = renderer as unknown as ColumnInternals;
 
     const first = internals.formatAbsoluteDate(1700000000);
     expect(first).to.be.a('string').and.to.not.equal('');
     expect(internals.formatAbsoluteDate(1700000000)).to.equal(first);
-    renderer.destroy();
+    try {
+      await setAppLocale('pt-BR');
+      expect(internals.formatAbsoluteDate(1700000000)).to.equal(
+        new Date(1700000000000).toLocaleDateString('pt-BR', {
+          day: '2-digit', month: 'short', year: '2-digit',
+        })
+      );
+    } finally {
+      await setAppLocale('en');
+      renderer.destroy();
+    }
   });
 });
 

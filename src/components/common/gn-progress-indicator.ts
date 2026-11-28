@@ -3,6 +3,8 @@
  * Shows ongoing operations with progress and cancellation support
  */
 
+import { localized } from '@lit/localize';
+import { getAppLocale } from '../../i18n/index.ts';
 import { LitElement, html, css } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import { sharedStyles } from '../../styles/shared-styles.ts';
@@ -12,6 +14,7 @@ import type { ProgressOperation } from '../../services/progress.service.ts';
 export type { ProgressOperation } from '../../services/progress.service.ts';
 
 @customElement('gn-progress-indicator')
+@localized()
 export class GnProgressIndicator extends LitElement {
   static styles = [
     sharedStyles,
@@ -184,8 +187,8 @@ export class GnProgressIndicator extends LitElement {
     if (receivedObjects === undefined) return '';
     const objects =
       totalObjects && totalObjects > 0
-        ? `${receivedObjects.toLocaleString()} / ${totalObjects.toLocaleString()} objects`
-        : `${receivedObjects.toLocaleString()} objects`;
+        ? `${receivedObjects.toLocaleString(getAppLocale())} / ${totalObjects.toLocaleString(getAppLocale())} objects`
+        : `${receivedObjects.toLocaleString(getAppLocale())} objects`;
     return receivedBytes ? `${objects} · ${this.formatBytes(receivedBytes)}` : objects;
   }
 

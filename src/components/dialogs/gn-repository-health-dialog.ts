@@ -3,6 +3,8 @@
  * Shows repository health information and provides maintenance actions
  */
 
+import { localized } from '@lit/localize';
+import { getAppLocale } from '../../i18n/index.ts';
 import { LitElement, html, css } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { sharedStyles } from '../../styles/shared-styles.ts';
@@ -40,6 +42,7 @@ interface HealthStats {
 }
 
 @customElement('gn-repository-health-dialog')
+@localized()
 export class GnRepositoryHealthDialog extends LitElement {
   static styles = [
     sharedStyles,
@@ -667,15 +670,15 @@ export class GnRepositoryHealthDialog extends LitElement {
           <div class="stats-grid">
             <div class="stat-card">
               <span class="stat-label">Total Commits</span>
-              <span class="stat-value">${this.stats.totalCommits != null ? this.stats.totalCommits.toLocaleString() : '—'}</span>
+              <span class="stat-value">${this.stats.totalCommits != null ? this.stats.totalCommits.toLocaleString(getAppLocale()) : '—'}</span>
             </div>
             <div class="stat-card">
               <span class="stat-label">Contributors</span>
-              <span class="stat-value">${this.stats.totalContributors != null ? this.stats.totalContributors.toLocaleString() : '—'}</span>
+              <span class="stat-value">${this.stats.totalContributors != null ? this.stats.totalContributors.toLocaleString(getAppLocale()) : '—'}</span>
             </div>
             <div class="stat-card">
               <span class="stat-label">Total Objects</span>
-              <span class="stat-value">${this.stats.objectCount.toLocaleString()}</span>
+              <span class="stat-value">${this.stats.objectCount.toLocaleString(getAppLocale())}</span>
             </div>
             <div class="stat-card">
               <span class="stat-label">Repository Size</span>
@@ -683,7 +686,7 @@ export class GnRepositoryHealthDialog extends LitElement {
             </div>
             <div class="stat-card">
               <span class="stat-label">Loose Objects</span>
-              <span class="stat-value ${this.stats.looseObjectCount > 500 ? 'warning' : ''}">${this.stats.looseObjectCount.toLocaleString()}</span>
+              <span class="stat-value ${this.stats.looseObjectCount > 500 ? 'warning' : ''}">${this.stats.looseObjectCount.toLocaleString(getAppLocale())}</span>
             </div>
             <div class="stat-card">
               <span class="stat-label">Pack Files</span>

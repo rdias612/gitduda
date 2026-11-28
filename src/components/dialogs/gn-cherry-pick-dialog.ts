@@ -3,6 +3,8 @@
  * Allows users to cherry-pick a commit with options
  */
 
+import { localized } from '@lit/localize';
+import { getAppLocale } from '../../i18n/index.ts';
 import { LitElement, html, css, nothing } from 'lit';
 import { customElement, state, property, query } from 'lit/decorators.js';
 import { sharedStyles } from '../../styles/shared-styles.ts';
@@ -17,6 +19,7 @@ import {
 } from '../../utils/ref-lock.ts';
 
 @customElement('gn-cherry-pick-dialog')
+@localized()
 export class GnCherryPickDialog extends LitElement {
   static styles = [
     sharedStyles,
@@ -380,7 +383,7 @@ export class GnCherryPickDialog extends LitElement {
   }
 
   private formatDate(timestamp: number): string {
-    return new Date(timestamp * 1000).toLocaleDateString(undefined, {
+    return new Date(timestamp * 1000).toLocaleDateString(getAppLocale(), {
       year: 'numeric',
       month: 'short',
       day: 'numeric',

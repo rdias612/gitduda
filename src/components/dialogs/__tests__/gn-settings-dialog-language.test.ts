@@ -119,7 +119,9 @@ describe('gn-settings-dialog language setting', () => {
     }));
     expect(options).to.deep.equal([
       { value: 'en', label: 'English' },
+      { value: 'es', label: 'Español' },
       { value: 'fr', label: 'Français' },
+      { value: 'pt-BR', label: 'Português (Brasil)' },
     ]);
     expect(select(el).value).to.equal('en');
     expect(sectionTitles(el)[0]).to.equal('Appearance');
@@ -148,6 +150,20 @@ describe('gn-settings-dialog language setting', () => {
     expect(toggleLabels).to.include('Mode hors ligne');
     expect(changed, 'settings-changed was dispatched once').to.equal(1);
   });
+
+  for (const [locale, appearance] of [['pt-BR', 'Aparência'], ['es', 'Apariencia']] as const) {
+    it(`restores ${locale} from storage after selection`, async () => {
+      await choose(el, locale);
+      await waitUntil(() => sectionTitles(el)[0] === appearance);
+      expect(JSON.parse(localStorage.getItem('gitduda-settings')!).state.language).to.equal(locale);
+
+      await setAppLocale('en');
+      await settingsStore.persist.rehydrate();
+      await waitUntil(() => getAppLocale() === locale && sectionTitles(el)[0] === appearance);
+      expect(select(el).value).to.equal(locale);
+      expect(document.documentElement.lang).to.equal(locale);
+    });
+  }
 
   it('keeps the select in step with the persisted locale when reopened', async () => {
     await choose(el, 'fr');

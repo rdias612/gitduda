@@ -11,7 +11,9 @@ export const sourceLocale = `en`;
  * lexicographically.
  */
 export const targetLocales = [
+  `es`,
   `fr`,
+  `pt-BR`,
 ] as const;
 
 /**
@@ -19,5 +21,7 @@ export const targetLocales = [
  */
 export const allLocales = [
   `en`,
+  `es`,
   `fr`,
+  `pt-BR`,
 ] as const;

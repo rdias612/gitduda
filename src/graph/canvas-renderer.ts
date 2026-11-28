@@ -7,6 +7,7 @@
  * to keep per-frame measureText cost down.
  */
 
+import { getAppLocale } from '../i18n/index.ts';
 import type { RenderData, GraphPullRequest } from './virtual-scroll.ts';
 import type { RefInfo, RefType } from '../types/git.types.ts';
 import { md5 } from '../utils/md5.ts';
@@ -404,6 +405,7 @@ export class CanvasRenderer {
   private static readonly DATE_COLUMN_WIDTH = 85;
 
   // Formatted absolute dates cached per timestamp
+  private absoluteDateLocale = getAppLocale();
   private absoluteDateCache: Map<number, string> = new Map();
 
   // Avatar hitboxes for tooltip detection
@@ -925,10 +927,15 @@ export class CanvasRenderer {
    * timestamp
    */
   private formatAbsoluteDate(timestamp: number): string {
+    const locale = getAppLocale();
+    if (this.absoluteDateLocale !== locale) {
+      this.absoluteDateCache.clear();
+      this.absoluteDateLocale = locale;
+    }
     const cached = this.absoluteDateCache.get(timestamp);
     if (cached !== undefined) return cached;
 
-    const formatted = new Date(timestamp * 1000).toLocaleDateString(undefined, {
+    const formatted = new Date(timestamp * 1000).toLocaleDateString(locale, {
       day: '2-digit',
       month: 'short',
       year: '2-digit',

@@ -912,6 +912,170 @@
 <trans-unit id="s008cf36269a306d9">
   <source>Filter issues</source>
   <target>Filtrer les tickets</target></trans-unit>
+<trans-unit id="s85a41bbfce88c887">
+  <source><x id="0" equiv-text="${ab.ahead}"/> ahead, <x id="1" equiv-text="${ab.behind}"/> behind upstream</source>
+  <target><x id="0" equiv-text="${ab.ahead}"/> en avance et <x id="1" equiv-text="${ab.behind}"/> en retard sur la branche suivie</target>
+</trans-unit>
+<trans-unit id="s7768cf0156e0da61">
+  <source>Uncommitted changes</source>
+  <target>Modifications non commitées</target>
+</trans-unit>
+<trans-unit id="sa753e3eedb167e2b">
+  <source>Remote operations</source>
+  <target>Opérations distantes</target>
+</trans-unit>
+<trans-unit id="s8acb6cf1f3301472">
+  <source>Tab actions for <x id="0" equiv-text="${repo.repository.name}"/></source>
+  <target>Actions de l’onglet <x id="0" equiv-text="${repo.repository.name}"/></target>
+</trans-unit>
+<trans-unit id="s5e8250fb85d64c23">
+  <source>Close</source>
+  <target>Fermer</target>
+</trans-unit>
+<trans-unit id="sf6f655531022c24e">
+  <source>Close Others</source>
+  <target>Fermer les autres onglets</target>
+</trans-unit>
+<trans-unit id="sf4b73b7ecc981947">
+  <source>Close Tabs to the Right</source>
+  <target>Fermer les onglets à droite</target>
+</trans-unit>
+<trans-unit id="se2f12cc022f2d900">
+  <source>Close All</source>
+  <target>Fermer tous les onglets</target>
+</trans-unit>
+<trans-unit id="s449f1bc11500bc10">
+  <source>Open in Terminal</source>
+  <target>Ouvrir dans le terminal</target>
+</trans-unit>
+<trans-unit id="s788a58928ff7e430">
+  <source>Reveal in File Manager</source>
+  <target>Afficher dans le gestionnaire de fichiers</target>
+</trans-unit>
+<trans-unit id="s720c58910ee1bc81">
+  <source>Open in Editor</source>
+  <target>Ouvrir dans l’éditeur</target>
+</trans-unit>
+<trans-unit id="sd56027c3e488188b">
+  <source>Copy Path</source>
+  <target>Copier le chemin</target>
+</trans-unit>
+<trans-unit id="s54d4fd437601644f">
+  <source>Open Repository</source>
+  <target>Ouvrir un dépôt</target>
+</trans-unit>
+<trans-unit id="s4363ab6ce3f84076">
+  <source>Clone Repository</source>
+  <target>Cloner un dépôt</target>
+</trans-unit>
+<trans-unit id="sdbef08a900b31bc9">
+  <source>Init Repository</source>
+  <target>Initialiser un dépôt</target>
+</trans-unit>
+<trans-unit id="s480d27b7a8b69ce5">
+  <source>Scroll left</source>
+  <target>Défiler vers la gauche</target>
+</trans-unit>
+<trans-unit id="s580e5ec1b1977da1">
+  <source>Scroll tabs left</source>
+  <target>Faire défiler les onglets vers la gauche</target>
+</trans-unit>
+<trans-unit id="s67abbf2f84cf48d6">
+  <source>Close <x id="0" equiv-text="${repo.repository.name}"/> tab</source>
+  <target>Fermer l’onglet <x id="0" equiv-text="${repo.repository.name}"/></target>
+</trans-unit>
+<trans-unit id="s5febcd9b311c16fe">
+  <source>Scroll right</source>
+  <target>Défiler vers la droite</target>
+</trans-unit>
+<trans-unit id="s5979da71c7538082">
+  <source>Scroll tabs right</source>
+  <target>Faire défiler les onglets vers la droite</target>
+</trans-unit>
+<trans-unit id="s9078b2f7544fef2a">
+  <source>Search commits (Ctrl+F)</source>
+  <target>Rechercher des commits (Ctrl+F)</target>
+</trans-unit>
+<trans-unit id="sf842e0c94b938003">
+  <source>Search commits</source>
+  <target>Rechercher des commits</target>
+</trans-unit>
+<trans-unit id="s869df938f7178d57">
+  <source>Command Palette (Cmd+P)</source>
+  <target>Palette de commandes (Cmd+P)</target>
+</trans-unit>
+<trans-unit id="sd2a0b848a15db111">
+  <source>Command Palette</source>
+  <target>Palette de commandes</target>
+</trans-unit>
+<trans-unit id="saea654a058766cd3">
+  <source>Keyboard Shortcuts (?)</source>
+  <target>Raccourcis clavier (?)</target>
+</trans-unit>
+<trans-unit id="s49213f6563f37637">
+  <source>Keyboard Shortcuts</source>
+  <target>Raccourcis clavier</target>
+</trans-unit>
+<trans-unit id="s498865c7bd1f3959">
+  <source>unknown</source>
+  <target>inconnu</target>
+</trans-unit>
+<trans-unit id="s84126fa92f00b4ef">
+  <source>just now</source>
+  <target>à l’instant</target>
+</trans-unit>
+<trans-unit id="s5411766f214dba5a">
+  <source><x id="0" equiv-text="${name}"/> — open a repository first</source>
+  <target><x id="0" equiv-text="${name}"/> — ouvrez d’abord un dépôt</target>
+</trans-unit>
+<trans-unit id="sd767dea821489dfb">
+  <source><x id="0" equiv-text="${name}"/> already in progress…</source>
+  <target><x id="0" equiv-text="${name}"/> est déjà en cours…</target>
+</trans-unit>
+<trans-unit id="s177c53f0438a6fda">
+  <source><x id="0" equiv-text="${name}"/> — a <x id="1" equiv-text="${running}"/> is already running in this repository</source>
+  <target><x id="0" equiv-text="${name}"/> — une opération <x id="1" equiv-text="${running}"/> est déjà en cours dans ce dépôt</target>
+</trans-unit>
+<trans-unit id="sc823c8a068e5b37f">
+  <source><x id="0" equiv-text="${name}"/> — an operation is already running in this repository</source>
+  <target><x id="0" equiv-text="${name}"/> — une opération est déjà en cours dans ce dépôt</target>
+</trans-unit>
+<trans-unit id="seb2b8a054a514044">
+  <source>Fetch from remote (<x id="0" equiv-text="${shortcut}"/>)</source>
+  <target>Récupérer les références distantes (<x id="0" equiv-text="${shortcut}"/>)</target>
+</trans-unit>
+<trans-unit id="s63dbb3af89589601">
+  <source>Pull 1 incoming commit into <x id="0" equiv-text="${branch}"/> (<x id="1" equiv-text="${shortcut}"/>)</source>
+  <target>Intégrer 1 commit dans <x id="0" equiv-text="${branch}"/> (<x id="1" equiv-text="${shortcut}"/>)</target>
+</trans-unit>
+<trans-unit id="s60d3997232c3b247">
+  <source>Pull <x id="0" equiv-text="${behind}"/> incoming commits into <x id="1" equiv-text="${branch}"/> (<x id="2" equiv-text="${shortcut}"/>)</source>
+  <target>Intégrer <x id="0" equiv-text="${behind}"/> commits dans <x id="1" equiv-text="${branch}"/> (<x id="2" equiv-text="${shortcut}"/>)</target>
+</trans-unit>
+<trans-unit id="sf05b79570cfff326">
+  <source>Pull from remote — nothing to pull right now (<x id="0" equiv-text="${shortcut}"/>)</source>
+  <target>Intégrer les changements distants — rien à intégrer (<x id="0" equiv-text="${shortcut}"/>)</target>
+</trans-unit>
+<trans-unit id="s1944ebd0768458c4">
+  <source>Push <x id="0" equiv-text="${branch}"/> to remote — it has no upstream yet (<x id="1" equiv-text="${shortcut}"/>)</source>
+  <target>Publier <x id="0" equiv-text="${branch}"/> sur le dépôt distant — aucune branche suivie (<x id="1" equiv-text="${shortcut}"/>)</target>
+</trans-unit>
+<trans-unit id="sae30a13e6f13fcd5">
+  <source>Push 1 local commit from <x id="0" equiv-text="${branch}"/> (<x id="1" equiv-text="${shortcut}"/>)</source>
+  <target>Envoyer 1 commit local de <x id="0" equiv-text="${branch}"/> (<x id="1" equiv-text="${shortcut}"/>)</target>
+</trans-unit>
+<trans-unit id="sb90793846f379f75">
+  <source>Push <x id="0" equiv-text="${ahead}"/> local commits from <x id="1" equiv-text="${branch}"/> (<x id="2" equiv-text="${shortcut}"/>)</source>
+  <target>Envoyer <x id="0" equiv-text="${ahead}"/> commits locaux de <x id="1" equiv-text="${branch}"/> (<x id="2" equiv-text="${shortcut}"/>)</target>
+</trans-unit>
+<trans-unit id="sb22dcbf2edddaa6b">
+  <source>Push to remote — nothing to push (<x id="0" equiv-text="${shortcut}"/>)</source>
+  <target>Envoyer vers le dépôt distant — rien à envoyer (<x id="0" equiv-text="${shortcut}"/>)</target>
+</trans-unit>
+<trans-unit id="s8c33f537f3b643ce">
+  <source><x id="0" equiv-text="${action}"/> — this repository has no remote configured</source>
+  <target><x id="0" equiv-text="${action}"/> — aucun dépôt distant configuré</target>
+</trans-unit>
 </body>
 </file>
 </xliff>

@@ -230,7 +230,7 @@ describe('gn-blame-view', () => {
       // String(year) check flaky.
       const shownTimestamp = (el as unknown as { groups: Array<{ timestamp: number }> })
         .groups[0].timestamp;
-      const expectedTooltipDate = new Date(shownTimestamp * 1000).toLocaleString();
+      const expectedTooltipDate = new Date(shownTimestamp * 1000).toLocaleString('en');
 
       // The tooltip always formatted the timestamp correctly; the header did not.
       expect(info.getAttribute('title')).to.contain(expectedTooltipDate);

@@ -13,6 +13,8 @@
  * on its own.
  */
 
+import { localized } from '@lit/localize';
+import { getAppLocale } from '../../i18n/index.ts';
 import { LitElement, html, css, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { sharedStyles } from '../../styles/shared-styles.ts';
@@ -67,6 +69,7 @@ type PickerErrorKind =
   | 'api';
 
 @customElement('gn-account-repo-picker')
+@localized()
 export class GnAccountRepoPicker extends LitElement {
   static styles = [
     sharedStyles,
@@ -905,7 +908,7 @@ function formatLastPush(timestamp: string | null): string {
   if (!timestamp) return '';
   const date = new Date(timestamp);
   if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleDateString();
+  return date.toLocaleDateString(getAppLocale());
 }
 
 declare global {

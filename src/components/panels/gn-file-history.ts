@@ -3,6 +3,8 @@
  * Shows all commits that modified a specific file
  */
 
+import { localized } from '@lit/localize';
+import { getAppLocale } from '../../i18n/index.ts';
 import { LitElement, html, css, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { sharedStyles } from '../../styles/shared-styles.ts';
@@ -19,6 +21,7 @@ interface HistoryContextMenuState {
 }
 
 @customElement('gn-file-history')
+@localized()
 export class GnFileHistory extends LitElement {
   static styles = [
     sharedStyles,
@@ -376,21 +379,12 @@ export class GnFileHistory extends LitElement {
     const diffMs = now.getTime() - date.getTime();
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-    if (diffDays === 0) {
-      return 'Today';
-    } else if (diffDays === 1) {
-      return 'Yesterday';
-    } else if (diffDays < 7) {
-      return `${diffDays} days ago`;
-    } else if (diffDays < 30) {
-      const weeks = Math.floor(diffDays / 7);
-      return `${weeks} week${weeks > 1 ? 's' : ''} ago`;
-    } else if (diffDays < 365) {
-      const months = Math.floor(diffDays / 30);
-      return `${months} month${months > 1 ? 's' : ''} ago`;
-    } else {
-      return date.toLocaleDateString();
-    }
+    const locale = getAppLocale();
+    const relative = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
+    if (diffDays < 7) return relative.format(-diffDays, 'day');
+    if (diffDays < 30) return relative.format(-Math.floor(diffDays / 7), 'week');
+    if (diffDays < 365) return relative.format(-Math.floor(diffDays / 30), 'month');
+    return date.toLocaleDateString(locale);
   }
 
   // Context menu handlers

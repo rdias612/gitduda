@@ -1,3 +1,5 @@
+import { localized } from '@lit/localize';
+import { getAppLocale } from '../../i18n/index.ts';
 import { LitElement, html, css, nothing } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
 import { sharedStyles } from '../../styles/shared-styles.ts';
@@ -36,6 +38,7 @@ const TASK_TIERS: readonly TierMetadata[] = [
 ];
 
 @customElement('gn-ai-routing-ledger')
+@localized()
 export class GnAiRoutingLedger extends LitElement {
   static styles = [
     sharedStyles,
@@ -397,7 +400,7 @@ export class GnAiRoutingLedger extends LitElement {
 
   private formatTimestamp(unixSeconds: number): string {
     try {
-      return new Date(unixSeconds * 1000).toLocaleTimeString();
+      return new Date(unixSeconds * 1000).toLocaleTimeString(getAppLocale());
     } catch {
       return String(unixSeconds);
     }

@@ -1,12 +1,13 @@
-/**
- * Formatting utilities
- */
+import { msg } from '@lit/localize';
+import { getAppLocale } from '../i18n/index.ts';
+
+const relativeTimeFormats = new Map<string, Intl.RelativeTimeFormat>();
 
 /**
  * Format a date relative to now
  */
 export function formatRelativeTime(timestamp: number): string {
-  if (typeof timestamp !== 'number' || !isFinite(timestamp)) return 'unknown';
+  if (typeof timestamp !== 'number' || !isFinite(timestamp)) return msg('unknown');
   const now = Date.now();
   const diff = now - timestamp * 1000;
   const seconds = Math.floor(diff / 1000);
@@ -17,27 +18,33 @@ export function formatRelativeTime(timestamp: number): string {
   const months = Math.floor(days / 30);
   const years = Math.floor(days / 365);
 
-  if (seconds < 60) return 'just now';
-  if (minutes < 60) return `${minutes}m ago`;
-  if (hours < 24) return `${hours}h ago`;
-  if (days < 7) return `${days}d ago`;
-  if (weeks < 4) return `${weeks}w ago`;
-  if (months < 12) return `${months}mo ago`;
-  return `${years}y ago`;
+  if (seconds < 60) return msg('just now');
+  const locale = getAppLocale();
+  let format = relativeTimeFormats.get(locale);
+  if (!format) {
+    format = new Intl.RelativeTimeFormat(locale, { style: 'narrow' });
+    relativeTimeFormats.set(locale, format);
+  }
+  if (minutes < 60) return format.format(-minutes, 'minute');
+  if (hours < 24) return format.format(-hours, 'hour');
+  if (days < 7) return format.format(-days, 'day');
+  if (days < 30) return format.format(-weeks, 'week');
+  if (days < 365) return format.format(-months, 'month');
+  return format.format(-years, 'year');
 }
 
 /**
- * Format a date as ISO string
+ * Format a date in the active locale
  */
 export function formatDate(timestamp: number): string {
-  return new Date(timestamp * 1000).toLocaleDateString();
+  return new Date(timestamp * 1000).toLocaleDateString(getAppLocale());
 }
 
 /**
  * Format a date with time
  */
 export function formatDateTime(timestamp: number): string {
-  return new Date(timestamp * 1000).toLocaleString();
+  return new Date(timestamp * 1000).toLocaleString(getAppLocale());
 }
 
 /**
@@ -68,14 +75,20 @@ export function formatFileSize(bytes: number): string {
     unitIndex++;
   }
 
-  return `${size.toFixed(unitIndex > 0 ? 1 : 0)} ${units[unitIndex]}`;
+  const digits = unitIndex > 0 ? 1 : 0;
+  const formatted = size.toLocaleString(getAppLocale(), {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+    useGrouping: false,
+  });
+  return `${formatted} ${units[unitIndex]}`;
 }
 
 /**
  * Format a number with separators
  */
 export function formatNumber(num: number): string {
-  return num.toLocaleString();
+  return num.toLocaleString(getAppLocale());
 }
 
 /**

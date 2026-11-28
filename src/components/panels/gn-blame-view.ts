@@ -1,3 +1,5 @@
+import { localized } from '@lit/localize';
+import { getAppLocale } from '../../i18n/index.ts';
 import { LitElement, html, css, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { sharedStyles } from '../../styles/shared-styles.ts';
@@ -38,6 +40,7 @@ function getAuthorColor(name: string): string {
 }
 
 @customElement('gn-blame-view')
+@localized()
 export class GnBlameView extends CodeRenderMixin(LitElement) {
   static styles = [
     sharedStyles,
@@ -658,7 +661,7 @@ export class GnBlameView extends CodeRenderMixin(LitElement) {
                 <div
                   class="group-info"
                   @click=${() => this.handleCommitClick(group)}
-                  title="${group.summary}&#10;&#10;${group.authorName}&#10;${new Date(group.timestamp * 1000).toLocaleString()}"
+                  title="${group.summary}&#10;&#10;${group.authorName}&#10;${new Date(group.timestamp * 1000).toLocaleString(getAppLocale())}"
                 >
                   <div
                     class="author-indicator"

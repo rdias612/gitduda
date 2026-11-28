@@ -7,6 +7,7 @@
  */
 
 import { expect, waitUntil } from '@open-wc/testing';
+import { formatDate, formatNumber, formatRelativeTime } from '../../utils/format.ts';
 import { msg, str } from '@lit/localize';
 import {
   detectSystemLocale,
@@ -22,10 +23,10 @@ describe('i18n runtime', () => {
     await setAppLocale('en');
   });
 
-  it('ships English as the source locale and French alongside it', () => {
-    expect(supportedLocales.map((l) => l.code)).to.deep.equal(['en', 'fr']);
+  it('lists every bundled locale by its endonym', () => {
+    expect(supportedLocales.map((l) => l.code)).to.deep.equal(['en', 'es', 'fr', 'pt-BR']);
     // Endonyms: the picker stays readable whatever the active locale is.
-    expect(supportedLocales.map((l) => l.name)).to.deep.equal(['English', 'Français']);
+    expect(supportedLocales.map((l) => l.name)).to.deep.equal(['English', 'Español', 'Français', 'Português (Brasil)']);
   });
 
   it('recognises only the locales it ships', () => {
@@ -44,9 +45,18 @@ describe('i18n runtime', () => {
     expect(resolveLocale(null)).to.equal('en');
   });
 
-  it('detects a system locale we actually ship', () => {
-    expect(supportedLocales.some((l) => l.code === detectSystemLocale())).to.be.true;
-  });
+  for (const [preferred, expected] of [
+    [['de', 'PT-br'], 'pt-BR'],
+    [['es-MX'], 'es'],
+    [['es-ES'], 'es'],
+    [['pt-PT', 'es-AR'], 'es'],
+    [['en-US', 'pt-BR'], 'en'],
+    [['pt-PT', 'de'], 'en'],
+  ] as const) {
+    it(`resolves system preferences ${preferred} to ${expected}`, () => {
+      expect(detectSystemLocale(preferred)).to.equal(expected);
+    });
+  }
 
   it('renders source strings under the source locale', () => {
     expect(getAppLocale()).to.equal('en');
@@ -89,122 +99,123 @@ describe('i18n runtime', () => {
     expect(msg('Clone')).to.equal('Cloner');
   });
 
-  /**
-   * Every string on the two localised surfaces has to have a translation, or
-   * the French UI silently mixes English into it. A message whose source text
-   * is not in the bundle falls back to the source, so "still English under fr"
-   * is exactly the failure this catches.
-   *
-   * This used to iterate a hand-written list of ~20 source strings, which meant
-   * any string it did not happen to name could lose its translation and still
-   * pass. It now enumerates the XLIFF itself and drives every unit through the
-   * real `msg()` runtime, so the check grows with the catalogue.
-   *
-   * The other half of the contract — that the XLIFF's ids are exactly the ids
-   * the `msg()` call sites in `src/**` hash to — cannot be checked from a
-   * browser, which has no view of the source tree. `scripts/i18n-coverage.test.mjs`
-   * derives and asserts that, and `npm test` runs it alongside these tests.
-   */
-  describe('the French catalogue resolves through the runtime', () => {
-    /** One translation unit, with template expressions split out. */
-    interface Unit {
-      id: string;
-      /** Literal chunks of the source, one more than there are expressions. */
-      strings: string[];
-      /** Literal chunks of the target. */
-      targetStrings: string[];
-      /** For each gap in the target, which source expression fills it. */
-      targetOrder: number[];
-    }
-
-    /**
-     * `<source>Opened workspace: <x id="0"/></source>` becomes the template
-     * strings `["Opened workspace: ", ""]` — the same shape `str` produces, and
-     * the shape the message id is hashed from.
-     */
-    function split(element: Element): { strings: string[]; order: number[] } {
-      const strings: string[] = [''];
-      const order: number[] = [];
-      for (const node of Array.from(element.childNodes)) {
-        if (node.nodeType === Node.TEXT_NODE) {
-          strings[strings.length - 1] += node.textContent ?? '';
-        } else if (node.nodeType === Node.ELEMENT_NODE) {
-          order.push(Number((node as Element).getAttribute('id')));
-          strings.push('');
-        }
+  for (const [locale, copied] of [
+    ['fr', 'X copié dans le presse-papiers'],
+    ['pt-BR', 'X na área de transferência'],
+    ['es', 'X en el portapapeles'],
+  ] as const) {
+    describe(`the ${locale} catalogue resolves through the runtime`, () => {
+      /** One translation unit, with template expressions split out. */
+      interface Unit {
+        id: string;
+        /** Literal chunks of the source, one more than there are expressions. */
+        strings: string[];
+        /** Literal chunks of the target. */
+        targetStrings: string[];
+        /** For each gap in the target, which source expression fills it. */
+        targetOrder: number[];
       }
-      return { strings, order };
-    }
 
-    let units: Unit[];
+      /**
+       * `<source>Opened workspace: <x id="0"/></source>` becomes the template
+       * strings `["Opened workspace: ", ""]` — the same shape `str` produces, and
+       * the shape the message id is hashed from.
+       */
+      function split(element: Element): { strings: string[]; order: number[] } {
+        const strings: string[] = [''];
+        const order: number[] = [];
+        for (const node of Array.from(element.childNodes)) {
+          if (node.nodeType === Node.TEXT_NODE) {
+            strings[strings.length - 1] += node.textContent ?? '';
+          } else if (node.nodeType === Node.ELEMENT_NODE) {
+            order.push(Number((node as Element).getAttribute('id')));
+            strings.push('');
+          }
+        }
+        return { strings, order };
+      }
 
-    before(async () => {
-      const response = await fetch('/src/i18n/xliff/fr.xlf');
-      expect(response.ok, 'the French XLIFF is readable').to.be.true;
-      const xliff = new DOMParser().parseFromString(await response.text(), 'application/xml');
-      expect(xliff.querySelector('parsererror'), 'the XLIFF is well-formed XML').to.not.exist;
+      let units: Unit[];
 
-      units = Array.from(xliff.querySelectorAll('trans-unit')).map((unit) => {
-        const source = split(unit.querySelector('source') as Element);
-        const target = split(unit.querySelector('target') as Element);
-        return {
-          id: unit.getAttribute('id') ?? '',
-          strings: source.strings,
-          targetStrings: target.strings,
-          targetOrder: target.order,
-        };
+      before(async () => {
+        const response = await fetch(`/src/i18n/xliff/${locale}.xlf`);
+        expect(response.ok, 'the XLIFF is readable').to.be.true;
+        const xliff = new DOMParser().parseFromString(await response.text(), 'application/xml');
+        expect(xliff.querySelector('parsererror'), 'the XLIFF is well-formed XML').to.not.exist;
+
+        units = Array.from(xliff.querySelectorAll('trans-unit')).map((unit) => {
+          const source = split(unit.querySelector('source') as Element);
+          const target = split(unit.querySelector('target') as Element);
+          expect([...target.order].sort(), unit.getAttribute('id') ?? '').to.deep.equal(
+            [...source.order].sort()
+          );
+          return {
+            id: unit.getAttribute('id') ?? '',
+            strings: source.strings,
+            targetStrings: target.strings,
+            targetOrder: target.order,
+          };
+        });
+      });
+
+      beforeEach(async () => {
+        expect(await setAppLocale(locale)).to.equal(locale);
+      });
+
+      it('formats dates and numbers using the active language', () => {
+        const date = new Date(2025, 10, 28);
+        expect(formatDate(date.getTime() / 1000)).to.equal(date.toLocaleDateString(locale));
+        expect(formatNumber(1234567.89)).to.equal((1234567.89).toLocaleString(locale));
+        expect(formatRelativeTime(Date.now() / 1000 - 7200)).to.equal(
+          new Intl.RelativeTimeFormat(locale, { style: 'narrow' }).format(-2, 'hour')
+        );
+      });
+
+      it('has a catalogue to check', () => {
+        expect(units.length, 'trans-units in the catalogue').to.be.greaterThan(100);
+        expect(units.every((unit) => unit.id !== '')).to.be.true;
+      });
+
+      it('renders every translated unit in the active locale', () => {
+        const untranslated: string[] = [];
+
+        for (const unit of units) {
+          // One distinct marker per expression, so a value that lands in the
+          // wrong gap after translation reorders them is visible in the diff.
+          const values = unit.strings.slice(1).map((_, i) => `\u27e6${i}\u27e7`);
+          const rendered =
+            unit.strings.length === 1
+              ? msg(unit.strings[0])
+              : msg(str(unit.strings as unknown as TemplateStringsArray, ...values));
+          const expected = unit.targetStrings.reduce(
+            (acc, chunk, i) => (i === 0 ? chunk : acc + values[unit.targetOrder[i - 1]] + chunk),
+            ''
+          );
+          if (rendered !== expected) {
+            untranslated.push(
+              `${unit.id}: got ${JSON.stringify(rendered)}, want ${JSON.stringify(expected)}`
+            );
+          }
+        }
+
+        expect(
+          untranslated,
+          `${untranslated.length} unit(s) in src/i18n/xliff/${locale}.xlf do not render their target — ` +
+            `the generated bundle src/i18n/generated/locales/${locale}.ts is out of step with the XLIFF:\n` +
+            untranslated.join('\n')
+        ).to.deep.equal([]);
+      });
+
+      it('still substitutes values into a translated message', () => {
+        const label = 'X';
+        expect(msg(str`${label} copied to clipboard`)).to.equal(copied);
+        const host = 'www.gravatar.com';
+        const avatars = msg(
+          str`Display author avatars in commit nodes. Avatars are fetched from Gravatar (${host}), a third-party service: each request sends an MD5 hash of the commit author's email address and your IP address. Off by default; Offline Mode disables it.`
+        );
+        expect(avatars).to.not.contain('Display author avatars');
+        expect(avatars, 'the host is still substituted').to.contain(host);
       });
     });
-
-    beforeEach(async () => {
-      await setAppLocale('fr');
-      await waitUntil(() => msg('Open') === 'Ouvrir', 'French templates became active');
-    });
-
-    it('has a catalogue to check', () => {
-      expect(units.length, 'trans-units in fr.xlf').to.be.greaterThan(100);
-      expect(units.every((unit) => unit.id !== '')).to.be.true;
-    });
-
-    it('renders every translated unit in French', () => {
-      const untranslated: string[] = [];
-
-      for (const unit of units) {
-        // One distinct marker per expression, so a value that lands in the
-        // wrong gap after translation reorders them is visible in the diff.
-        const values = unit.strings.slice(1).map((_, i) => `\u27e6${i}\u27e7`);
-        const rendered =
-          unit.strings.length === 1
-            ? msg(unit.strings[0])
-            : msg(str(unit.strings as unknown as TemplateStringsArray, ...values));
-        const expected = unit.targetStrings.reduce(
-          (acc, chunk, i) => (i === 0 ? chunk : acc + values[unit.targetOrder[i - 1]] + chunk),
-          ''
-        );
-        if (rendered !== expected) {
-          untranslated.push(
-            `${unit.id}: got ${JSON.stringify(rendered)}, want ${JSON.stringify(expected)}`
-          );
-        }
-      }
-
-      expect(
-        untranslated,
-        `${untranslated.length} unit(s) in src/i18n/xliff/fr.xlf do not render their French target — ` +
-          `the generated bundle src/i18n/generated/locales/fr.ts is out of step with the XLIFF:\n` +
-          untranslated.join('\n')
-      ).to.deep.equal([]);
-    });
-
-    it('still substitutes values into a translated message', () => {
-      const label = 'X';
-      expect(msg(str`${label} copied to clipboard`)).to.equal('X copié dans le presse-papiers');
-      const host = 'www.gravatar.com';
-      const avatars = msg(
-        str`Display author avatars in commit nodes. Avatars are fetched from Gravatar (${host}), a third-party service: each request sends an MD5 hash of the commit author's email address and your IP address. Off by default; Offline Mode disables it.`
-      );
-      expect(avatars).to.not.contain('Display author avatars');
-      expect(avatars, 'the host is still substituted').to.contain(host);
-    });
-  });
+  }
 });

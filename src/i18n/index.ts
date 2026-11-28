@@ -31,7 +31,9 @@ export interface LocaleOption {
  */
 const localeNames: Record<Locale, string> = {
   en: 'English',
+  es: 'Español',
   fr: 'Français',
+  'pt-BR': 'Português (Brasil)',
 };
 
 export const supportedLocales: readonly LocaleOption[] = allLocales.map((code) => ({
@@ -44,24 +46,37 @@ export const supportedLocales: readonly LocaleOption[] = allLocales.map((code) =
  * map rather than a computed `import()` path so both Vite and the test runner
  * can statically see every locale module.
  */
-const localeLoaders: Record<string, () => Promise<LocaleModule>> = {
+const localeLoaders: Record<(typeof targetLocales)[number], () => Promise<LocaleModule>> = {
+  es: () => import('./generated/locales/es.ts'),
   fr: () => import('./generated/locales/fr.ts'),
+  'pt-BR': () => import('./generated/locales/pt-BR.ts'),
 };
 
 export const { getLocale, setLocale } = configureLocalization({
   sourceLocale,
   targetLocales,
   loadLocale: (locale: string) => {
-    const loader = localeLoaders[locale];
-    if (!loader) {
+    if (!isSupportedLocale(locale) || locale === sourceLocale) {
       return Promise.reject(new Error(`No templates bundled for locale "${locale}"`));
     }
-    return loader();
+    return localeLoaders[locale]();
   },
 });
 
 export function isSupportedLocale(code: string): code is Locale {
   return (allLocales as readonly string[]).includes(code);
+}
+
+function matchLocale(code: string): Locale | undefined {
+  let tag = code.toLowerCase();
+  while (tag) {
+    const match = allLocales.find((locale) => locale.toLowerCase() === tag);
+    if (match) return match;
+    const separator = tag.lastIndexOf('-');
+    if (separator < 0) break;
+    tag = tag.slice(0, separator);
+  }
+  return undefined;
 }
 
 /**
@@ -70,24 +85,22 @@ export function isSupportedLocale(code: string): code is Locale {
  * French templates rather than English.
  */
 export function resolveLocale(code: string | null | undefined): Locale {
-  if (!code) return sourceLocale;
-  if (isSupportedLocale(code)) return code;
-  const base = code.split('-')[0].toLowerCase();
-  return isSupportedLocale(base) ? base : sourceLocale;
+  return matchLocale(code ?? '') ?? sourceLocale;
 }
 
 /**
  * The locale to start from on a fresh install: the first of the OS/browser
  * preferred languages that we actually ship, English otherwise.
  */
-export function detectSystemLocale(): Locale {
-  if (typeof navigator === 'undefined') return sourceLocale;
-  const preferred = navigator.languages?.length ? navigator.languages : [navigator.language];
+export function detectSystemLocale(
+  preferred: readonly string[] = typeof navigator === 'undefined'
+    ? []
+    : navigator.languages?.length ? navigator.languages : [navigator.language]
+): Locale {
   for (const tag of preferred) {
     if (!tag) continue;
-    if (isSupportedLocale(tag)) return tag;
-    const base = tag.split('-')[0].toLowerCase();
-    if (isSupportedLocale(base)) return base;
+    const locale = matchLocale(tag);
+    if (locale) return locale;
   }
   return sourceLocale;
 }
@@ -103,7 +116,8 @@ export async function setAppLocale(code: string): Promise<Locale> {
   const target = resolveLocale(code);
   try {
     await setLocale(target);
-    return target;
+    document.documentElement.lang = getLocale();
+    return resolveLocale(getLocale());
   } catch {
     // The templates could not be loaded. Stay on whatever is rendering now.
     return resolveLocale(getLocale());

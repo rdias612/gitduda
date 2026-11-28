@@ -63,8 +63,7 @@ describe('format', () => {
     it('should handle timestamp 0 (epoch)', () => {
       const result = formatDate(0);
       expect(result).to.be.a('string');
-      // Should be some date string for Jan 1 1970
-      expect(result).to.include('1970');
+      expect(result).to.equal(new Date(0).toLocaleDateString('en'));
     });
   });
 

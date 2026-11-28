@@ -3,6 +3,8 @@
  * Shows detailed information about a selected commit
  */
 
+import { localized } from '@lit/localize';
+import { getAppLocale } from '../../i18n/index.ts';
 import { LitElement, html, css, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { sharedStyles } from '../../styles/shared-styles.ts';
@@ -38,6 +40,7 @@ interface FileContextMenuState {
 }
 
 @customElement('gn-commit-details')
+@localized()
 export class GnCommitDetails extends LitElement {
   static styles = [
     sharedStyles,
@@ -1330,7 +1333,7 @@ export class GnCommitDetails extends LitElement {
 
   private formatDate(timestamp: number): string {
     const date = new Date(timestamp * 1000);
-    return date.toLocaleString(undefined, {
+    return date.toLocaleString(getAppLocale(), {
       year: 'numeric',
       month: 'short',
       day: 'numeric',

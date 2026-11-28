@@ -5,7 +5,7 @@
 
 import { LitElement, html, css, nothing } from 'lit';
 import { customElement, state, query } from 'lit/decorators.js';
-import { localized, msg } from '@lit/localize';
+import { localized, msg, str } from '@lit/localize';
 import { sharedStyles } from '../../styles/shared-styles.ts';
 import { repositoryStore, workspaceStore, type OpenRepository } from '../../stores/index.ts';
 import { openRepository } from '../../services/git.service.ts';
@@ -889,14 +889,14 @@ export class GnToolbar extends LitElement {
     const name = { fetch: 'Fetch', pull: 'Pull', push: 'Push' }[op];
 
     if (!repo) {
-      return { disabled: true, idle: false, count: 0, label: `${name} — open a repository first` };
+      return { disabled: true, idle: false, count: 0, label: msg(str`${name} — open a repository first`) };
     }
     // Shared with the context dashboard's copies of these three buttons, so
     // the two surfaces cannot disagree about whether a repository has anywhere
     // to fetch from — or about how to say that it has not.
-    // Only once the remotes have actually been READ: `remotes: []` is also
+    // Only once the remotes have actually been READ: msg(str`remotes: []`) is also
     // what the store holds for the moment between opening the tab and
-    // `get_remotes` answering, and greying the three buttons out over that
+    // msg(str`get_remotes`) answering, and greying the three buttons out over that
     // gap told every freshly opened repository it had no remote.
     if (knownToHaveNoRemote(repo)) {
       return { disabled: true, idle: false, count: 0, label: noRemoteButtonLabel(name) };
@@ -915,10 +915,10 @@ export class GnToolbar extends LitElement {
       // which this surface cannot name at all.
       const reason =
         running === op
-          ? `${name} already in progress…`
+          ? msg(str`${name} already in progress…`)
           : running !== undefined
-            ? `${name} — a ${running} is already running in this repository`
-            : `${name} — an operation is already running in this repository`;
+            ? msg(str`${name} — a ${running} is already running in this repository`)
+            : msg(str`${name} — an operation is already running in this repository`);
       return { disabled: true, idle: false, count: 0, label: reason };
     }
 
@@ -928,7 +928,7 @@ export class GnToolbar extends LitElement {
     const branch = repo.currentBranch?.shorthand ?? 'HEAD';
 
     if (op === 'fetch') {
-      return { disabled: false, idle: false, count: 0, label: `Fetch from remote (${shortcut})` };
+      return { disabled: false, idle: false, count: 0, label: msg(str`Fetch from remote (${shortcut})`) };
     }
     if (op === 'pull') {
       return {
@@ -936,9 +936,11 @@ export class GnToolbar extends LitElement {
         idle: behind === 0,
         count: behind,
         label:
-          behind > 0
-            ? `Pull ${behind} incoming commit${behind === 1 ? '' : 's'} into ${branch} (${shortcut})`
-            : `Pull from remote — nothing to pull right now (${shortcut})`,
+          behind === 0
+            ? msg(str`Pull from remote — nothing to pull right now (${shortcut})`)
+            : behind === 1
+              ? msg(str`Pull 1 incoming commit into ${branch} (${shortcut})`)
+              : msg(str`Pull ${behind} incoming commits into ${branch} (${shortcut})`),
       };
     }
     // Push. A branch with no upstream has no ahead count and is never "up to
@@ -950,7 +952,7 @@ export class GnToolbar extends LitElement {
         disabled: false,
         idle: false,
         count: 0,
-        label: `Push ${branch} to remote — it has no upstream yet (${shortcut})`,
+        label: msg(str`Push ${branch} to remote — it has no upstream yet (${shortcut})`),
       };
     }
     return {
@@ -958,9 +960,11 @@ export class GnToolbar extends LitElement {
       idle: ahead === 0,
       count: ahead,
       label:
-        ahead > 0
-          ? `Push ${ahead} local commit${ahead === 1 ? '' : 's'} from ${branch} (${shortcut})`
-          : `Push to remote — nothing to push (${shortcut})`,
+        ahead === 0
+          ? msg(str`Push to remote — nothing to push (${shortcut})`)
+          : ahead === 1
+            ? msg(str`Push 1 local commit from ${branch} (${shortcut})`)
+            : msg(str`Push ${ahead} local commits from ${branch} (${shortcut})`),
     };
   }
 
@@ -1192,12 +1196,12 @@ export class GnToolbar extends LitElement {
       ${showAheadBehind
         ? html`<span
             class="tab-ahead-behind"
-            title="${ab.ahead} ahead, ${ab.behind} behind upstream"
+            title=${msg(str`${ab.ahead} ahead, ${ab.behind} behind upstream`)}
             >${ab.ahead > 0 ? `↑${ab.ahead}` : ''}${ab.behind > 0 ? `↓${ab.behind}` : ''}</span
           >`
         : nothing}
       ${dirty
-        ? html`<span class="tab-dirty" title="Uncommitted changes" aria-label="Uncommitted changes"></span>`
+        ? html`<span class="tab-dirty" title=${msg('Uncommitted changes')} aria-label=${msg('Uncommitted changes')}></span>`
         : nothing}
     `;
   }
@@ -1239,7 +1243,7 @@ export class GnToolbar extends LitElement {
 
   private renderRemoteActions() {
     return html`
-      <div class="toolbar-section remote-actions" role="group" aria-label="Remote operations">
+      <div class="toolbar-section remote-actions" role="group" aria-label=${msg('Remote operations')}>
         ${this.renderRemoteButton('fetch')} ${this.renderRemoteButton('pull')}
         ${this.renderRemoteButton('push')}
       </div>
@@ -1334,7 +1338,7 @@ export class GnToolbar extends LitElement {
       <div
         class="tab-context-menu"
         role="menu"
-        aria-label="Tab actions for ${repo.repository.name}"
+        aria-label=${msg(str`Tab actions for ${repo.repository.name}`)}
         style="top: ${y}px; left: ${x}px;"
       >
         <button
@@ -1345,7 +1349,7 @@ export class GnToolbar extends LitElement {
             repositoryStore.getState().removeRepository(repo.repository.path);
           }}
         >
-          Close
+          ${msg('Close')}
         </button>
         <button
           class="context-menu-item"
@@ -1353,7 +1357,7 @@ export class GnToolbar extends LitElement {
           ?disabled=${isOnly}
           @click=${() => this.handleCloseOtherTabs(index)}
         >
-          Close Others
+          ${msg('Close Others')}
         </button>
         <button
           class="context-menu-item"
@@ -1361,10 +1365,10 @@ export class GnToolbar extends LitElement {
           ?disabled=${isLast}
           @click=${() => this.handleCloseTabsToRight(index)}
         >
-          Close Tabs to the Right
+          ${msg('Close Tabs to the Right')}
         </button>
         <button class="context-menu-item" role="menuitem" @click=${() => this.handleCloseAllTabs()}>
-          Close All
+          ${msg('Close All')}
         </button>
         <div class="context-menu-separator"></div>
         <button
@@ -1372,25 +1376,25 @@ export class GnToolbar extends LitElement {
           role="menuitem"
           @click=${() => void this.handleOpenTabInTerminal(index)}
         >
-          Open in Terminal
+          ${msg('Open in Terminal')}
         </button>
         <button
           class="context-menu-item"
           role="menuitem"
           @click=${() => void this.handleRevealTabInFileManager(index)}
         >
-          Reveal in File Manager
+          ${msg('Reveal in File Manager')}
         </button>
         <button
           class="context-menu-item"
           role="menuitem"
           @click=${() => void this.handleOpenTabInEditor(index)}
         >
-          Open in Editor
+          ${msg('Open in Editor')}
         </button>
         <div class="context-menu-separator"></div>
         <button class="context-menu-item" role="menuitem" @click=${() => this.handleCopyTabPath(index)}>
-          Copy Path
+          ${msg('Copy Path')}
         </button>
       </div>
     `;
@@ -1411,8 +1415,8 @@ export class GnToolbar extends LitElement {
       <div class="toolbar-section menu-buttons">
         <button
           class="menu-btn"
-          title="Open Repository"
-          aria-label="Open Repository"
+          title=${msg('Open Repository')}
+          aria-label=${msg('Open Repository')}
           @click=${this.handleOpenRepo}
           ?disabled=${this.isLoading}
         >
@@ -1422,8 +1426,8 @@ export class GnToolbar extends LitElement {
         </button>
         <button
           class="menu-btn"
-          title="Clone Repository"
-          aria-label="Clone Repository"
+          title=${msg('Clone Repository')}
+          aria-label=${msg('Clone Repository')}
           @click=${this.handleCloneRepo}
           ?disabled=${this.isLoading}
         >
@@ -1435,8 +1439,8 @@ export class GnToolbar extends LitElement {
         </button>
         <button
           class="menu-btn"
-          title="Init Repository"
-          aria-label="Init Repository"
+          title=${msg('Init Repository')}
+          aria-label=${msg('Init Repository')}
           @click=${this.handleInitRepo}
           ?disabled=${this.isLoading}
         >
@@ -1447,8 +1451,8 @@ export class GnToolbar extends LitElement {
         </button>
         <button
           class="menu-btn"
-          title="Workspaces"
-          aria-label="Workspaces"
+          title=${msg('Workspaces')}
+          aria-label=${msg('Workspaces')}
           @click=${this.handleOpenWorkspaceManager}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -1464,8 +1468,8 @@ export class GnToolbar extends LitElement {
         <button
           class="scroll-btn ${this.canScrollLeft ? 'visible' : ''}"
           @click=${this.handleScrollLeft}
-          title="Scroll left"
-          aria-label="Scroll tabs left"
+          title=${msg('Scroll left')}
+          aria-label=${msg('Scroll tabs left')}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <polyline points="15 18 9 12 15 6"></polyline>
@@ -1496,7 +1500,7 @@ export class GnToolbar extends LitElement {
                       class="tab-close"
                       role="button"
                       tabindex="0"
-                      aria-label="Close ${repo.repository.name} tab"
+                      aria-label=${msg(str`Close ${repo.repository.name} tab`)}
                       @click=${(e: Event) => this.handleTabClose(e, repo.repository.path)}
                       @keydown=${(e: KeyboardEvent) => this.handleTabCloseKeydown(e, repo.repository.path)}
                     >
@@ -1512,8 +1516,8 @@ export class GnToolbar extends LitElement {
         <button
           class="scroll-btn ${this.canScrollRight ? 'visible' : ''}"
           @click=${this.handleScrollRight}
-          title="Scroll right"
-          aria-label="Scroll tabs right"
+          title=${msg('Scroll right')}
+          aria-label=${msg('Scroll tabs right')}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <polyline points="9 18 15 12 9 6"></polyline>
@@ -1546,8 +1550,8 @@ export class GnToolbar extends LitElement {
         ${this.activeRepo ? html`
           <button
             class="menu-btn ${this.showSearch ? 'active' : ''}"
-            title="Search commits (Ctrl+F)"
-            aria-label="Search commits"
+            title=${msg('Search commits (Ctrl+F)')}
+            aria-label=${msg('Search commits')}
             @click=${this.handleToggleSearch}
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -1558,8 +1562,8 @@ export class GnToolbar extends LitElement {
         ` : ''}
         <button
           class="menu-btn"
-          title="Command Palette (Cmd+P)"
-          aria-label="Command Palette"
+          title=${msg('Command Palette (Cmd+P)')}
+          aria-label=${msg('Command Palette')}
           @click=${this.handleOpenCommandPalette}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -1571,8 +1575,8 @@ export class GnToolbar extends LitElement {
         </button>
         <button
           class="menu-btn"
-          title="Keyboard Shortcuts (?)"
-          aria-label="Keyboard Shortcuts"
+          title=${msg('Keyboard Shortcuts (?)')}
+          aria-label=${msg('Keyboard Shortcuts')}
           @click=${this.handleOpenShortcuts}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -1589,8 +1593,8 @@ export class GnToolbar extends LitElement {
         </button>
         <button
           class="menu-btn"
-          title="Settings"
-          aria-label="Settings"
+          title=${msg('Settings')}
+          aria-label=${msg('Settings')}
           @click=${this.handleOpenSettings}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">

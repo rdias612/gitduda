@@ -3,6 +3,9 @@
  * Shows reflog entries and allows undo operations
  */
 
+import { localized } from '@lit/localize';
+import { formatRelativeTime } from '../../utils/format.ts';
+import { getAppLocale } from '../../i18n/index.ts';
 import { LitElement, html, css, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { sharedStyles } from '../../styles/shared-styles.ts';
@@ -34,6 +37,7 @@ interface ReflogContextMenuState {
 const REFLOG_PAGE_SIZE = 50;
 
 @customElement('gn-reflog-dialog')
+@localized()
 export class GnReflogDialog extends LitElement {
   static styles = [
     sharedStyles,
@@ -858,15 +862,8 @@ export class GnReflogDialog extends LitElement {
     const date = new Date(timestamp * 1000);
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / (1000 * 60));
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-    if (diffMins < 1) return 'just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return date.toLocaleDateString();
+    if (diffMs < 7 * 86400_000) return formatRelativeTime(timestamp);
+    return date.toLocaleDateString(getAppLocale());
   }
 
   // Context menu handlers

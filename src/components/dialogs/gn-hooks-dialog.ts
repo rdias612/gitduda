@@ -3,6 +3,8 @@
  * Manage git hooks: view, edit, create, delete, enable/disable
  */
 
+import { localized } from '@lit/localize';
+import { getAppLocale } from '../../i18n/index.ts';
 import { LitElement, html, css, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { sharedStyles } from '../../styles/shared-styles.ts';
@@ -93,6 +95,7 @@ exit 0
 };
 
 @customElement('gn-hooks-dialog')
+@localized()
 export class GnHooksDialog extends LitElement {
   static styles = [
     sharedStyles,
@@ -983,7 +986,7 @@ export class GnHooksDialog extends LitElement {
     const ms = timestamp < 1_000_000_000_000 ? timestamp * 1000 : timestamp;
     const date = new Date(ms);
     if (Number.isNaN(date.getTime())) return String(timestamp);
-    return date.toLocaleString();
+    return date.toLocaleString(getAppLocale());
   }
 
   private async selectHook(hook: GitHook): Promise<void> {

@@ -16,6 +16,8 @@
  * dead-end list.
  */
 
+import { localized } from '@lit/localize';
+import { getAppLocale } from '../../i18n/index.ts';
 import { LitElement, html, css, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { sharedStyles } from '../../styles/shared-styles.ts';
@@ -50,6 +52,7 @@ const UTF8_ENCODER = new TextEncoder();
 const UTF8_DECODER = new TextDecoder();
 
 @customElement('gn-search-dialog')
+@localized()
 export class GnSearchDialog extends LitElement {
   static styles = [
     sharedStyles,
@@ -729,7 +732,7 @@ export class GnSearchDialog extends LitElement {
   }
 
   private formatDate(timestamp: number): string {
-    return new Date(timestamp * 1000).toLocaleString();
+    return new Date(timestamp * 1000).toLocaleString(getAppLocale());
   }
 
   render() {

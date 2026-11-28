@@ -15,11 +15,14 @@
  */
 
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { test } from 'node:test';
 
 import { generateMsgId } from '@lit/localize/internal/id-generation.js';
 
 import {
+  REPO_ROOT,
   EXPECTED_INPUT_FILES,
   collectLocalisedFiles,
   collectSourceMessages,
@@ -125,30 +128,17 @@ test('every msg() call site is statically extractable', () => {
   );
 });
 
-test('every msg() source string has a French translation', () => {
-  const missing = difference(sourceIds, collectTemplateIds());
-  assert.deepEqual(
-    missing,
-    [],
-    `${missing.length} string(s) render English under "fr" because nothing in ` +
-      `src/i18n/generated/locales/fr.ts answers their id. Add a trans-unit to ` +
-      `src/i18n/xliff/fr.xlf and the matching entry to the bundle:\n` +
-      missing.map(describe).join('\n')
-  );
-});
-
-test('every French translation still has a msg() source string', () => {
-  const orphaned = difference(collectTemplateIds(), sourceIds);
-  assert.deepEqual(
-    orphaned,
-    [],
-    `${orphaned.length} translation(s) in src/i18n/generated/locales/fr.ts are ` +
-      `dead — no msg() call site hashes to their id, so the source text was ` +
-      `re-worded or removed. Re-point or delete them (and their trans-unit in ` +
-      `src/i18n/xliff/fr.xlf):\n` +
-      orphaned.map(describe).join('\n')
-  );
-});
+const { targetLocales } = JSON.parse(readFileSync(join(REPO_ROOT, 'lit-localize.json'), 'utf8'));
+for (const locale of targetLocales) {
+  test(`the ${locale} bundle and XLIFF cover exactly the extracted messages`, () => {
+    const bundle = collectTemplateIds(join(REPO_ROOT, 'src/i18n/generated/locales', locale + '.ts'));
+    const xliff = collectXliffIds(join(REPO_ROOT, 'src/i18n/xliff', locale + '.xlf'));
+    for (const ids of [bundle, xliff]) {
+      assert.deepEqual(difference(sourceIds, ids).map(describe), [], 'missing messages');
+      assert.deepEqual(difference(ids, sourceIds).map(describe), [], 'obsolete messages');
+    }
+  });
+}
 
 test('docs/localisation.md names exactly the files that are localised', () => {
   // The doc is what a maintainer reads before re-wording a label, and it went
@@ -161,20 +151,5 @@ test('docs/localisation.md names exactly the files that are localised', () => {
     'the "What is localised today" list in docs/localisation.md no longer matches the ' +
       'files that contain msg() calls — add (or remove) a bullet whose first backticked ' +
       'value is the repo-relative path'
-  );
-});
-
-test('the XLIFF and the generated bundle carry the same ids', () => {
-  const templates = collectTemplateIds();
-  const xliff = collectXliffIds();
-  assert.deepEqual(
-    difference(xliff, templates),
-    [],
-    'translated in src/i18n/xliff/fr.xlf but missing from the generated bundle — re-run lit-localize build'
-  );
-  assert.deepEqual(
-    difference(templates, xliff),
-    [],
-    'in the generated bundle but not in src/i18n/xliff/fr.xlf — the bundle was hand-edited'
   );
 });

@@ -23,13 +23,15 @@ call site is here, and nothing else in `src/` has one.
   previews, risk warnings, and confirmation controls.
 - `src/components/sidebar/gn-commit-panel.ts` — issue search and commit references.
 - `src/components/toolbar/gn-toolbar.ts` — the workspace and repository
-  switcher, including its accessible labels and empty states.
+  switcher, tab actions, toolbar shortcuts and their accessible labels.
 - `src/components/welcome/gn-welcome.ts` — the whole component, including its
   toast messages and accessible labels.
 - `src/services/workspace.service.ts` — feedback when opening a workspace.
 - `src/stores/settings.store.ts` — the whitespace-mode menu and the graph
   palette names (`getGraphColorSchemes()`), both built where the setting lives
   rather than frozen into a module-level constant at the startup locale.
+- `src/utils/remote-availability.ts` — the tooltip for operations without a configured remote.
+- `src/utils/format.ts` — relative timestamps.
 - `src/utils/avatar-policy.ts` — why the avatar setting is unavailable when a
   security setting has turned it off.
 
@@ -43,10 +45,15 @@ Migrating a component is a mechanical change; see below.
 | Code | Name     | Status                              |
 | ---- | -------- | ----------------------------------- |
 | `en` | English  | Source locale — the strings in code |
+| `es` | Español | Neutral Spanish shared by regional variants |
+| `pt-BR` | Português (Brasil) | Brazilian Portuguese |
 | `fr` | Français | Translated for the surfaces above   |
 
 On a fresh install the language defaults to the system language when it is one we
-ship (`fr-CA`, `fr-FR`, … all resolve to `fr`) and English otherwise. A persisted
+ship. Regional Spanish tags such as `es-ES` and `es-MX` share `es` because the
+catalogue uses neutral Spanish. Brazilian Portuguese uses `pt-BR` specifically.
+Other Portuguese variants do not select it. The first supported preference wins,
+and English is the default when none match. A persisted
 locale we no longer ship falls back to English rather than failing to render.
 
 ## Adding a localised string
@@ -87,7 +94,7 @@ locale we no longer ship falls back to English rather than failing to render.
    This rewrites `src/i18n/xliff/<locale>.xlf`, adding a `<trans-unit>` for every
    `msg()` call and keeping the translations that already exist.
 
-4. Translate. For each new `<trans-unit>` in `src/i18n/xliff/fr.xlf`, add a
+4. Translate. For each new `<trans-unit>` in each `src/i18n/xliff/<locale>.xlf`, add a
    `<target>` next to the `<source>`:
 
    ```xml

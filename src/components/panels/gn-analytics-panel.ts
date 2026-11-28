@@ -4,6 +4,8 @@
  * commit patterns, top contributors, and file type breakdown.
  */
 
+import { localized } from '@lit/localize';
+import { getAppLocale } from '../../i18n/index.ts';
 import { LitElement, html, css, svg, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { sharedStyles } from '../../styles/shared-styles.ts';
@@ -33,6 +35,7 @@ const CHART_COLORS = [
 ];
 
 @customElement('gn-analytics-panel')
+@localized()
 export class GnAnalyticsPanel extends LitElement {
   static styles = [
     sharedStyles,
@@ -534,8 +537,8 @@ export class GnAnalyticsPanel extends LitElement {
   /* ── Overview Cards ─────────────────────────────────────── */
 
   private renderOverview(s: RepoStatistics) {
-    const firstDate = s.firstCommitDate ? new Date(s.firstCommitDate * 1000).toLocaleDateString() : '—';
-    const lastDate = s.lastCommitDate ? new Date(s.lastCommitDate * 1000).toLocaleDateString() : '—';
+    const firstDate = s.firstCommitDate ? new Date(s.firstCommitDate * 1000).toLocaleDateString(getAppLocale()) : '—';
+    const lastDate = s.lastCommitDate ? new Date(s.lastCommitDate * 1000).toLocaleDateString(getAppLocale()) : '—';
     const size = formatFileSize(s.repoSizeBytes);
 
     return html`

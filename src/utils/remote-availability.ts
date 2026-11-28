@@ -33,6 +33,7 @@
  * `git.service`'s fetch/pull/push that is not the runner has to do the same.
  */
 
+import { msg, str } from '@lit/localize';
 import { showToast } from '../services/notification.service.ts';
 import { dialogs } from '../stores/dialog.store.ts';
 import { repositoryStore } from '../stores/repository.store.ts';
@@ -80,7 +81,7 @@ export function knownToHaveNoRemote(repo?: RemoteBearing | null): boolean {
  * "Fetch", "Pull", "Push".
  */
 export function noRemoteButtonLabel(action: string): string {
-  return `${action} — this repository has no remote configured`;
+  return msg(str`${action} — this repository has no remote configured`);
 }
 
 /** Last path segment, so a message names the repository the user knows. */

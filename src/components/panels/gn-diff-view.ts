@@ -1,3 +1,5 @@
+import { localized } from '@lit/localize';
+import { getAppLocale } from '../../i18n/index.ts';
 import { LitElement, html, css, nothing, type TemplateResult } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import { sharedStyles } from '../../styles/shared-styles.ts';
@@ -170,6 +172,7 @@ type LineKey = `${number}-${number}`;
  * Supports unified and split view modes
  */
 @customElement('gn-diff-view')
+@localized()
 export class GnDiffView extends CodeRenderMixin(LitElement) {
   static styles = [
     sharedStyles,
@@ -2562,7 +2565,7 @@ export class GnDiffView extends CodeRenderMixin(LitElement) {
            @scroll=${this.handleDiffScroll}>
         ${this.flatLines.length > 10000 ? html`
           <div class="large-diff-info">
-            Large diff (${this.flatLines.length.toLocaleString()} lines) -- virtualized for performance
+            Large diff (${this.flatLines.length.toLocaleString(getAppLocale())} lines) -- virtualized for performance
           </div>
         ` : nothing}
         <div style="height: ${contentHeight}px; position: relative;">
@@ -3473,7 +3476,7 @@ export class GnDiffView extends CodeRenderMixin(LitElement) {
         : nothing}
       ${this.diff?.truncated ? html`
         <div class="large-diff-info">
-          Showing first ${this.diff.hunks.reduce((sum, h) => sum + h.lines.length, 0).toLocaleString()} of ${this.diff.totalLines?.toLocaleString() ?? 'many'} lines
+          Showing first ${this.diff.hunks.reduce((sum, h) => sum + h.lines.length, 0).toLocaleString(getAppLocale())} of ${this.diff.totalLines?.toLocaleString(getAppLocale()) ?? 'many'} lines
           <button class="btn-link" @click=${this.handleLoadFullDiff}>Load full diff</button>
         </div>
       ` : nothing}
